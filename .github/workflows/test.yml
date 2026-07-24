@@ -48,3 +48,4 @@ jobs:
           node --check renderer/script.js
           node --check renderer/script-v2.js
           node --check renderer/polish-v3.js
+          node --check renderer/enter-fast.js
