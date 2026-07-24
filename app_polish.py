@@ -12,6 +12,10 @@ PREVIEW_DELAY_MS = 18
 def install(app: Any) -> None:
     """Wrap ``build_html`` with cached suggestions, fast preview and motion."""
 
+    if getattr(app, "_polish_v3_installed", False):
+        return
+    app._polish_v3_installed = True
+
     original_build_html: Callable[[], str] = app.build_html
 
     def build_html() -> str:
