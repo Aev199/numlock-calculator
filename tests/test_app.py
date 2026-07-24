@@ -1,6 +1,7 @@
 import json
 import sys
 import tempfile
+import time
 import types
 import unittest
 from pathlib import Path
@@ -136,6 +137,10 @@ class HotkeyTests(unittest.TestCase):
             self.assertEqual(app._window.show_calls, 1)
             self.assertEqual(app._window.restore_calls, 1)
             self.assertEqual(restore_numlock.call_count, 3)
+
+        # Showing the fake window starts the same asynchronous focus worker as
+        # the real application. Let it finish before tearDown swaps the window.
+        time.sleep(0.08)
 
     def test_hotkey_registration_allows_windows_toggle(self):
         calls = []
