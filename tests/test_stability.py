@@ -2,7 +2,6 @@ import sys
 import time
 import types
 import unittest
-from unittest.mock import patch
 
 fake_webview = types.SimpleNamespace(Window=object)
 sys.modules.setdefault("webview", fake_webview)
@@ -49,7 +48,7 @@ class StabilityTests(unittest.TestCase):
             app._quitting,
             app._numlock_down,
             app._restoring_numlock,
-            app._numlock_restore_needed,
+            app._numlock_cycle_active,
             app._numlock_hook_mode,
         )
         app._window = FakeWindow()
@@ -58,10 +57,11 @@ class StabilityTests(unittest.TestCase):
         app._quitting = False
         app._numlock_down = False
         app._restoring_numlock = False
-        app._numlock_restore_needed = False
-        app._numlock_hook_mode = "none"
+        app._numlock_cycle_active = False
+        app._numlock_hook_mode = "fallback-suppressed"
 
     def tearDown(self):
+        time.sleep(0.08)
         (
             app._window,
             app._visible,
@@ -69,22 +69,20 @@ class StabilityTests(unittest.TestCase):
             app._quitting,
             app._numlock_down,
             app._restoring_numlock,
-            app._numlock_restore_needed,
+            app._numlock_cycle_active,
             app._numlock_hook_mode,
         ) = self.saved
 
     def test_active_window_hides_once_per_physical_press(self):
-        with patch.object(app, "restore_numlock_after_toggle") as restore_numlock:
-            app.on_numlock_press(was_on_before=True)
-            app.on_numlock_press(was_on_before=True)
+        app.on_numlock_press(was_on_before=True)
+        app.on_numlock_press(was_on_before=True)
+        time.sleep(0.03)
         self.assertEqual(app._window.hide_calls, 1)
-        restore_numlock.assert_called_once()
 
     def test_visible_unfocused_window_is_refocused(self):
         app._renderer_focused = False
-        with patch.object(app, "restore_numlock_after_toggle"):
-            app.on_numlock_press(was_on_before=True)
-        time.sleep(0.06)
+        app.on_numlock_press(was_on_before=True)
+        time.sleep(0.08)
         self.assertEqual(app._window.hide_calls, 0)
         self.assertEqual(app._window.show_calls, 1)
         self.assertEqual(app._window.restore_calls, 1)
@@ -99,14 +97,16 @@ class StabilityTests(unittest.TestCase):
     def test_native_hook_is_installed_as_primary_handler(self):
         self.assertTrue(callable(app.register_numlock_hook))
         self.assertTrue(callable(app.stop_numlock_hook))
-        self.assertTrue(callable(app.restore_numlock_after_toggle))
+        self.assertTrue(callable(app.send_numlock_toggle))
+        self.assertTrue(callable(app.start_numlock_blink))
 
-    def test_injected_restore_events_are_identifiable(self):
+    def test_injected_events_are_identifiable(self):
         self.assertEqual(
             app_numlock_compat.INJECTED_MASK,
             app_numlock_compat.LLKHF_INJECTED
             | app_numlock_compat.LLKHF_LOWER_IL_INJECTED,
         )
+        self.assertNotEqual(app_numlock_compat.NUMLOCK_INJECTION_TAG, 0)
 
     def test_v2_html_contains_layout_independent_shortcut_and_groups(self):
         html = app.build_html()
