@@ -16,8 +16,12 @@ jobs:
           python-version: '3.13'
       - name: Compile Python sources
         run: python -m py_compile app.py app_keyboard.py app_stability.py calc_engine.py calc_engine_runtime.py
-      - name: Run Python tests
-        run: python -m unittest discover -s tests -v
+      - name: Test calculation engine
+        run: python -m unittest tests.test_calc_engine -v
+      - name: Test application API
+        run: python -m unittest tests.test_app -v
+      - name: Test focus and NumLock stability
+        run: python -m unittest tests.test_stability -v
       - name: Check renderer JavaScript
         run: |
           node --check renderer/script.js
