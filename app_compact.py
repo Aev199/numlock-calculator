@@ -69,17 +69,28 @@ def install(app: Any) -> None:
         for old, new in replacements:
             html = html.replace(old, new, 1)
 
-        # Install the optimistic Enter layer before the renderer registers its
-        # normal keydown handler. It reuses a matching live-preview immediately,
-        # while the original expression is still committed to history in parallel.
+        # Install the optimistic Enter layer after app_polish has wrapped the API,
+        # but before script-v2 registers the normal keydown handler. This preserves
+        # command-catalog invalidation while reusing a matching live-preview at once.
         renderer = Path(app.RENDERER_DIR)
         enter_fast_js = (renderer / "enter-fast.js").read_text(encoding="utf-8")
-        body_marker = '<body data-theme="dark">'
-        html = html.replace(
-            body_marker,
-            f'{body_marker}\n<script>\n{enter_fast_js}\n</script>',
-            1,
-        )
+        main_script_marker = "</script>\n<script>\n(function () {\n  'use strict';"
+        if main_script_marker in html:
+            html = html.replace(
+                main_script_marker,
+                "</script>\n"
+                f"<script>\n{enter_fast_js}\n</script>\n"
+                "<script>\n(function () {\n  'use strict';",
+                1,
+            )
+        else:
+            # Test/minimal shells may not include app_polish; keep a safe fallback.
+            body_marker = '<body data-theme="dark">'
+            html = html.replace(
+                body_marker,
+                f'{body_marker}\n<script>\n{enter_fast_js}\n</script>',
+                1,
+            )
         return html
 
     def create_window(*args: Any, **kwargs: Any) -> Any:
