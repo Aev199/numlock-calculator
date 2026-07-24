@@ -105,6 +105,8 @@ class HotkeyTests(unittest.TestCase):
             app._numlock_down,
             app._keyboard_module,
             app._restoring_numlock,
+            app._numlock_restore_needed,
+            app._numlock_hook_mode,
         )
         app._window = FakeWindow()
         app._visible = True
@@ -113,6 +115,8 @@ class HotkeyTests(unittest.TestCase):
         app._numlock_down = False
         app._keyboard_module = None
         app._restoring_numlock = False
+        app._numlock_restore_needed = False
+        app._numlock_hook_mode = 'none'
 
     def tearDown(self):
         (
@@ -123,17 +127,19 @@ class HotkeyTests(unittest.TestCase):
             app._numlock_down,
             app._keyboard_module,
             app._restoring_numlock,
+            app._numlock_restore_needed,
+            app._numlock_hook_mode,
         ) = self.saved
 
     def test_one_toggle_per_press_and_restore_schedule(self):
         with patch.object(app, 'restore_numlock_after_toggle') as restore_numlock:
-            app.on_numlock_press()
-            app.on_numlock_press()
+            app.on_numlock_press(was_on_before=True)
+            app.on_numlock_press(was_on_before=True)
             self.assertEqual(app._window.hide_calls, 1)
             self.assertEqual(restore_numlock.call_count, 1)
 
             app.on_numlock_release()
-            app.on_numlock_press()
+            app.on_numlock_press(was_on_before=True)
             self.assertEqual(app._window.show_calls, 1)
             self.assertEqual(app._window.restore_calls, 1)
             self.assertEqual(restore_numlock.call_count, 3)
@@ -142,7 +148,13 @@ class HotkeyTests(unittest.TestCase):
         # the real application. Let it finish before tearDown swaps the window.
         time.sleep(0.08)
 
-    def test_hotkey_registration_allows_windows_toggle(self):
+    def test_press_from_off_does_not_schedule_inverse_toggle(self):
+        with patch.object(app, 'restore_numlock_after_toggle') as restore_numlock:
+            app.on_numlock_press(was_on_before=False)
+            restore_numlock.assert_not_called()
+            self.assertFalse(app._numlock_restore_needed)
+
+    def test_fallback_suppresses_physical_toggle(self):
         calls = []
 
         class FakeKeyboard:
@@ -172,7 +184,7 @@ class HotkeyTests(unittest.TestCase):
 
         fallback_hooks = [call for call in calls if call[0] == 'hook']
         for hook in fallback_hooks:
-            self.assertEqual(hook[1:3], ('num lock', False))
+            self.assertEqual(hook[1:3], ('num lock', True))
 
 
 if __name__ == '__main__':
