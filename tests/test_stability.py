@@ -49,6 +49,8 @@ class StabilityTests(unittest.TestCase):
             app._quitting,
             app._numlock_down,
             app._restoring_numlock,
+            app._numlock_restore_needed,
+            app._numlock_hook_mode,
         )
         app._window = FakeWindow()
         app._visible = True
@@ -56,6 +58,8 @@ class StabilityTests(unittest.TestCase):
         app._quitting = False
         app._numlock_down = False
         app._restoring_numlock = False
+        app._numlock_restore_needed = False
+        app._numlock_hook_mode = "none"
 
     def tearDown(self):
         (
@@ -65,19 +69,21 @@ class StabilityTests(unittest.TestCase):
             app._quitting,
             app._numlock_down,
             app._restoring_numlock,
+            app._numlock_restore_needed,
+            app._numlock_hook_mode,
         ) = self.saved
 
     def test_active_window_hides_once_per_physical_press(self):
         with patch.object(app, "restore_numlock_after_toggle") as restore_numlock:
-            app.on_numlock_press()
-            app.on_numlock_press()
+            app.on_numlock_press(was_on_before=True)
+            app.on_numlock_press(was_on_before=True)
         self.assertEqual(app._window.hide_calls, 1)
         restore_numlock.assert_called_once()
 
     def test_visible_unfocused_window_is_refocused(self):
         app._renderer_focused = False
         with patch.object(app, "restore_numlock_after_toggle"):
-            app.on_numlock_press()
+            app.on_numlock_press(was_on_before=True)
         time.sleep(0.06)
         self.assertEqual(app._window.hide_calls, 0)
         self.assertEqual(app._window.show_calls, 1)
