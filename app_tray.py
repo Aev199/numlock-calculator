@@ -42,12 +42,6 @@ def install(app: Any) -> None:
         )
         return html
 
-    def create_window(*args: Any, **kwargs: Any) -> Any:
-        kwargs.setdefault("frameless", True)
-        kwargs.setdefault("easy_drag", False)
-        kwargs.setdefault("shadow", True)
-        return original_create_window(*args, **kwargs)
-
     def run_async(callback: Callable[[], None]) -> None:
         threading.Thread(target=callback, daemon=True).start()
 
@@ -140,11 +134,17 @@ def install(app: Any) -> None:
         if thread and thread.is_alive() and thread is not threading.current_thread():
             thread.join(timeout=0.8)
 
+    def create_window(*args: Any, **kwargs: Any) -> Any:
+        kwargs.setdefault("frameless", True)
+        kwargs.setdefault("easy_drag", False)
+        kwargs.setdefault("shadow", True)
+        window = original_create_window(*args, **kwargs)
+        # The window object now exists, so tray callbacks cannot race with startup.
+        start_tray()
+        return window
+
     def main() -> None:
-        # create_window is patched before the original shell creates the window.
-        # Start the tray immediately before entering pywebview's blocking loop.
         try:
-            start_tray()
             original_main()
         finally:
             stop_tray()
