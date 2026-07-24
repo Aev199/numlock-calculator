@@ -113,5 +113,27 @@
 
   <div class="toast hidden" id="toast" role="status"></div>
   <script src="script-v2.js"></script>
+  <script>
+    // A NumLock-driven return to the calculator is a fresh keyboard entry cycle:
+    // focus the editor and select the entire expression for immediate replacement.
+    // Internal UI actions keep using script-v2.js cursor-preserving restoration.
+    window.__nlcalcRestoreEditorFocus = function () {
+      const input = document.getElementById('expressionInput');
+      const completion = document.getElementById('completionPopover');
+      const palette = document.getElementById('paletteOverlay');
+      const drawer = document.getElementById('drawerOverlay');
+
+      completion?.classList.add('hidden');
+      for (const overlay of [palette, drawer]) {
+        overlay?.classList.add('hidden');
+        overlay?.setAttribute('aria-hidden', 'true');
+      }
+
+      window.requestAnimationFrame(() => {
+        input?.focus({ preventScroll: true });
+        input?.select();
+      });
+    };
+  </script>
 </body>
 </html>
