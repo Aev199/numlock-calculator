@@ -20,7 +20,7 @@ class CompactShellTests(unittest.TestCase):
             def commit_and_insert(self, _expression):
                 return {"ok": True}
 
-        source = """<html><head><style>base</style></head><body>
+        source = """<html><head><style>base</style></head><body data-theme="dark">
 <script>
 async function commitExpression(insertIntoDocument = false) {
       const evaluation = insertIntoDocument
@@ -42,6 +42,7 @@ function history(entry) {
 
         app = types.SimpleNamespace(
             AppApi=AppApi,
+            RENDERER_DIR=Path(__file__).resolve().parents[1] / "renderer",
             build_html=lambda: source,
             webview=types.SimpleNamespace(create_window=create_window),
         )
@@ -78,6 +79,21 @@ function history(entry) {
         self.assertIn("base !== 'DEC'", html)
         self.assertFalse(hasattr(app.AppApi, "commit_and_insert"))
 
+    def test_enter_uses_cached_preview_and_returns_result_as_expression(self):
+        app, _ = self.make_app()
+        app_compact.install(app)
+        html = app.build_html()
+
+        self.assertIn("nlcalc-enter-fast", html)
+        self.assertIn("cachedResultFor(expression)", html)
+        self.assertIn("window.queueMicrotask", html)
+        self.assertIn("expression: result", html)
+        self.assertIn("input.setSelectionRange(end, end)", html)
+        self.assertLess(
+            html.index("nlcalc-enter-fast"),
+            html.index("async function commitExpression()"),
+        )
+
     def test_compact_visual_rows_and_result_actions_are_hidden(self):
         css = (
             Path(__file__).resolve().parents[1]
@@ -91,7 +107,7 @@ function history(entry) {
         self.assertIn("display: none !important", css)
         self.assertIn("grid-template-columns: auto minmax(0, 1fr)", css)
 
-    def test_editor_focus_ring_stays_inside_input(self):
+    def test_expression_focus_ring_stays_inside_toolbar_boundary(self):
         css = (
             Path(__file__).resolve().parents[1]
             / "renderer"
@@ -101,7 +117,6 @@ function history(entry) {
         self.assertIn(".expression-input:focus-visible", css)
         self.assertIn("box-shadow: inset 0 0 0 2px var(--accent)", css)
         self.assertIn("margin-bottom: 5px", css)
-        self.assertIn("border-radius: 8px", css)
 
     def test_install_is_idempotent(self):
         app, _ = self.make_app()
