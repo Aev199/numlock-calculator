@@ -105,7 +105,7 @@ class HotkeyTests(unittest.TestCase):
             app._numlock_down,
             app._keyboard_module,
             app._restoring_numlock,
-            app._numlock_restore_needed,
+            app._numlock_cycle_active,
             app._numlock_hook_mode,
         )
         app._window = FakeWindow()
@@ -115,10 +115,13 @@ class HotkeyTests(unittest.TestCase):
         app._numlock_down = False
         app._keyboard_module = None
         app._restoring_numlock = False
-        app._numlock_restore_needed = False
-        app._numlock_hook_mode = 'none'
+        app._numlock_cycle_active = False
+        # Prevent platform-specific injection in unit tests. The fallback still
+        # exercises the physical key latch and window state machine.
+        app._numlock_hook_mode = 'fallback-suppressed'
 
     def tearDown(self):
+        time.sleep(0.08)
         (
             app._window,
             app._visible,
@@ -127,32 +130,31 @@ class HotkeyTests(unittest.TestCase):
             app._numlock_down,
             app._keyboard_module,
             app._restoring_numlock,
-            app._numlock_restore_needed,
+            app._numlock_cycle_active,
             app._numlock_hook_mode,
         ) = self.saved
 
-    def test_one_toggle_per_press_and_restore_schedule(self):
-        with patch.object(app, 'restore_numlock_after_toggle') as restore_numlock:
-            app.on_numlock_press(was_on_before=True)
-            app.on_numlock_press(was_on_before=True)
-            self.assertEqual(app._window.hide_calls, 1)
-            self.assertEqual(restore_numlock.call_count, 1)
+    def test_one_window_toggle_per_physical_press(self):
+        app.on_numlock_press(was_on_before=True)
+        app.on_numlock_press(was_on_before=True)
+        time.sleep(0.03)
+        self.assertEqual(app._window.hide_calls, 1)
 
-            app.on_numlock_release()
-            app.on_numlock_press(was_on_before=True)
-            self.assertEqual(app._window.show_calls, 1)
-            self.assertEqual(app._window.restore_calls, 1)
-            self.assertEqual(restore_numlock.call_count, 3)
-
-        # Showing the fake window starts the same asynchronous focus worker as
-        # the real application. Let it finish before tearDown swaps the window.
+        app.on_numlock_release()
+        app.on_numlock_press(was_on_before=True)
         time.sleep(0.08)
+        self.assertEqual(app._window.show_calls, 1)
+        self.assertEqual(app._window.restore_calls, 1)
 
-    def test_press_from_off_does_not_schedule_inverse_toggle(self):
-        with patch.object(app, 'restore_numlock_after_toggle') as restore_numlock:
-            app.on_numlock_press(was_on_before=False)
-            restore_numlock.assert_not_called()
-            self.assertFalse(app._numlock_restore_needed)
+    def test_native_blink_entry_points_are_exposed(self):
+        self.assertTrue(callable(app.send_numlock_toggle))
+        self.assertTrue(callable(app.start_numlock_blink))
+        self.assertGreater(app_numlock_compat.NUMLOCK_BLINK_SECONDS, 0)
+        self.assertEqual(
+            app_numlock_compat.INJECTED_MASK,
+            app_numlock_compat.LLKHF_INJECTED
+            | app_numlock_compat.LLKHF_LOWER_IL_INJECTED,
+        )
 
     def test_fallback_suppresses_physical_toggle(self):
         calls = []
