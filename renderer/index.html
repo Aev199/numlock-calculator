@@ -8,52 +8,55 @@
 </head>
 <body data-theme="light">
   <div class="app-container">
-    <!-- Шапка -->
-    <div class="header">
+    <header class="header">
       <span class="app-title">NumLock Calc</span>
       <div class="header-actions">
-        <button class="icon-btn" id="btnTheme" title="Тёмная/светлая тема">🌓</button>
+        <button type="button" class="icon-btn" id="btnTheme" title="Тёмная/светлая тема" aria-label="Переключить тему">◐</button>
+        <button type="button" class="icon-btn icon-btn--danger" id="btnExit" title="Полностью выйти" aria-label="Выйти">×</button>
       </div>
-    </div>
+    </header>
 
-    <!-- Вкладки: Калькулятор и Конвертер -->
-    <div class="tab-bar">
-      <button class="tab-btn active" data-tab="calc">Калькулятор</button>
-      <button class="tab-btn" data-tab="converter">Конвертер</button>
-    </div>
+    <nav class="tab-bar" aria-label="Разделы">
+      <button type="button" class="tab-btn active" data-tab="calc">Калькулятор</button>
+      <button type="button" class="tab-btn" data-tab="converter">Конвертер</button>
+    </nav>
 
-    <!-- Калькулятор -->
-    <div class="tab-content active" id="tab-calc">
-      <!-- История вычислений над дисплеем -->
-      <div class="history-panel" id="historyPanel">
+    <main class="tab-content active" id="tab-calc">
+      <section class="history-panel" aria-label="История вычислений">
         <div class="history-scroll" id="historyScroll">
           <div class="history-empty">Нет истории</div>
         </div>
-      </div>
-      <!-- Дисплей -->
-      <div class="display-area">
-        <div class="expression-line" id="exprLine"></div>
-        <div class="result-line" id="resultLine">0</div>
-      </div>
-      <!-- Клавиатура -->
-      <div class="keypad" id="keypad">
-        <!-- Генерируется JS -->
-      </div>
-      <!-- Переключение режима и очистка истории -->
-      <div class="mode-bar">
-        <button class="btn btn--memory" id="btnMode">Инженерный ▸ Стандартный</button>
-        <button class="btn btn--memory" id="btnClearHistory" title="Очистить историю">🗑️</button>
-      </div>
-    </div>
+      </section>
 
-    <!-- Конвертер -->
-    <div class="tab-content" id="tab-converter">
-      <div class="converter-wrap" id="converterWrap">
-        <!-- Генерируется JS -->
+      <section class="display-area" aria-label="Выражение и результат">
+        <input
+          type="text"
+          class="expression-input"
+          id="exprInput"
+          inputmode="decimal"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Редактируемое выражение"
+          placeholder="Введите выражение"
+        >
+        <div class="result-line" id="resultLine" aria-live="polite">0</div>
+      </section>
+
+      <section class="keypad" id="keypad" aria-label="Клавиатура калькулятора"></section>
+
+      <div class="mode-bar">
+        <button type="button" class="btn btn--memory" id="btnMode">Режим: инженерный</button>
+        <button type="button" class="btn btn--memory btn--compact" id="btnClearHistory" title="Очистить историю" aria-label="Очистить историю">🗑</button>
       </div>
-    </div>
+    </main>
+
+    <main class="tab-content" id="tab-converter">
+      <div class="converter-wrap" id="converterWrap"></div>
+    </main>
   </div>
 
+  <script src="calc-core.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

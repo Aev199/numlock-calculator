@@ -1,0 +1,3 @@
+pywebview==6.2.1
+keyboard==0.13.5
+pyinstaller==6.21.0

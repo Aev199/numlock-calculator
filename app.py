@@ -1,208 +1,338 @@
-"""
-NumLock Calculator — Python/WebView Portable Launcher
-=====================================================
-Заменяет Electron: окно на pywebview + глобальный хук NumLock.
+"""NumLock Calc: pywebview launcher for the portable Windows build."""
 
-Сборка: pyinstaller --onefile --windowed --add-data "renderer;renderer" app.py
-"""
+from __future__ import annotations
 
+import ctypes
+import json
 import os
 import sys
-import json
+import tempfile
 import threading
+from pathlib import Path
+from typing import Any
+
 import webview
 
-# ── Пути (учитываем PyInstaller bundle) ──────────────────────────────
-if getattr(sys, 'frozen', False):
-    BASE_DIR = sys._MEIPASS
-    DATA_FILE = os.path.join(os.path.dirname(sys.executable), 'numlock-calc-data.json')
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DATA_FILE = os.path.join(BASE_DIR, 'numlock-calc-data.json')
 
-RENDERER_DIR = os.path.join(BASE_DIR, 'renderer')
+APP_NAME = "NumLock Calc"
+DATA_FILENAME = "numlock-calc-data.json"
+VK_NUMLOCK = 0x90
+KEYEVENTF_EXTENDEDKEY = 0x0001
+KEYEVENTF_KEYUP = 0x0002
+NUMLOCK_SCAN_CODE = 0x45
 
 
-# ── Persistent storage (замена localStorage) ─────────────────────────
+def resource_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    return Path(__file__).resolve().parent
+
+
+def application_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+BASE_DIR = resource_dir()
+RENDERER_DIR = BASE_DIR / "renderer"
+DATA_FILE = application_dir() / DATA_FILENAME
+
+
 class Storage:
-    """Класс-мост между JS (localStorage) и Python (JSON-файл).
-    Методы getItem/setItem/removeItem вызываются из JS через
-    window.pywebview.api.getItem(...) и т.д.
-    """
+    """Small thread-safe JSON key/value store located next to the executable."""
 
-    def __init__(self, filepath):
+    def __init__(self, filepath: Path):
         self._filepath = filepath
-        self._data = {}
+        self._data: dict[str, Any] = {}
+        self._lock = threading.RLock()
         self._load()
 
-    def _load(self):
-        if os.path.exists(self._filepath):
+    def _load(self) -> None:
+        with self._lock:
+            if not self._filepath.exists():
+                return
             try:
-                with open(self._filepath, 'r', encoding='utf-8') as f:
-                    self._data = json.load(f)
-            except Exception:
+                raw = json.loads(self._filepath.read_text(encoding="utf-8"))
+                self._data = raw if isinstance(raw, dict) else {}
+            except (OSError, json.JSONDecodeError):
                 self._data = {}
 
-    def _save(self):
-        try:
-            with open(self._filepath, 'w', encoding='utf-8') as f:
-                json.dump(self._data, f, ensure_ascii=False)
-        except Exception:
-            pass
+    def _save(self) -> None:
+        with self._lock:
+            self._filepath.parent.mkdir(parents=True, exist_ok=True)
+            payload = json.dumps(self._data, ensure_ascii=False, indent=2)
+            fd, temp_name = tempfile.mkstemp(
+                prefix=f".{self._filepath.stem}-",
+                suffix=".tmp",
+                dir=str(self._filepath.parent),
+                text=True,
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                    handle.write(payload)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temp_name, self._filepath)
+            except Exception:
+                try:
+                    os.unlink(temp_name)
+                except OSError:
+                    pass
+                raise
 
-    def getItem(self, key):
-        return self._data.get(key)
+    def get(self, key: str) -> Any:
+        with self._lock:
+            return self._data.get(key)
 
-    def setItem(self, key, value):
-        self._data[key] = value
-        self._save()
+    def set(self, key: str, value: Any) -> bool:
+        with self._lock:
+            self._data[key] = value
+            self._save()
+        return True
 
-    def removeItem(self, key):
-        self._data.pop(key, None)
-        self._save()
+    def remove(self, key: str) -> bool:
+        with self._lock:
+            self._data.pop(key, None)
+            self._save()
+        return True
+
+    def clear(self) -> bool:
+        with self._lock:
+            self._data.clear()
+            self._save()
+        return True
 
 
-# ── Сборка HTML (инлайн CSS + JS + localStorage-полифилл) ────────────
-def build_html():
-    with open(os.path.join(RENDERER_DIR, 'index.html'), 'r', encoding='utf-8') as f:
-        html = f.read()
-    with open(os.path.join(RENDERER_DIR, 'style.css'), 'r', encoding='utf-8') as f:
-        css = f.read()
-    with open(os.path.join(RENDERER_DIR, 'script.js'), 'r', encoding='utf-8') as f:
-        js = f.read()
+class AppApi:
+    """Methods exposed to JavaScript through pywebview's promise-based bridge."""
 
-    # Инлайн CSS
+    def __init__(self, storage: Storage):
+        self._storage = storage
+        self.window: webview.Window | None = None
+
+    def storage_get(self, key: str) -> Any:
+        return self._storage.get(key)
+
+    def storage_set(self, key: str, value: Any) -> bool:
+        return self._storage.set(key, value)
+
+    def storage_remove(self, key: str) -> bool:
+        return self._storage.remove(key)
+
+    def storage_clear(self) -> bool:
+        return self._storage.clear()
+
+    def quit_app(self) -> bool:
+        request_quit()
+        return True
+
+
+def build_html() -> str:
+    html = (RENDERER_DIR / "index.html").read_text(encoding="utf-8")
+    css = (RENDERER_DIR / "style.css").read_text(encoding="utf-8")
+    core_js = (RENDERER_DIR / "calc-core.js").read_text(encoding="utf-8")
+    app_js = (RENDERER_DIR / "script.js").read_text(encoding="utf-8")
+
     html = html.replace(
         '<link rel="stylesheet" href="style.css">',
-        f'<style>\n{css}\n</style>'
+        f"<style>\n{css}\n</style>",
     )
-    # Инлайн JS
+    html = html.replace(
+        '<script src="calc-core.js"></script>',
+        f"<script>\n{core_js}\n</script>",
+    )
     html = html.replace(
         '<script src="script.js"></script>',
-        f'<script>\n{js}\n</script>'
+        f"<script>\n{app_js}\n</script>",
     )
-
-    # Полифилл: подменяем localStorage на Python-мост (до загрузки body)
-    polyfill = '''<script>
-(function() {
-    var _cache = {};
-    window._lsReady = false;
-    try {
-        _cache.nlcalc_history = window.pywebview.api.getItem('nlcalc_history');
-        _cache.nlcalc_theme = window.pywebview.api.getItem('nlcalc_theme');
-        window._lsReady = true;
-    } catch(e) {}
-
-    var fakeLS = {
-        getItem: function(k) { return _cache[k] || null; },
-        setItem: function(k, v) {
-            _cache[k] = v;
-            try { window.pywebview.api.setItem(k, v); } catch(e) {}
-        },
-        removeItem: function(k) {
-            delete _cache[k];
-            try { window.pywebview.api.removeItem(k); } catch(e) {}
-        },
-        clear: function() { _cache = {}; }
-    };
-
-    Object.defineProperty(window, 'localStorage', {
-        value: fakeLS, writable: false, configurable: false
-    });
-})();
-</script>
-'''
-    html = html.replace('<body', polyfill + '\n<body', 1)
-
+    html = html.replace(
+        "<head>",
+        "<head>\n<script>window.__NUMLOCK_PYWEBVIEW__ = true;</script>",
+        1,
+    )
     return html
 
 
-# ── Глобальное состояние ─────────────────────────────────────────────
-_win = None          # pywebview window
-_visible = True      # отслеживаем видимость
-_quitting = False    # флаг выхода
-_storage = Storage(DATA_FILE)
+_window: webview.Window | None = None
+_visible = True
+_quitting = False
+_numlock_down = False
+_keyboard_module: Any = None
+_state_lock = threading.RLock()
+_api = AppApi(Storage(DATA_FILE))
 
 
-def toggle_window():
-    """Показать/скрыть окно (вызывается из потока-хука keyboard)."""
-    global _win, _visible
-    if _win is None:
+def numlock_is_on(user32: Any | None = None) -> bool:
+    """Return the Windows toggle state. Non-Windows test hosts are treated as on."""
+
+    if os.name != "nt" and user32 is None:
+        return True
+    api = user32 if user32 is not None else ctypes.windll.user32
+    return bool(api.GetKeyState(VK_NUMLOCK) & 0x0001)
+
+
+def ensure_numlock_on(user32: Any | None = None) -> bool:
+    """Turn NumLock on before installing the suppressing global hook."""
+
+    if os.name != "nt" and user32 is None:
+        return True
+    api = user32 if user32 is not None else ctypes.windll.user32
+    if numlock_is_on(api):
+        return True
+
+    api.keybd_event(VK_NUMLOCK, NUMLOCK_SCAN_CODE, KEYEVENTF_EXTENDEDKEY, 0)
+    api.keybd_event(
+        VK_NUMLOCK,
+        NUMLOCK_SCAN_CODE,
+        KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP,
+        0,
+    )
+    return numlock_is_on(api)
+
+
+def toggle_window() -> None:
+    """Toggle visibility exactly once for one accepted NumLock press."""
+
+    global _visible
+    if _window is None or _quitting:
+        return
+
+    with _state_lock:
+        should_hide = _visible
+
+    try:
+        if should_hide:
+            _window.hide()
+            with _state_lock:
+                _visible = False
+        else:
+            _window.show()
+            _window.restore()
+            with _state_lock:
+                _visible = True
+    except Exception:
+        return
+
+
+def on_numlock_press(_event: Any = None) -> None:
+    """Accept only the first KEY_DOWN until the matching KEY_UP arrives."""
+
+    global _numlock_down
+    with _state_lock:
+        if _quitting or _numlock_down:
+            return
+        _numlock_down = True
+    toggle_window()
+
+
+def on_numlock_release(_event: Any = None) -> None:
+    global _numlock_down
+    with _state_lock:
+        _numlock_down = False
+
+
+def on_numlock_event(event: Any) -> None:
+    """Dispatch one suppressed low-level NumLock event."""
+
+    event_type = getattr(event, "event_type", None)
+    if event_type == "down":
+        on_numlock_press(event)
+    elif event_type == "up":
+        on_numlock_release(event)
+
+
+def on_closing() -> bool:
+    global _visible
+    if _quitting:
+        return True
+    try:
+        if _window is not None:
+            _window.hide()
+    finally:
+        with _state_lock:
+            _visible = False
+    return False
+
+
+def on_shown() -> None:
+    global _visible
+    with _state_lock:
+        _visible = True
+
+
+def unregister_hotkeys() -> None:
+    global _numlock_down
+    if _keyboard_module is None:
         return
     try:
-        if _visible:
-            _win.hide()
-            _visible = False
-        else:
-            _win.show()
-            _win.restore()
-            _visible = True
+        _keyboard_module.unhook_all()
     except Exception:
-        pass
-
-
-def on_closing():
-    """Закрытие окна: прячем вместо выхода."""
-    global _visible, _quitting
-    if not _quitting:
-        _visible = False
-        return False  # блокируем закрытие
-    return True
-
-
-def on_shown():
-    global _visible
-    _visible = True
-
-
-def quit_app():
-    """Полный выход из приложения."""
-    global _quitting, _win
-    _quitting = True
-    if _win:
         try:
-            _win.destroy()
+            _keyboard_module.unhook_all_hotkeys()
         except Exception:
             pass
-    os._exit(0)
+    finally:
+        with _state_lock:
+            _numlock_down = False
 
 
-# ── Точка входа ──────────────────────────────────────────────────────
-def main():
-    global _win
+def request_quit() -> None:
+    global _quitting
+    if _quitting:
+        return
+    _quitting = True
+    unregister_hotkeys()
+    if _window is not None:
+        try:
+            _window.destroy()
+        except Exception:
+            pass
 
-    html = build_html()
 
-    _win = webview.create_window(
-        title='NumLock Calc',
-        html=html,
+def register_hotkeys() -> None:
+    global _keyboard_module
+    try:
+        import keyboard
+
+        ensure_numlock_on()
+        _keyboard_module = keyboard
+        keyboard.hook_key("num lock", on_numlock_event, suppress=True)
+        keyboard.add_hotkey(
+            "ctrl+shift+q",
+            request_quit,
+            suppress=False,
+            trigger_on_release=True,
+        )
+    except Exception:
+        _keyboard_module = None
+
+
+def main() -> None:
+    global _window
+
+    _window = webview.create_window(
+        title=APP_NAME,
+        html=build_html(),
         width=480,
         height=680,
         min_size=(380, 550),
-        js_api=_storage,
+        js_api=_api,
         resizable=True,
         easy_drag=False,
         confirm_close=False,
+        on_top=True,
     )
+    _api.window = _window
+    _window.events.closing += on_closing
+    _window.events.shown += on_shown
 
-    # События окна
-    _win.events.closing += on_closing
-    _win.events.shown += on_shown
-
-    # Глобальный хук NumLock
+    register_hotkeys()
     try:
-        import keyboard
-        keyboard.add_hotkey('num lock', toggle_window, suppress=False)
-        # Ctrl+Shift+Q для полного выхода
-        keyboard.add_hotkey('ctrl+shift+q', quit_app, suppress=False)
-        print('[NumLock] Hotkeys registered: NumLock=toggle, Ctrl+Shift+Q=quit')
-    except Exception as e:
-        print(f'[NumLock] Hotkey error: {e}')
-
-    # Старт
-    webview.start(private_mode=True)
+        webview.start(private_mode=True)
+    finally:
+        unregister_hotkeys()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
