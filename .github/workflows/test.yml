@@ -15,13 +15,17 @@ jobs:
         with:
           python-version: '3.13'
       - name: Compile Python sources
-        run: python -m py_compile app.py app_keyboard.py app_stability.py app_polish.py app_numlock_compat.py calc_engine.py calc_engine_runtime.py
+        run: python -m py_compile app.py app_keyboard.py app_stability.py app_polish.py app_numlock_compat.py app_tray.py calc_engine.py calc_engine_runtime.py
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
         run: python -m unittest tests.test_app -v
       - name: Test focus and NumLock stability
         run: python -m unittest tests.test_stability -v
+      - name: Test renderer polish
+        run: python -m unittest tests.test_polish -v
+      - name: Test frameless tray shell
+        run: python -m unittest tests.test_tray -v
       - name: Test full build sequence
         id: discover
         continue-on-error: true
