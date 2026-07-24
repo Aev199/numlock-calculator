@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Callable
 
 DEFAULT_WIDTH = 480
@@ -53,13 +54,6 @@ def install(app: Any) -> None:
         return
     app._compact_shell_installed = True
 
-    # The old prototype API is created before refinement layers are installed.
-    # Remove its document-insertion endpoint from the keyboard-first build so the
-    # feature cannot be called by renderer code or the pywebview bridge.
-    api_class = getattr(app, "AppApi", None)
-    if api_class is not None and hasattr(api_class, "commit_and_insert"):
-        delattr(api_class, "commit_and_insert")
-
     original_build_html: Callable[[], str] = app.build_html
     original_create_window = app.webview.create_window
 
@@ -74,6 +68,18 @@ def install(app: Any) -> None:
         )
         for old, new in replacements:
             html = html.replace(old, new, 1)
+
+        # Install the optimistic Enter layer before the renderer registers its
+        # normal keydown handler. It reuses a matching live-preview immediately,
+        # while the original expression is still committed to history in parallel.
+        renderer = Path(app.RENDERER_DIR)
+        enter_fast_js = (renderer / "enter-fast.js").read_text(encoding="utf-8")
+        body_marker = '<body data-theme="dark">'
+        html = html.replace(
+            body_marker,
+            f'{body_marker}\n<script>\n{enter_fast_js}\n</script>',
+            1,
+        )
         return html
 
     def create_window(*args: Any, **kwargs: Any) -> Any:
@@ -83,6 +89,11 @@ def install(app: Any) -> None:
         kwargs["height"] = DEFAULT_HEIGHT
         kwargs["min_size"] = MIN_SIZE
         return original_create_window(*args, **kwargs)
+
+    # The keyboard-first renderer no longer exposes the abandoned document-insert
+    # workflow through pywebview, even though the legacy helper remains in app.py.
+    if hasattr(app.AppApi, "commit_and_insert"):
+        delattr(app.AppApi, "commit_and_insert")
 
     app.build_html = build_html
     app.webview.create_window = create_window
