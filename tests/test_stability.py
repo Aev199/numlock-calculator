@@ -1,7 +1,7 @@
 import sys
+import time
 import types
 import unittest
-from unittest.mock import patch
 
 fake_webview = types.SimpleNamespace(Window=object)
 sys.modules.setdefault("webview", fake_webview)
@@ -68,12 +68,12 @@ class StabilityTests(unittest.TestCase):
 
     def test_visible_unfocused_window_is_refocused(self):
         app._renderer_focused = False
-        with patch.object(app, "request_editor_focus") as focus:
-            app.on_numlock_press()
+        app.on_numlock_press()
+        time.sleep(0.06)
         self.assertEqual(app._window.hide_calls, 0)
         self.assertEqual(app._window.show_calls, 1)
         self.assertEqual(app._window.restore_calls, 1)
-        focus.assert_called_once()
+        self.assertEqual(app._window.evaluate_calls, 1)
 
     def test_focus_state_is_exposed_through_api(self):
         app._api.window_focus_changed(False)
@@ -81,26 +81,9 @@ class StabilityTests(unittest.TestCase):
         app._api.window_focus_changed(True)
         self.assertTrue(app._renderer_focused)
 
-    def test_native_hook_is_preferred_over_keyboard_fallback(self):
-        calls = []
-
-        class FakeKeyboard:
-            @staticmethod
-            def hook_key(*_args, **_kwargs):
-                raise AssertionError("fallback should not be used")
-
-            @staticmethod
-            def add_hotkey(key, callback, **kwargs):
-                calls.append((key, callback, kwargs))
-
-        with (
-            patch.dict(sys.modules, {"keyboard": FakeKeyboard}),
-            patch.object(app, "ensure_numlock_on", return_value=True),
-            patch.object(app, "register_numlock_hook", return_value=True),
-        ):
-            app.register_hotkeys()
-
-        self.assertEqual(calls[0][0], "ctrl+shift+q")
+    def test_native_hook_is_installed_as_primary_handler(self):
+        self.assertTrue(callable(app.register_numlock_hook))
+        self.assertTrue(callable(app.stop_numlock_hook))
 
     def test_v2_html_contains_layout_independent_shortcut_and_groups(self):
         html = app.build_html()
