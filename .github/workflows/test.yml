@@ -15,8 +15,10 @@ jobs:
         with:
           python-version: '3.13'
       - name: Compile Python sources
-        run: python -m py_compile app.py app_keyboard.py calc_engine.py calc_engine_runtime.py
+        run: python -m py_compile app.py app_keyboard.py app_stability.py calc_engine.py calc_engine_runtime.py
       - name: Run Python tests
         run: python -m unittest discover -s tests -v
       - name: Check renderer JavaScript
-        run: node --check renderer/script.js
+        run: |
+          node --check renderer/script.js
+          node --check renderer/script-v2.js
