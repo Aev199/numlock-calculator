@@ -15,6 +15,9 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
+import app_stability
+
+app_stability.install(app)
 
 
 class StorageAndApiTests(unittest.TestCase):
@@ -65,8 +68,9 @@ class StorageAndApiTests(unittest.TestCase):
         self.assertIn('id="expressionInput"', html)
         self.assertIn('id="historyList"', html)
         self.assertNotIn('id="keypad"', html)
-        self.assertNotIn('src="script.js"', html)
+        self.assertNotIn('src="script-v2.js"', html)
         self.assertIn('window.__NUMLOCK_PYWEBVIEW__ = true', html)
+        self.assertIn('input?.select();', html)
 
 
 class FakeWindow:
@@ -97,12 +101,14 @@ class HotkeyTests(unittest.TestCase):
             getattr(app, '_renderer_focused', True),
             app._quitting,
             app._numlock_down,
+            app._keyboard_module,
         )
         app._window = FakeWindow()
         app._visible = True
         app._renderer_focused = True
         app._quitting = False
         app._numlock_down = False
+        app._keyboard_module = None
 
     def tearDown(self):
         (
@@ -111,6 +117,7 @@ class HotkeyTests(unittest.TestCase):
             app._renderer_focused,
             app._quitting,
             app._numlock_down,
+            app._keyboard_module,
         ) = self.saved
 
     def test_one_toggle_per_press(self):
@@ -122,7 +129,7 @@ class HotkeyTests(unittest.TestCase):
         self.assertEqual(app._window.show_calls, 1)
         self.assertEqual(app._window.restore_calls, 1)
 
-    def test_numlock_hook_is_suppressed(self):
+    def test_native_numlock_hook_is_primary(self):
         calls = []
 
         class FakeKeyboard:
@@ -134,9 +141,37 @@ class HotkeyTests(unittest.TestCase):
             def add_hotkey(key, callback, **kwargs):
                 calls.append(('hotkey', key, kwargs))
 
-        with patch.dict(sys.modules, {'keyboard': FakeKeyboard}), patch.object(app, 'ensure_numlock_on', return_value=True):
+        with (
+            patch.dict(sys.modules, {'keyboard': FakeKeyboard}),
+            patch.object(app, 'ensure_numlock_on', return_value=True),
+            patch.object(app, 'register_numlock_hook', return_value=True),
+        ):
             app.register_hotkeys()
-        self.assertEqual(calls[0][0:3], ('hook', 'num lock', True))
+
+        self.assertFalse(any(call[0] == 'hook' for call in calls))
+        self.assertEqual(calls[0][0:2], ('hotkey', 'ctrl+shift+q'))
+
+    def test_keyboard_hook_remains_suppressed_fallback(self):
+        calls = []
+
+        class FakeKeyboard:
+            @staticmethod
+            def hook_key(key, callback, suppress=False):
+                calls.append(('hook', key, suppress, callback))
+
+            @staticmethod
+            def add_hotkey(key, callback, **kwargs):
+                calls.append(('hotkey', key, kwargs))
+
+        with (
+            patch.dict(sys.modules, {'keyboard': FakeKeyboard}),
+            patch.object(app, 'ensure_numlock_on', return_value=True),
+            patch.object(app, 'register_numlock_hook', return_value=False),
+        ):
+            app.register_hotkeys()
+
+        hook = next(call for call in calls if call[0] == 'hook')
+        self.assertEqual(hook[1:3], ('num lock', True))
 
 
 if __name__ == '__main__':
