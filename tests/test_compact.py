@@ -79,7 +79,7 @@ function history(entry) {
         self.assertIn("base !== 'DEC'", html)
         self.assertFalse(hasattr(app.AppApi, "commit_and_insert"))
 
-    def test_enter_uses_cached_preview_and_returns_result_as_expression(self):
+    def test_enter_uses_cached_preview_and_updates_history_optimistically(self):
         app, _ = self.make_app()
         app_compact.install(app)
         html = app.build_html()
@@ -87,8 +87,11 @@ function history(entry) {
         self.assertIn("nlcalc-enter-fast", html)
         self.assertIn("cachedResultFor(expression)", html)
         self.assertIn("window.queueMicrotask", html)
-        self.assertIn("expression: result", html)
+        self.assertIn("expression: stillOnCommittedValue ? result : currentValue", html)
         self.assertIn("input.setSelectionRange(end, end)", html)
+        self.assertIn("showOptimisticHistory(expression, result)", html)
+        self.assertIn("markHistoryForSilentReconcile", html)
+        self.assertIn("history-reconciling", html)
         self.assertLess(
             html.index("nlcalc-enter-fast"),
             html.index("async function commitExpression()"),
@@ -117,6 +120,17 @@ function history(entry) {
         self.assertIn(".expression-input:focus-visible", css)
         self.assertIn("box-shadow: inset 0 0 0 2px var(--accent)", css)
         self.assertIn("margin-bottom: 5px", css)
+
+    def test_history_reconciliation_does_not_replay_all_row_animations(self):
+        css = (
+            Path(__file__).resolve().parents[1]
+            / "renderer"
+            / "polish-v3.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(".history-entry-optimistic", css)
+        self.assertIn(".history-list.history-reconciling .history-entry", css)
+        self.assertIn("animation: none !important", css)
 
     def test_install_is_idempotent(self):
         app, _ = self.make_app()
