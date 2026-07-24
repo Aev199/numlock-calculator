@@ -90,6 +90,7 @@ class StabilityTests(unittest.TestCase):
         self.assertIn('id="paletteGroups"', html)
         self.assertIn("event.code === 'KeyK'", html)
         self.assertIn("__nlcalcRestoreEditorFocus", html)
+        self.assertIn("input?.select();", html)
 
 
 if __name__ == "__main__":
