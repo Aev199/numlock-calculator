@@ -13,6 +13,13 @@ class CompactShellTests(unittest.TestCase):
             calls.append((args, kwargs))
             return object()
 
+        class AppApi:
+            def commit(self, _expression):
+                return {"ok": True}
+
+            def commit_and_insert(self, _expression):
+                return {"ok": True}
+
         source = """<html><head><style>base</style></head><body>
 <script>
 async function commitExpression(insertIntoDocument = false) {
@@ -34,6 +41,7 @@ function history(entry) {
 </script></body></html>"""
 
         app = types.SimpleNamespace(
+            AppApi=AppApi,
             build_html=lambda: source,
             webview=types.SimpleNamespace(create_window=create_window),
         )
@@ -68,6 +76,7 @@ function history(entry) {
         self.assertNotIn("Результат вставлен", html)
         self.assertIn("angle !== 'DEG'", html)
         self.assertIn("base !== 'DEC'", html)
+        self.assertFalse(hasattr(app.AppApi, "commit_and_insert"))
 
     def test_compact_visual_rows_and_result_actions_are_hidden(self):
         css = (
