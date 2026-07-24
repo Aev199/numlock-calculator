@@ -57,20 +57,30 @@
     );
 
     const fastCommit = async expression => {
+      const originalExpression = normalizeExpression(expression);
+      const optimisticResult = cachedResultFor(originalExpression);
       const response = await originalCommit(expression);
       if (!response?.ok || response.result === undefined || response.result === null) {
         return response;
       }
 
       const result = String(response.result).trim();
+      const input = document.getElementById('expressionInput');
+      const currentValue = input?.value ?? '';
+      const currentExpression = normalizeExpression(currentValue);
+      const stillOnCommittedValue = (
+        currentExpression === originalExpression
+        || currentExpression === optimisticResult
+      );
+
       cachedPreview = { expression: result, result };
 
       // script-v2.js writes evaluation.expression back into the editor after the
-      // await. Returning the result here preserves the original expression inside
-      // history_entry while making the editor behave like a classic calculator.
+      // await. Return the result while the user is still on this calculation, but
+      // preserve any newer typing that happened while persistence was finishing.
       return {
         ...response,
-        expression: result,
+        expression: stillOnCommittedValue ? result : currentValue,
       };
     };
 
