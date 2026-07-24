@@ -7,9 +7,11 @@ calc_engine.CalculatorSession = CalculatorSession
 
 import app
 import app_numlock_compat
+import app_polish
 import app_stability
 
 app_stability.install(app)
+app_polish.install(app)
 app_numlock_compat.install(app)
 
 
