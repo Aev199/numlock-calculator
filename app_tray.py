@@ -143,7 +143,7 @@ def install(app: Any) -> None:
 
     def start_webview(*args: Any, **kwargs: Any) -> Any:
         # app._window has already been assigned by the shell before this point.
-        start_tray()
+        app.start_tray()
         return original_webview_start(*args, **kwargs)
 
     def main() -> None:
