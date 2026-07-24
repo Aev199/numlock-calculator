@@ -1,0 +1,77 @@
+/* Interaction polish layered over style-v2.css. */
+
+.result-block .result-value,
+.result-block .result-error,
+.statusbar span,
+.mode-pill,
+.icon-button,
+.tool-button,
+.result-button,
+.palette-group,
+.palette-item,
+.completion-item,
+.history-entry {
+  will-change: transform, opacity;
+}
+
+.result-block .result-value {
+  transition:
+    opacity .12s ease,
+    color .14s ease,
+    transform .14s var(--ease);
+}
+
+.result-block.is-pending .result-value {
+  opacity: .62;
+  transform: translateY(1px);
+}
+
+.result-block.is-pending .result-prefix {
+  color: var(--accent);
+  animation: nlcalc-pending-pulse .75s ease-in-out infinite alternate;
+}
+
+.expression-input {
+  transition:
+    background .14s ease,
+    color .14s ease,
+    caret-color .14s ease;
+}
+
+.completion-popover:not(.hidden),
+.overlay:not(.hidden) .palette,
+.overlay:not(.hidden) .drawer {
+  transform-origin: top center;
+}
+
+.palette-group.active {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.palette-item.active,
+.completion-item.active {
+  transform: translateX(2px);
+}
+
+.history-entry:active {
+  transform: translateX(1px) scale(.995);
+}
+
+.result-button.accent:not(:disabled) {
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.result-button.accent:not(:disabled):hover {
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 31%, transparent);
+}
+
+@keyframes nlcalc-pending-pulse {
+  from { opacity: .45; transform: translateX(0); }
+  to { opacity: 1; transform: translateX(1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-block.is-pending .result-prefix {
+    animation: none;
+  }
+}
