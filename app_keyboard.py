@@ -6,6 +6,7 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
+import app_compact
 import app_numlock_compat
 import app_polish
 import app_stability
@@ -15,6 +16,7 @@ app_stability.install(app)
 app_polish.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
+app_compact.install(app)
 
 
 if __name__ == "__main__":
