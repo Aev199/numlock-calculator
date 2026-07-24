@@ -22,6 +22,8 @@ jobs:
         run: python -m unittest tests.test_app -v
       - name: Test focus and NumLock stability
         run: python -m unittest tests.test_stability -v
+      - name: Test full build sequence
+        run: python -m unittest discover -s tests -v
       - name: Check renderer JavaScript
         run: |
           node --check renderer/script.js
