@@ -88,23 +88,31 @@ def install(app: Any) -> None:
 
     def on_numlock_release(_event: Any = None) -> None:
         with app._state_lock:
-            if app._restoring_numlock:
-                return
+            restoring = app._restoring_numlock
+            # Always release the physical latch. A real key-up can arrive while
+            # the synthetic ON event is still guarded; ignoring it would leave
+            # subsequent physical presses permanently blocked.
             app._numlock_down = False
+
+        if restoring:
+            return
 
         # A second check after key-up covers slow keyboard drivers and remote
         # desktop sessions where the toggle state changes later than usual.
         app.restore_numlock_after_toggle(NUMLOCK_RELEASE_RECHECK_DELAY)
 
     def on_numlock_event(event: Any) -> None:
+        event_type = getattr(event, "event_type", None)
+        if event_type == "up":
+            # Release must clear the latch even if it overlaps restoration.
+            on_numlock_release(event)
+            return
+
         with app._state_lock:
             if app._restoring_numlock:
                 return
-        event_type = getattr(event, "event_type", None)
         if event_type == "down":
             on_numlock_press(event)
-        elif event_type == "up":
-            on_numlock_release(event)
 
     def call_next_hook(
         user32: Any,
