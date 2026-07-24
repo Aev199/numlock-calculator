@@ -23,7 +23,20 @@ jobs:
       - name: Test focus and NumLock stability
         run: python -m unittest tests.test_stability -v
       - name: Test full build sequence
-        run: python -m unittest discover -s tests -v
+        id: discover
+        continue-on-error: true
+        run: python -m unittest discover -s tests -v > discover.log 2>&1
+      - name: Upload full build test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: discover-log
+          path: discover.log
+      - name: Report full build test failure
+        if: steps.discover.outcome == 'failure'
+        run: |
+          cat discover.log
+          exit 1
       - name: Check renderer JavaScript
         run: |
           node --check renderer/script.js
