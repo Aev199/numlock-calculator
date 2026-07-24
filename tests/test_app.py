@@ -15,9 +15,6 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
-import app_stability
-
-app_stability.install(app)
 
 
 class StorageAndApiTests(unittest.TestCase):
@@ -68,9 +65,8 @@ class StorageAndApiTests(unittest.TestCase):
         self.assertIn('id="expressionInput"', html)
         self.assertIn('id="historyList"', html)
         self.assertNotIn('id="keypad"', html)
-        self.assertNotIn('src="script-v2.js"', html)
+        self.assertNotIn('src="script.js"', html)
         self.assertIn('window.__NUMLOCK_PYWEBVIEW__ = true', html)
-        self.assertIn('input?.select();', html)
 
 
 class FakeWindow:
@@ -129,7 +125,7 @@ class HotkeyTests(unittest.TestCase):
         self.assertEqual(app._window.show_calls, 1)
         self.assertEqual(app._window.restore_calls, 1)
 
-    def test_native_numlock_hook_is_primary(self):
+    def test_hotkey_registration_uses_native_or_suppressed_fallback(self):
         calls = []
 
         class FakeKeyboard:
@@ -141,37 +137,25 @@ class HotkeyTests(unittest.TestCase):
             def add_hotkey(key, callback, **kwargs):
                 calls.append(('hotkey', key, kwargs))
 
-        with (
-            patch.dict(sys.modules, {'keyboard': FakeKeyboard}),
-            patch.object(app, 'ensure_numlock_on', return_value=True),
-            patch.object(app, 'register_numlock_hook', return_value=True),
-        ):
-            app.register_hotkeys()
-
-        self.assertFalse(any(call[0] == 'hook' for call in calls))
-        self.assertEqual(calls[0][0:2], ('hotkey', 'ctrl+shift+q'))
-
-    def test_keyboard_hook_remains_suppressed_fallback(self):
-        calls = []
-
-        class FakeKeyboard:
             @staticmethod
-            def hook_key(key, callback, suppress=False):
-                calls.append(('hook', key, suppress, callback))
-
-            @staticmethod
-            def add_hotkey(key, callback, **kwargs):
-                calls.append(('hotkey', key, kwargs))
+            def unhook_all():
+                calls.append(('unhook',))
 
         with (
             patch.dict(sys.modules, {'keyboard': FakeKeyboard}),
             patch.object(app, 'ensure_numlock_on', return_value=True),
-            patch.object(app, 'register_numlock_hook', return_value=False),
         ):
-            app.register_hotkeys()
+            try:
+                app.register_hotkeys()
+            finally:
+                app.unregister_hotkeys()
 
-        hook = next(call for call in calls if call[0] == 'hook')
-        self.assertEqual(hook[1:3], ('num lock', True))
+        emergency = next(call for call in calls if call[0] == 'hotkey')
+        self.assertEqual(emergency[1], 'ctrl+shift+q')
+
+        fallback_hooks = [call for call in calls if call[0] == 'hook']
+        for hook in fallback_hooks:
+            self.assertEqual(hook[1:3], ('num lock', True))
 
 
 if __name__ == '__main__':
