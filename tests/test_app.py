@@ -1,6 +1,7 @@
 import json
 import sys
 import tempfile
+import time
 import types
 import unittest
 from pathlib import Path
@@ -122,6 +123,7 @@ class HotkeyTests(unittest.TestCase):
         self.assertEqual(app._window.hide_calls, 1)
         app.on_numlock_release()
         app.on_numlock_press()
+        time.sleep(0.08)
         self.assertEqual(app._window.show_calls, 1)
         self.assertEqual(app._window.restore_calls, 1)
 
