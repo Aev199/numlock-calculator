@@ -1,10 +1,9 @@
 """Classic NumLock Calculator key behavior for the keyboard-first shell.
 
-A physical NumLock press is allowed to reach Windows, so the keyboard LED and
-system toggle state follow the normal hardware path. NumLock Calc reacts to the
-same press and then restores NumLock to the ON state. Synthetic events emitted
-by that restoration are ignored by the calculator and therefore cannot toggle
-the window a second time.
+The physical NumLock event is allowed to reach Windows. The calculator reacts
+immediately, then the native hook thread verifies the resulting toggle state
+and restores NumLock to ON. Reading and restoring on the hook thread avoids
+stale GetKeyState values from unrelated worker threads.
 """
 
 from __future__ import annotations
@@ -23,12 +22,12 @@ WM_KEYUP = 0x0101
 WM_SYSKEYDOWN = 0x0104
 WM_SYSKEYUP = 0x0105
 WM_QUIT = 0x0012
+WM_APP_RESTORE_NUMLOCK = 0x8001
 LLKHF_LOWER_IL_INJECTED = 0x00000002
 LLKHF_INJECTED = 0x00000010
 INJECTED_MASK = LLKHF_LOWER_IL_INJECTED | LLKHF_INJECTED
-NUMLOCK_RESTORE_DELAY = 0.04
-NUMLOCK_RELEASE_RECHECK_DELAY = 0.015
-NUMLOCK_INJECTION_GUARD = 0.06
+NUMLOCK_RESTORE_DELAY = 0.045
+NUMLOCK_RELEASE_RECHECK_DELAY = 0.010
 
 _hook_thread: threading.Thread | None = None
 _hook_thread_id: int | None = None
@@ -39,72 +38,84 @@ _restore_lock = threading.RLock()
 
 
 def install(app: Any) -> None:
-    """Replace only NumLock registration while preserving the stabilized UI."""
+    """Replace NumLock registration while preserving the stabilized UI."""
 
     app._restoring_numlock = False
+    app._numlock_restore_needed = False
+    app._numlock_hook_mode = "none"
 
-    def restore_numlock_after_toggle(delay: float = NUMLOCK_RESTORE_DELAY) -> None:
-        """Restore NumLock asynchronously after Windows processes the key press."""
+    def post_restore_message(delay: float = NUMLOCK_RESTORE_DELAY) -> None:
+        """Ask the native hook thread to check and restore NumLock."""
 
-        def restore() -> None:
+        def post() -> None:
             if delay > 0:
                 time.sleep(delay)
             if app._quitting:
                 return
 
-            # Two physical callbacks (down and up) may schedule a restore. The
-            # lock prevents both workers from observing OFF and injecting two
-            # toggles, which would leave NumLock disabled again.
-            with _restore_lock:
-                if app._quitting:
-                    return
-                with app._state_lock:
-                    app._restoring_numlock = True
+            thread_id = _hook_thread_id
+            if os.name == "nt" and thread_id:
                 try:
-                    app.ensure_numlock_on()
-                    # keyboard's fallback hook can deliver injected events just
-                    # after keybd_event returns. Keep the guard alive briefly.
-                    time.sleep(NUMLOCK_INJECTION_GUARD)
-                finally:
-                    with app._state_lock:
-                        app._restoring_numlock = False
+                    app._user32().PostThreadMessageW(
+                        thread_id,
+                        WM_APP_RESTORE_NUMLOCK,
+                        0,
+                        0,
+                    )
+                    return
+                except Exception:
+                    pass
+
+            # This path is used only by the library fallback. Its hook suppresses
+            # the physical system toggle, so NumLock should already remain ON.
+            try:
+                app.ensure_numlock_on()
+            except Exception:
+                pass
 
         threading.Thread(
-            target=restore,
-            name="NumLockRestore",
+            target=post,
+            name="NumLockRestoreRequest",
             daemon=True,
         ).start()
 
-    def on_numlock_press(_event: Any = None) -> None:
+    def restore_numlock_after_toggle(delay: float = NUMLOCK_RESTORE_DELAY) -> None:
+        post_restore_message(delay)
+
+    def on_numlock_press(
+        _event: Any = None,
+        was_on_before: bool | None = None,
+    ) -> None:
+        if was_on_before is None:
+            try:
+                was_on_before = bool(app.numlock_is_on())
+            except Exception:
+                was_on_before = True
+
         with app._state_lock:
             if app._quitting or app._restoring_numlock or app._numlock_down:
                 return
             app._numlock_down = True
+            # If NumLock was ON before the genuine press, Windows is about to
+            # switch it OFF and the hook thread must switch it back ON.
+            app._numlock_restore_needed = bool(was_on_before)
 
-        # React immediately, but do not consume the key. Windows will briefly
-        # toggle NumLock OFF through its normal path; the worker restores it ON.
         app.toggle_window()
-        app.restore_numlock_after_toggle(NUMLOCK_RESTORE_DELAY)
+        if was_on_before:
+            app.restore_numlock_after_toggle(NUMLOCK_RESTORE_DELAY)
 
     def on_numlock_release(_event: Any = None) -> None:
         with app._state_lock:
-            restoring = app._restoring_numlock
-            # Always release the physical latch. A real key-up can arrive while
-            # the synthetic ON event is still guarded; ignoring it would leave
-            # subsequent physical presses permanently blocked.
             app._numlock_down = False
+            restore_needed = bool(app._numlock_restore_needed)
 
-        if restoring:
-            return
-
-        # A second check after key-up covers slow keyboard drivers and remote
-        # desktop sessions where the toggle state changes later than usual.
-        app.restore_numlock_after_toggle(NUMLOCK_RELEASE_RECHECK_DELAY)
+        if restore_needed:
+            # A second idempotent check covers slow drivers and remote sessions.
+            app.restore_numlock_after_toggle(NUMLOCK_RELEASE_RECHECK_DELAY)
 
     def on_numlock_event(event: Any) -> None:
         event_type = getattr(event, "event_type", None)
         if event_type == "up":
-            # Release must clear the latch even if it overlaps restoration.
             on_numlock_release(event)
             return
 
@@ -128,6 +139,43 @@ def install(app: Any) -> None:
                 l_param,
             )
         )
+
+    def restore_on_hook_thread(user32: Any) -> None:
+        """Restore toggle state from the hook message-loop thread itself."""
+
+        with _restore_lock:
+            if app._quitting:
+                return
+
+            try:
+                is_on = bool(user32.GetKeyState(app.VK_NUMLOCK) & 0x0001)
+            except Exception:
+                is_on = True
+
+            if not is_on:
+                with app._state_lock:
+                    app._restoring_numlock = True
+                try:
+                    # keybd_event produces LLKHF_INJECTED events. The hook passes
+                    # them to Windows but never treats them as a user invocation.
+                    user32.keybd_event(
+                        app.VK_NUMLOCK,
+                        app.NUMLOCK_SCAN_CODE,
+                        app.KEYEVENTF_EXTENDEDKEY,
+                        0,
+                    )
+                    user32.keybd_event(
+                        app.VK_NUMLOCK,
+                        app.NUMLOCK_SCAN_CODE,
+                        app.KEYEVENTF_EXTENDEDKEY | app.KEYEVENTF_KEYUP,
+                        0,
+                    )
+                finally:
+                    with app._state_lock:
+                        app._restoring_numlock = False
+
+            with app._state_lock:
+                app._numlock_restore_needed = False
 
     def native_hook_loop() -> None:
         global _hook_thread_id, _hook_handle, _hook_callback
@@ -171,6 +219,13 @@ def install(app: Any) -> None:
             ctypes.c_ssize_t,
         ]
         user32.CallNextHookEx.restype = ctypes.c_ssize_t
+        user32.PostThreadMessageW.argtypes = [
+            ctypes.c_ulong,
+            ctypes.c_uint,
+            ctypes.c_size_t,
+            ctypes.c_ssize_t,
+        ]
+        user32.PostThreadMessageW.restype = wintypes.BOOL
         _hook_thread_id = int(kernel32.GetCurrentThreadId())
 
         @low_level_proc
@@ -184,25 +239,29 @@ def install(app: Any) -> None:
                     flags = int(event.flags)
                     if not (flags & INJECTED_MASK):
                         if int(w_param) in (WM_KEYDOWN, WM_SYSKEYDOWN):
-                            threading.Thread(
-                                target=on_numlock_press,
-                                daemon=True,
-                            ).start()
+                            # At this point Windows has not applied the physical
+                            # toggle yet, so this is the true pre-press state.
+                            was_on = bool(
+                                user32.GetKeyState(app.VK_NUMLOCK) & 0x0001
+                            )
+                            on_numlock_press(was_on_before=was_on)
                         elif int(w_param) in (WM_KEYUP, WM_SYSKEYUP):
                             on_numlock_release()
 
-                    # Important: pass both physical and injected events onward.
-                    # Physical input briefly performs the genuine Windows
-                    # toggle; injected restoration then turns NumLock back ON.
+                    # Both genuine and injected events must reach Windows: the
+                    # genuine event creates the brief OFF state, and the injected
+                    # event restores ON.
                     return call_next_hook(user32, n_code, w_param, l_param)
 
             return call_next_hook(user32, n_code, w_param, l_param)
 
         _hook_callback = keyboard_proc
+        # Passing NULL is the standard and most compatible choice for a
+        # WH_KEYBOARD_LL callback hosted by the current Python process.
         hook = user32.SetWindowsHookExW(
             WH_KEYBOARD_LL,
             keyboard_proc,
-            kernel32.GetModuleHandleW(None),
+            None,
             0,
         )
         _hook_handle = int(hook) if hook else None
@@ -212,12 +271,18 @@ def install(app: Any) -> None:
 
         message = wintypes.MSG()
         try:
-            while user32.GetMessageW(
-                ctypes.byref(message),
-                None,
-                0,
-                0,
-            ) > 0:
+            while True:
+                result = user32.GetMessageW(
+                    ctypes.byref(message),
+                    None,
+                    0,
+                    0,
+                )
+                if result <= 0:
+                    break
+                if int(message.message) == WM_APP_RESTORE_NUMLOCK:
+                    restore_on_hook_thread(user32)
+                    continue
                 user32.TranslateMessage(ctypes.byref(message))
                 user32.DispatchMessageW(ctypes.byref(message))
         finally:
@@ -261,22 +326,35 @@ def install(app: Any) -> None:
         _hook_callback = None
 
     def register_hotkeys() -> None:
+        # The native hook must not depend on the optional keyboard package used
+        # for Ctrl+Shift+Q and clipboard insertion.
+        try:
+            app.ensure_numlock_on()
+        except Exception:
+            pass
+
+        native_ok = register_native_hook()
+        app._numlock_hook_mode = "native" if native_ok else "none"
+
         try:
             import keyboard
+        except Exception:
+            app._keyboard_module = None
+            return
 
-            # Normalize startup state before installing the hook, so this
-            # synthetic event cannot be mistaken for a user invocation.
-            app.ensure_numlock_on()
-            app._keyboard_module = keyboard
-            if not register_native_hook():
-                # Fallback must also let the genuine Windows toggle happen.
-                # _restoring_numlock prevents the synthetic re-enable event
-                # from opening or hiding the application again.
-                keyboard.hook_key(
-                    "num lock",
-                    on_numlock_event,
-                    suppress=False,
-                )
+        app._keyboard_module = keyboard
+        if not native_ok:
+            # A reliable classic blink cannot be implemented without the native
+            # thread. Suppress the physical toggle so NumLock at least remains ON
+            # while the calculator still responds.
+            keyboard.hook_key(
+                "num lock",
+                on_numlock_event,
+                suppress=True,
+            )
+            app._numlock_hook_mode = "fallback-suppressed"
+
+        try:
             keyboard.add_hotkey(
                 "ctrl+shift+q",
                 app.request_quit,
@@ -284,7 +362,7 @@ def install(app: Any) -> None:
                 trigger_on_release=True,
             )
         except Exception:
-            app._keyboard_module = None
+            pass
 
     def unregister_hotkeys() -> None:
         stop_native_hook()
@@ -299,6 +377,8 @@ def install(app: Any) -> None:
         with app._state_lock:
             app._numlock_down = False
             app._restoring_numlock = False
+            app._numlock_restore_needed = False
+            app._numlock_hook_mode = "none"
 
     def main() -> None:
         app._window = app.webview.create_window(
