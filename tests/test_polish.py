@@ -35,8 +35,8 @@ class RendererPolishTests(unittest.TestCase):
         self.assertIn("function schedulePreview(delay = 18)", html)
         self.assertIn("nlcalc-pending-pulse", html)
         self.assertLess(
-            html.index("nlcalc-polish-v3"),
-            html.index("const POLISH_MARKER") + len(html),
+            html.index("const POLISH_MARKER"),
+            html.index("function schedulePreview(delay = 18)"),
         )
 
     def test_install_is_idempotent(self):
