@@ -190,6 +190,18 @@
   border-radius: 9px;
 }
 
+/* Enter adds one local row immediately. When the persisted entry arrives,
+   script-v2 rebuilds the list; suppress that reconciliation animation so the
+   optimistic row is replaced without a visible second refresh. */
+.history-entry-optimistic {
+  animation-duration: .12s;
+}
+
+.history-list.history-reconciling .history-entry {
+  animation: none !important;
+  transition: none !important;
+}
+
 .history-meta {
   margin-top: 2px;
 }
