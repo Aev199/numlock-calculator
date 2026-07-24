@@ -91,6 +91,18 @@ function history(entry) {
         self.assertIn("display: none !important", css)
         self.assertIn("grid-template-columns: auto minmax(0, 1fr)", css)
 
+    def test_editor_focus_ring_stays_inside_input(self):
+        css = (
+            Path(__file__).resolve().parents[1]
+            / "renderer"
+            / "polish-v3.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(".expression-input:focus-visible", css)
+        self.assertIn("box-shadow: inset 0 0 0 2px var(--accent)", css)
+        self.assertIn("margin-bottom: 5px", css)
+        self.assertIn("border-radius: 8px", css)
+
     def test_install_is_idempotent(self):
         app, _ = self.make_app()
         app_compact.install(app)
