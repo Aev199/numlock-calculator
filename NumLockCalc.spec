@@ -6,7 +6,12 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('renderer', 'renderer')],
-    hiddenimports=['calc_engine_runtime'],
+    hiddenimports=[
+        'calc_engine_runtime',
+        'pystray._win32',
+        'PIL.Image',
+        'PIL.ImageDraw',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
