@@ -2,6 +2,7 @@
   'use strict';
 
   const POLISH_MARKER = 'nlcalc-polish-v3';
+  const AMBIGUOUS_WRAP_DELAY = 240;
   const FUNCTION_FALLBACK = [
     'sin', 'cos', 'tan', 'asin', 'acos', 'atan',
     'sqrt', 'cbrt', 'ln', 'log', 'log10', 'exp',
@@ -12,6 +13,7 @@
   const functionNames = new Set(FUNCTION_FALLBACK);
   let composing = false;
   let pendingVisualTimer = null;
+  let ambiguousWrapTimer = null;
 
   function expressionInput() {
     return document.getElementById('expressionInput');
@@ -43,8 +45,7 @@
   }
 
   function settlePreview() {
-    const block = resultBlock();
-    block?.classList.remove('is-pending');
+    resultBlock()?.classList.remove('is-pending');
     window.clearTimeout(pendingVisualTimer);
   }
 
@@ -151,11 +152,30 @@
       ].some(value => String(value || '').toLowerCase().includes(needle)));
     }
 
+    const cachedSuggestions = async query => filterCatalog(
+      await loadCatalog(),
+      query,
+    );
+
+    let methodPatched = false;
     try {
-      api.suggestions = async query => filterCatalog(await loadCatalog(), query);
+      api.suggestions = cachedSuggestions;
+      methodPatched = api.suggestions === cachedSuggestions;
     } catch (_) {
-      // Some pywebview backends expose a read-only proxy. Preloading still gives
-      // auto-parentheses the full function list even when method replacement fails.
+      methodPatched = false;
+    }
+
+    if (!methodPatched && window.pywebview?.api === api) {
+      try {
+        window.pywebview.api = new Proxy(api, {
+          get(target, property, receiver) {
+            if (property === 'suggestions') return cachedSuggestions;
+            return Reflect.get(target, property, receiver);
+          },
+        });
+      } catch (_) {
+        // Preloading still supplies the function list when the API object is fixed.
+      }
     }
 
     function invalidateAfter(methodName) {
@@ -200,24 +220,17 @@
     };
   }
 
-  function wrapTypedFunction(event) {
-    const input = expressionInput();
-    if (!input || event.target !== input) return;
-    if (composing || event.isComposing) return;
-    if (event.inputType !== 'insertText' || !event.data) return;
-    if (!/^[A-Za-z]$/.test(event.data)) return;
+  function hasLongerFunctionPrefix(name) {
+    const normalized = name.toLowerCase();
+    return [...functionNames].some(candidate => (
+      candidate !== normalized && candidate.startsWith(normalized)
+    ));
+  }
 
-    const token = tokenBeforeCursor(input);
-    if (!token || !functionNames.has(token.name.toLowerCase())) return;
-    if (input.value[token.cursor] === '(') return;
-
-    input.setRangeText('()', token.cursor, token.cursor, 'end');
-    input.setSelectionRange(token.cursor + 1, token.cursor + 1);
+  function pulseFunctionWrap(input) {
     markPreviewPending();
-
-    const card = input.closest('.editor-card');
     animateElement(
-      card,
+      input.closest('.editor-card'),
       [
         { boxShadow: 'var(--card-shadow)' },
         { boxShadow: '0 0 0 3px var(--accent-soft), var(--card-shadow)' },
@@ -225,6 +238,43 @@
       ],
       { duration: 240, easing: 'ease-out' },
     );
+  }
+
+  function wrapTokenNow(input, token, dispatchInput = false) {
+    const fresh = tokenBeforeCursor(input);
+    if (!fresh || fresh.name.toLowerCase() !== token.name.toLowerCase()) return;
+    if (fresh.cursor !== token.cursor || input.value[fresh.cursor] === '(') return;
+
+    input.setRangeText('()', fresh.cursor, fresh.cursor, 'end');
+    input.setSelectionRange(fresh.cursor + 1, fresh.cursor + 1);
+    pulseFunctionWrap(input);
+
+    if (dispatchInput) {
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  function wrapTypedFunction(event) {
+    const input = expressionInput();
+    if (!input || event.target !== input) return;
+    if (composing || event.isComposing) return;
+    if (event.inputType !== 'insertText' || !event.data) return;
+    if (!/^[A-Za-z]$/.test(event.data)) return;
+
+    window.clearTimeout(ambiguousWrapTimer);
+    const token = tokenBeforeCursor(input);
+    if (!token || !functionNames.has(token.name.toLowerCase())) return;
+    if (input.value[token.cursor] === '(') return;
+
+    if (hasLongerFunctionPrefix(token.name)) {
+      ambiguousWrapTimer = window.setTimeout(
+        () => wrapTokenNow(input, token, true),
+        AMBIGUOUS_WRAP_DELAY,
+      );
+      return;
+    }
+
+    wrapTokenNow(input, token);
   }
 
   function handlePairedParenthesis(event) {
@@ -255,7 +305,10 @@
     const input = expressionInput();
     if (!input) return;
 
-    input.addEventListener('compositionstart', () => { composing = true; }, true);
+    input.addEventListener('compositionstart', () => {
+      composing = true;
+      window.clearTimeout(ambiguousWrapTimer);
+    }, true);
     input.addEventListener('compositionend', () => { composing = false; }, true);
     input.addEventListener('input', event => {
       markPreviewPending();
