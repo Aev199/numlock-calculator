@@ -1,454 +1,629 @@
-(function() {
-  // Состояние
-  let currentExpr = '';
-  let currentResult = '0';
-  let memory = 0;
-  let isEngineerMode = true;
-  let history = JSON.parse(localStorage.getItem('nlcalc_history') || '[]');
-  let theme = localStorage.getItem('nlcalc_theme') || 'light';
+(function () {
+  'use strict';
 
-  document.body.setAttribute('data-theme', theme);
+  const expressionInput = document.getElementById('expressionInput');
+  const resultValue = document.getElementById('resultValue');
+  const resultError = document.getElementById('resultError');
+  const copyButton = document.getElementById('copyButton');
+  const insertButton = document.getElementById('insertButton');
+  const historyList = document.getElementById('historyList');
+  const historyCounter = document.getElementById('historyCounter');
+  const historySearch = document.getElementById('historySearch');
+  const completionPopover = document.getElementById('completionPopover');
+  const angleMode = document.getElementById('angleMode');
+  const numberBase = document.getElementById('numberBase');
+  const themeButton = document.getElementById('themeButton');
+  const hideButton = document.getElementById('hideButton');
+  const quitButton = document.getElementById('quitButton');
+  const paletteButton = document.getElementById('paletteButton');
+  const memoryButton = document.getElementById('memoryButton');
+  const variablesButton = document.getElementById('variablesButton');
+  const clearHistoryButton = document.getElementById('clearHistoryButton');
+  const statusText = document.getElementById('statusText');
+  const paletteOverlay = document.getElementById('paletteOverlay');
+  const paletteSearch = document.getElementById('paletteSearch');
+  const paletteResults = document.getElementById('paletteResults');
+  const drawerOverlay = document.getElementById('drawerOverlay');
+  const drawerTitle = document.getElementById('drawerTitle');
+  const drawerSubtitle = document.getElementById('drawerSubtitle');
+  const drawerContent = document.getElementById('drawerContent');
+  const drawerClose = document.getElementById('drawerClose');
+  const toast = document.getElementById('toast');
 
-  // DOM
-  const exprLine = document.getElementById('exprLine');
-  const resultLine = document.getElementById('resultLine');
-  const keypad = document.getElementById('keypad');
-  const btnMode = document.getElementById('btnMode');
-  const btnClearHistory = document.getElementById('btnClearHistory');
-  const historyScroll = document.getElementById('historyScroll');
-  const converterWrap = document.getElementById('converterWrap');
+  let api = null;
+  let history = [];
+  let settings = { angle_mode: 'DEG', number_base: 'DEC', precision: 12 };
+  let uiSettings = { theme: 'dark' };
+  let variables = {};
+  let memories = Array(10).fill('0');
+  let lastEvaluation = null;
+  let previewTimer = null;
+  let previewSequence = 0;
+  let historyCursor = -1;
+  let historyDraft = '';
+  let completionItems = [];
+  let completionIndex = 0;
+  let paletteItems = [];
+  let paletteIndex = 0;
+  let toastTimer = null;
+  let clearArmedUntil = 0;
 
-  // Раскладки
-  const standardButtons = [
-    ['MC', 'MR', 'M+', 'M-', 'C'],
-    ['7', '8', '9', '/', '√'],
-    ['4', '5', '6', '*', '%'],
-    ['1', '2', '3', '-', '1/x'],
-    ['0', '.', '±', '+', '='],
-  ];
-
-  const engineerButtons = [
-    ['sin', 'cos', 'tan', 'log', 'ln', 'C'],
-    ['sin⁻¹', 'cos⁻¹', 'tan⁻¹', '10ˣ', 'eˣ', '⌫'],
-    ['x²', 'x³', 'xⁿ', '√', '∛', 'π'],
-    ['(', ')', 'EXP', 'n!', 'MC', 'MR'],
-    ['7', '8', '9', '/', 'M+', 'M-'],
-    ['4', '5', '6', '*', '±', '%'],
-    ['1', '2', '3', '-', '.', '1/x'],
-    ['0', '=', '+', '', '', ''],
-  ];
-
-  function buildKeypad(mode) {
-    const buttons = mode === 'engineer' ? engineerButtons : standardButtons;
-    keypad.innerHTML = '';
-    keypad.className = 'keypad ' + (mode === 'engineer' ? 'engineer' : 'standard');
-
-    buttons.forEach(row => {
-      row.forEach(label => {
-        if (!label) {
-          const spacer = document.createElement('div');
-          spacer.style.visibility = 'hidden';
-          keypad.appendChild(spacer);
-          return;
-        }
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        btn.classList.add('btn');
-
-        if (/^[0-9.]$/.test(label)) btn.classList.add('btn--number');
-        else if (['+', '-', '*', '/', '%'].includes(label)) btn.classList.add('btn--operator');
-        else if (label === '=') btn.classList.add('btn--equals');
-        else if (['MC', 'MR', 'M+', 'M-'].includes(label)) btn.classList.add('btn--memory');
-        else btn.classList.add('btn--func');
-
-        btn.addEventListener('click', () => handleButton(label));
-        keypad.appendChild(btn);
-      });
+  async function waitForBridge() {
+    if (window.pywebview && window.pywebview.api) return window.pywebview.api;
+    return new Promise(resolve => {
+      window.addEventListener('pywebviewready', () => resolve(window.pywebview.api), { once: true });
     });
   }
 
-  function handleButton(label) {
-    switch (label) {
-      case 'C':
-        currentExpr = '';
-        currentResult = '0';
-        break;
-      case '⌫':
-        currentExpr = currentExpr.slice(0, -1);
-        evaluateExpr();
-        break;
-      case '=':
-        calculateFinal();
-        return;
-      case '±':
-        toggleSign();
-        break;
-      case 'MC': memory = 0; return;
-      case 'MR': appendToExpr(String(memory)); break;
-      case 'M+': memory += parseFloat(currentResult) || 0; return;
-      case 'M-': memory -= parseFloat(currentResult) || 0; return;
-      case 'sin': applyUnary('sin'); return;
-      case 'cos': applyUnary('cos'); return;
-      case 'tan': applyUnary('tan'); return;
-      case 'sin⁻¹': applyUnary('asin'); return;
-      case 'cos⁻¹': applyUnary('acos'); return;
-      case 'tan⁻¹': applyUnary('atan'); return;
-      case 'log': applyUnary('log10'); return;
-      case 'ln': applyUnary('ln'); return;
-      case '10ˣ': applyUnary('10^'); return;
-      case 'eˣ': applyUnary('exp'); return;
-      case 'x²': applyUnary('sqr'); return;
-      case 'x³': applyUnary('cube'); return;
-      case '√': applyUnary('sqrt'); return;
-      case '∛': applyUnary('cbrt'); return;
-      case '1/x': applyUnary('inv'); return;
-      case 'n!': applyUnary('fact'); return;
-      case 'π': appendToExpr(String(Math.PI)); break;
-      case 'EXP': appendToExpr('e'); break;
-      case 'xⁿ': appendToExpr('^'); break;
-      default:
-        appendToExpr(label);
-    }
-    evaluateExpr();
-    updateDisplay();
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.remove('hidden');
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => toast.classList.add('hidden'), 1800);
   }
 
-  function appendToExpr(val) {
-    if (currentResult === 'Error') { currentExpr = ''; currentResult = '0'; }
-    currentExpr += val;
+  function setStatus(message) {
+    statusText.textContent = message;
   }
 
-  function toggleSign() {
-    if (currentResult !== '0' && currentResult !== 'Error' && currentExpr === '') {
-      currentExpr = String(-parseFloat(currentResult));
-      currentResult = currentExpr;
-    } else if (currentExpr) {
-      const match = currentExpr.match(/(.*?)(-?\d+\.?\d*)(?![\d.])$/);
-      if (match) {
-        const num = parseFloat(match[2]);
-        currentExpr = match[1] + String(-num);
-      }
-    }
-    evaluateExpr();
+  function setTheme(theme, persist = true) {
+    const normalized = theme === 'light' ? 'light' : 'dark';
+    uiSettings.theme = normalized;
+    document.body.dataset.theme = normalized;
+    if (persist && api) api.set_ui_settings({ theme: normalized }).catch(() => {});
   }
 
-  function applyUnary(func) {
-    try {
-      let val = parseFloat(currentResult);
-      if (isNaN(val)) val = 0;
-      let res;
-      const degToRad = (d) => d * Math.PI / 180;
-      const radToDeg = (r) => r * 180 / Math.PI;
-      switch (func) {
-        case 'sin': res = Math.sin(degToRad(val)); break;
-        case 'cos': res = Math.cos(degToRad(val)); break;
-        case 'tan': res = Math.tan(degToRad(val)); break;
-        case 'asin': res = radToDeg(Math.asin(Math.max(-1, Math.min(1, val)))); break;
-        case 'acos': res = radToDeg(Math.acos(Math.max(-1, Math.min(1, val)))); break;
-        case 'atan': res = radToDeg(Math.atan(val)); break;
-        case 'log10': res = Math.log10(val); break;
-        case 'ln': res = Math.log(val); break;
-        case '10^': res = Math.pow(10, val); break;
-        case 'exp': res = Math.exp(val); break;
-        case 'sqr': res = val * val; break;
-        case 'cube': res = val * val * val; break;
-        case 'sqrt': res = Math.sqrt(val); break;
-        case 'cbrt': res = Math.cbrt(val); break;
-        case 'inv': res = val !== 0 ? 1 / val : NaN; break;
-        case 'fact': {
-          if (val < 0 || !Number.isInteger(val)) { res = NaN; break; }
-          res = 1;
-          for (let i = 2; i <= val; i++) res *= i;
-          break;
-        }
-        default: res = val;
-      }
-      if (isNaN(res) || !isFinite(res)) {
-        currentResult = 'Error';
-        currentExpr = func + '(' + (parseFloat(currentResult)||val) + ')';
-      } else {
-        currentExpr = func + '(' + val + ')';
-        currentResult = formatNumber(res);
-      }
-    } catch(e) {
-      currentResult = 'Error';
-    }
-    updateDisplay();
+  function applySettings(next) {
+    settings = { ...settings, ...next };
+    angleMode.textContent = settings.angle_mode;
+    numberBase.textContent = settings.number_base;
   }
 
-  function evaluateExpr() {
-    if (!currentExpr) { currentResult = '0'; return; }
-    try {
-      let expr = currentExpr
-        .replace(/\^/g, '**')
-        .replace(/π/g, String(Math.PI))
-        .replace(/(?<![0-9)])e(?![0-9+\-*/^(])/, String(Math.E));
-      const sanitized = expr.replace(/[^0-9+\-*/().%eE\s]/g, '');
-      if (!sanitized) { currentResult = '0'; return; }
-      // eslint-disable-next-line no-new-func
-      const result = new Function('return ' + sanitized)();
-      if (isNaN(result) || !isFinite(result)) {
-        currentResult = 'Error';
-      } else {
-        currentResult = formatNumber(result);
-      }
-    } catch(e) {
-      currentResult = 'Error';
-    }
-  }
+  function setResult(evaluation) {
+    lastEvaluation = evaluation;
+    const valid = Boolean(evaluation && evaluation.ok && evaluation.result);
+    copyButton.disabled = !valid;
+    insertButton.disabled = !valid;
 
-  function calculateFinal() {
-    const expr = currentExpr;
-    evaluateExpr();
-    if (currentResult !== 'Error' && expr) {
-      addToHistory(expr, currentResult);
-    }
-    currentExpr = currentResult !== 'Error' ? currentResult : '';
-    updateDisplay();
-  }
-
-  function formatNumber(num) {
-    if (typeof num !== 'number') return String(num);
-    if (Number.isInteger(num) && Math.abs(num) < 1e15) return String(num);
-    if (Math.abs(num) < 1e-10 && num !== 0) return num.toExponential(8);
-    if (Math.abs(num) >= 1e15) return num.toExponential(8);
-    return parseFloat(num.toPrecision(12)).toString();
-  }
-
-  function updateDisplay() {
-    exprLine.textContent = currentExpr;
-    resultLine.textContent = currentResult;
-  }
-
-  // История в основном окне
-  function addToHistory(expr, res) {
-    const entry = { expr, res, time: Date.now() };
-    history.unshift(entry);
-    if (history.length > 200) history = history.slice(0, 200);
-    localStorage.setItem('nlcalc_history', JSON.stringify(history));
-    renderHistoryPanel();
-  }
-
-  function renderHistoryPanel() {
-    if (history.length === 0) {
-      historyScroll.innerHTML = '<div class="history-empty">Нет истории</div>';
+    if (!expressionInput.value.trim()) {
+      resultValue.textContent = 'Введите выражение';
+      resultValue.classList.add('muted');
+      resultError.classList.add('hidden');
       return;
     }
-    historyScroll.innerHTML = history.slice(0, 20).map((h, i) => `
-      <div class="history-item" data-index="${i}">
-        <span class="history-expr" title="${escapeHtml(h.expr)}">${escapeHtml(h.expr)}</span>
-        <span class="history-res">${escapeHtml(h.res)}</span>
-      </div>
-    `).join('');
 
-    historyScroll.querySelectorAll('.history-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const idx = parseInt(item.dataset.index);
-        const entry = history[idx];
-        currentExpr = entry.expr;
-        currentResult = entry.res;
-        updateDisplay();
-      });
-    });
-  }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  function clearHistory() {
-    if (confirm('Очистить всю историю вычислений?')) {
-      history = [];
-      localStorage.removeItem('nlcalc_history');
-      renderHistoryPanel();
-    }
-  }
-
-  // Конвертер единиц
-  const unitCategories = {
-    'Давление': {
-      units: ['Па', 'кПа', 'МПа', 'бар', 'атм', 'мм рт.ст.', 'psi'],
-      toBase: [1, 1000, 1e6, 1e5, 101325, 133.322, 6894.76],
-    },
-    'Площадь': {
-      units: ['м²', 'км²', 'га', 'см²', 'мм²', 'дюйм²', 'фут²'],
-      toBase: [1, 1e6, 10000, 0.0001, 1e-6, 0.00064516, 0.092903],
-    },
-    'Сила': {
-      units: ['Н', 'кН', 'кгс', 'фунт-сила', 'дина'],
-      toBase: [1, 1000, 9.80665, 4.44822, 1e-5],
-    },
-    'Объём': {
-      units: ['м³', 'л', 'мл', 'см³', 'галлон (US)', 'фут³'],
-      toBase: [1, 0.001, 1e-6, 1e-6, 0.00378541, 0.0283168],
-    },
-    'Длина': {
-      units: ['м', 'км', 'см', 'мм', 'дюйм', 'фут', 'миля'],
-      toBase: [1, 1000, 0.01, 0.001, 0.0254, 0.3048, 1609.34],
-    },
-    'Масса': {
-      units: ['кг', 'г', 'т', 'фунт', 'унция'],
-      toBase: [1, 0.001, 1000, 0.453592, 0.0283495],
-    },
-    'Температура': {
-      units: ['°C', '°F', 'K'],
-      toBase: null,
-    },
-  };
-
-  function buildConverter() {
-    const catSelect = document.createElement('select');
-    Object.keys(unitCategories).forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat;
-      opt.textContent = cat;
-      catSelect.appendChild(opt);
-    });
-
-    const fromSelect = document.createElement('select');
-    const toSelect = document.createElement('select');
-    const fromInput = document.createElement('input');
-    fromInput.type = 'number';
-    fromInput.value = '1';
-    const toInput = document.createElement('input');
-    toInput.type = 'number';
-    toInput.readOnly = true;
-
-    function populateUnits(cat) {
-      const data = unitCategories[cat];
-      fromSelect.innerHTML = '';
-      toSelect.innerHTML = '';
-      data.units.forEach(u => {
-        fromSelect.appendChild(new Option(u, u));
-        toSelect.appendChild(new Option(u, u));
-      });
-      toSelect.selectedIndex = 1;
-    }
-
-    function convert() {
-      const cat = catSelect.value;
-      const data = unitCategories[cat];
-      const fromUnit = fromSelect.value;
-      const toUnit = toSelect.value;
-      const fromVal = parseFloat(fromInput.value) || 0;
-
-      if (cat === 'Температура') {
-        let kelvin;
-        if (fromUnit === '°C') kelvin = fromVal + 273.15;
-        else if (fromUnit === '°F') kelvin = (fromVal - 32) * 5/9 + 273.15;
-        else kelvin = fromVal;
-
-        let result;
-        if (toUnit === '°C') result = kelvin - 273.15;
-        else if (toUnit === '°F') result = (kelvin - 273.15) * 9/5 + 32;
-        else result = kelvin;
-        toInput.value = parseFloat(result.toPrecision(10));
+    if (!evaluation || !evaluation.ok) {
+      resultValue.textContent = evaluation?.incomplete ? '…' : '—';
+      resultValue.classList.add('muted');
+      if (evaluation?.incomplete) {
+        resultError.classList.add('hidden');
       } else {
-        const fromIdx = data.units.indexOf(fromUnit);
-        const toIdx = data.units.indexOf(toUnit);
-        const baseVal = fromVal * data.toBase[fromIdx];
-        const result = baseVal / data.toBase[toIdx];
-        toInput.value = parseFloat(result.toPrecision(10));
+        resultError.textContent = evaluation?.error || 'Ошибка вычисления';
+        resultError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    resultValue.textContent = evaluation.result;
+    resultValue.classList.remove('muted');
+    resultError.classList.add('hidden');
+  }
+
+  function schedulePreview(delay = 90) {
+    window.clearTimeout(previewTimer);
+    const current = ++previewSequence;
+    previewTimer = window.setTimeout(async () => {
+      const expression = expressionInput.value;
+      if (!expression.trim()) {
+        setResult(null);
+        hideCompletion();
+        return;
+      }
+      try {
+        const evaluation = await api.preview(expression);
+        if (current !== previewSequence) return;
+        setResult(evaluation);
+      } catch (_) {
+        if (current === previewSequence) setResult({ ok: false, error: 'Нет связи с вычислительным движком' });
+      }
+    }, delay);
+  }
+
+  async function commitExpression(insertIntoDocument = false) {
+    const expression = expressionInput.value.trim();
+    if (!expression) return;
+    hideCompletion();
+    setStatus('Вычисление…');
+    try {
+      const evaluation = insertIntoDocument
+        ? await api.commit_and_insert(expression)
+        : await api.commit(expression);
+      setResult(evaluation);
+      if (!evaluation.ok) {
+        setStatus(evaluation.error || 'Ошибка вычисления');
+        return;
+      }
+      if (evaluation.history_entry) {
+        history.unshift(evaluation.history_entry);
+        renderHistory();
+      }
+      expressionInput.value = evaluation.expression?.trim() || expression;
+      expressionInput.setSelectionRange(expressionInput.value.length, expressionInput.value.length);
+      historyCursor = -1;
+      historyDraft = '';
+      setStatus(insertIntoDocument ? 'Результат вставлен' : 'Готово');
+      if (evaluation.assigned_variable) await refreshSessionData();
+    } catch (_) {
+      setStatus('Ошибка связи с приложением');
+    }
+  }
+
+  async function refreshSessionData() {
+    const data = await api.bootstrap();
+    variables = data.variables || {};
+    memories = data.memories || Array(10).fill('0');
+  }
+
+  function historyMatches(entry, query) {
+    if (!query) return true;
+    const haystack = `${entry.expression} ${entry.result}`.toLowerCase();
+    return haystack.includes(query.toLowerCase());
+  }
+
+  function shortTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderHistory() {
+    const query = historySearch.value.trim();
+    const filtered = history.filter(entry => historyMatches(entry, query));
+    historyCounter.textContent = String(filtered.length);
+    historyList.innerHTML = '';
+
+    if (!filtered.length) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.innerHTML = query
+        ? '<div><strong>Ничего не найдено</strong>Измените запрос</div>'
+        : '<div><strong>История пуста</strong>Введите выражение и нажмите Enter</div>';
+      historyList.appendChild(empty);
+      return;
+    }
+
+    filtered.forEach((entry, index) => {
+      const row = document.createElement('article');
+      row.className = 'history-entry';
+      row.style.animationDelay = `${Math.min(index, 8) * 14}ms`;
+      row.tabIndex = 0;
+      row.title = 'Загрузить выражение для редактирования';
+
+      const left = document.createElement('div');
+      const expression = document.createElement('div');
+      expression.className = 'history-expression';
+      expression.textContent = entry.expression;
+      const meta = document.createElement('div');
+      meta.className = 'history-meta';
+      meta.textContent = [entry.angle_mode, entry.number_base, shortTime(entry.created_at)].filter(Boolean).join(' · ');
+      left.append(expression, meta);
+
+      const result = document.createElement('div');
+      result.className = 'history-result';
+      result.textContent = entry.result;
+      result.title = 'Нажмите, чтобы скопировать результат';
+
+      const actions = document.createElement('div');
+      actions.className = 'history-entry-actions';
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'history-action';
+      copy.textContent = '⧉';
+      copy.title = 'Копировать результат';
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'history-action delete';
+      remove.textContent = '×';
+      remove.title = 'Удалить запись';
+      actions.append(copy, remove);
+
+      const load = () => loadHistoryEntry(entry);
+      row.addEventListener('click', load);
+      row.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          load();
+        }
+      });
+      result.addEventListener('click', event => {
+        event.stopPropagation();
+        copyText(entry.result);
+      });
+      copy.addEventListener('click', event => {
+        event.stopPropagation();
+        copyText(entry.result);
+      });
+      remove.addEventListener('click', async event => {
+        event.stopPropagation();
+        history = await api.delete_history(entry.id);
+        renderHistory();
+        showToast('Запись удалена');
+      });
+
+      row.append(left, result, actions);
+      historyList.appendChild(row);
+    });
+  }
+
+  function loadHistoryEntry(entry) {
+    expressionInput.value = entry.expression;
+    expressionInput.focus();
+    expressionInput.setSelectionRange(expressionInput.value.length, expressionInput.value.length);
+    historyCursor = -1;
+    schedulePreview(0);
+  }
+
+  async function copyText(text) {
+    const copied = await api.copy_text(text);
+    showToast(copied ? 'Результат скопирован' : 'Не удалось открыть буфер обмена');
+  }
+
+  function currentToken() {
+    const cursor = expressionInput.selectionStart ?? expressionInput.value.length;
+    const before = expressionInput.value.slice(0, cursor);
+    const match = before.match(/[A-Za-zА-Яа-я_][\wА-Яа-я]*$/);
+    return { token: match ? match[0] : '', start: match ? cursor - match[0].length : cursor, end: cursor };
+  }
+
+  async function updateCompletion(force = false) {
+    const token = currentToken();
+    if (!force && token.token.length < 2) {
+      hideCompletion();
+      return;
+    }
+    completionItems = await api.suggestions(token.token);
+    completionItems = completionItems.slice(0, 7);
+    completionIndex = 0;
+    renderCompletion();
+  }
+
+  function renderCompletion() {
+    completionPopover.innerHTML = '';
+    if (!completionItems.length) {
+      hideCompletion();
+      return;
+    }
+    completionItems.forEach((item, index) => {
+      const button = suggestionButton(item, index === completionIndex, 'completion-item');
+      button.addEventListener('mousedown', event => event.preventDefault());
+      button.addEventListener('click', () => insertSuggestion(item));
+      completionPopover.appendChild(button);
+    });
+    completionPopover.classList.remove('hidden');
+  }
+
+  function hideCompletion() {
+    completionPopover.classList.add('hidden');
+    completionItems = [];
+  }
+
+  function suggestionButton(item, active, className) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `${className}${active ? ' active' : ''}`;
+    const kind = document.createElement('span');
+    kind.className = 'item-kind';
+    kind.textContent = item.kind === 'function' ? 'ƒx' : item.kind === 'unit' ? 'unit' : 'var';
+    const label = document.createElement('span');
+    label.className = 'item-label';
+    label.textContent = item.label;
+    const description = document.createElement('span');
+    description.className = 'item-description';
+    description.textContent = item.description || '';
+    button.append(kind, label, description);
+    return button;
+  }
+
+  function insertAtSelection(text, cursorBack = 0) {
+    const start = expressionInput.selectionStart ?? expressionInput.value.length;
+    const end = expressionInput.selectionEnd ?? start;
+    expressionInput.setRangeText(text, start, end, 'end');
+    const cursor = Math.max(0, (expressionInput.selectionStart ?? expressionInput.value.length) - cursorBack);
+    expressionInput.setSelectionRange(cursor, cursor);
+    expressionInput.focus();
+    schedulePreview();
+  }
+
+  function insertSuggestion(item) {
+    const token = currentToken();
+    expressionInput.setSelectionRange(token.start, token.end);
+    const insert = item.insert || item.label;
+    insertAtSelection(insert, item.kind === 'function' && insert.endsWith('()') ? 1 : 0);
+    hideCompletion();
+    closePalette();
+  }
+
+  async function openPalette() {
+    hideCompletion();
+    paletteOverlay.classList.remove('hidden');
+    paletteOverlay.setAttribute('aria-hidden', 'false');
+    paletteSearch.value = '';
+    paletteItems = await api.suggestions('');
+    paletteIndex = 0;
+    renderPalette();
+    window.setTimeout(() => paletteSearch.focus(), 0);
+  }
+
+  function closePalette() {
+    paletteOverlay.classList.add('hidden');
+    paletteOverlay.setAttribute('aria-hidden', 'true');
+    expressionInput.focus();
+  }
+
+  function renderPalette() {
+    paletteResults.innerHTML = '';
+    if (!paletteItems.length) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.textContent = 'Ничего не найдено';
+      paletteResults.appendChild(empty);
+      return;
+    }
+    paletteItems.slice(0, 50).forEach((item, index) => {
+      const button = suggestionButton(item, index === paletteIndex, 'palette-item');
+      button.addEventListener('click', () => insertSuggestion(item));
+      paletteResults.appendChild(button);
+    });
+    paletteResults.querySelector('.active')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  async function filterPalette() {
+    paletteItems = await api.suggestions(paletteSearch.value);
+    paletteIndex = 0;
+    renderPalette();
+  }
+
+  function openDrawer(kind) {
+    drawerOverlay.classList.remove('hidden');
+    drawerOverlay.setAttribute('aria-hidden', 'false');
+    if (kind === 'memory') renderMemoryDrawer();
+    else renderVariablesDrawer();
+  }
+
+  function closeDrawer() {
+    drawerOverlay.classList.add('hidden');
+    drawerOverlay.setAttribute('aria-hidden', 'true');
+    expressionInput.focus();
+  }
+
+  function renderMemoryDrawer() {
+    drawerTitle.textContent = 'Память';
+    drawerSubtitle.textContent = '10 ячеек, совместимых с классическим NumLock Calculator';
+    drawerContent.innerHTML = '';
+    memories.forEach((value, index) => {
+      const row = document.createElement('div');
+      row.className = 'memory-row';
+      const slot = document.createElement('span');
+      slot.className = 'memory-slot';
+      slot.textContent = `M${index}`;
+      const display = document.createElement('span');
+      display.className = 'memory-value';
+      display.textContent = value;
+      const actions = document.createElement('div');
+      const insert = document.createElement('button');
+      insert.type = 'button';
+      insert.className = 'row-button';
+      insert.textContent = 'Вставить';
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'row-button';
+      save.textContent = 'Записать';
+      insert.addEventListener('click', () => {
+        insertAtSelection(value);
+        closeDrawer();
+      });
+      save.addEventListener('click', async () => {
+        const response = await api.set_memory(index, expressionInput.value);
+        if (!response.ok) {
+          showToast(response.error || 'Не удалось записать память');
+          return;
+        }
+        memories[index] = response.memory;
+        renderMemoryDrawer();
+        showToast(`M${index} обновлена`);
+      });
+      actions.append(insert, save);
+      row.append(slot, display, actions);
+      drawerContent.appendChild(row);
+    });
+  }
+
+  function renderVariablesDrawer() {
+    drawerTitle.textContent = 'Переменные';
+    drawerSubtitle.textContent = 'Создание: имя := выражение';
+    drawerContent.innerHTML = '';
+    const entries = Object.entries(variables);
+    if (!entries.length) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.innerHTML = '<div><strong>Переменных пока нет</strong>Пример: span := 6 m</div>';
+      drawerContent.appendChild(empty);
+      return;
+    }
+    entries.forEach(([name, value]) => {
+      const row = document.createElement('div');
+      row.className = 'variable-row';
+      const label = document.createElement('span');
+      label.className = 'memory-slot';
+      label.textContent = name;
+      const display = document.createElement('span');
+      display.className = 'variable-value';
+      display.textContent = value;
+      const insert = document.createElement('button');
+      insert.type = 'button';
+      insert.className = 'row-button';
+      insert.textContent = 'Вставить';
+      insert.addEventListener('click', () => {
+        insertAtSelection(name);
+        closeDrawer();
+      });
+      row.append(label, display, insert);
+      drawerContent.appendChild(row);
+    });
+  }
+
+  function navigateHistory(direction) {
+    if (!history.length) return;
+    if (historyCursor === -1) historyDraft = expressionInput.value;
+    historyCursor = Math.max(-1, Math.min(history.length - 1, historyCursor + direction));
+    expressionInput.value = historyCursor === -1 ? historyDraft : history[historyCursor].expression;
+    expressionInput.setSelectionRange(expressionInput.value.length, expressionInput.value.length);
+    schedulePreview(0);
+  }
+
+  expressionInput.addEventListener('input', () => {
+    historyCursor = -1;
+    schedulePreview();
+    updateCompletion().catch(() => hideCompletion());
+  });
+
+  expressionInput.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      event.stopPropagation();
+      openPalette();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key === ' ') {
+      event.preventDefault();
+      updateCompletion(true);
+      return;
+    }
+    if (!completionPopover.classList.contains('hidden')) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const delta = event.key === 'ArrowDown' ? 1 : -1;
+        completionIndex = (completionIndex + delta + completionItems.length) % completionItems.length;
+        renderCompletion();
+        return;
+      }
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        insertSuggestion(completionItems[completionIndex]);
+        return;
       }
     }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitExpression(event.ctrlKey || event.metaKey);
+      return;
+    }
+    if (event.key === 'ArrowUp' && expressionInput.selectionStart === 0 && expressionInput.selectionEnd === 0) {
+      event.preventDefault();
+      navigateHistory(1);
+      return;
+    }
+    if (event.key === 'ArrowDown' && expressionInput.selectionStart === expressionInput.value.length) {
+      event.preventDefault();
+      navigateHistory(-1);
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (!completionPopover.classList.contains('hidden')) {
+        hideCompletion();
+      } else if (expressionInput.value) {
+        expressionInput.value = '';
+        setResult(null);
+      } else {
+        api.hide_app();
+      }
+    }
+  });
 
-    catSelect.addEventListener('change', () => { populateUnits(catSelect.value); convert(); });
-    fromSelect.addEventListener('change', convert);
-    toSelect.addEventListener('change', convert);
-    fromInput.addEventListener('input', convert);
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      openPalette();
+    }
+  });
 
-    const swapBtn = document.createElement('button');
-    swapBtn.className = 'swap-btn';
-    swapBtn.textContent = '⇄';
-    swapBtn.addEventListener('click', () => {
-      const tmpUnit = fromSelect.value;
-      const tmpVal = fromInput.value;
-      fromSelect.value = toSelect.value;
-      fromInput.value = toInput.value;
-      toSelect.value = tmpUnit;
-      convert();
-    });
+  paletteSearch.addEventListener('input', () => filterPalette());
+  paletteSearch.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closePalette();
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!paletteItems.length) return;
+      const delta = event.key === 'ArrowDown' ? 1 : -1;
+      paletteIndex = (paletteIndex + delta + paletteItems.length) % paletteItems.length;
+      renderPalette();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (paletteItems[paletteIndex]) insertSuggestion(paletteItems[paletteIndex]);
+    }
+  });
 
-    converterWrap.innerHTML = '';
-    const catRow = document.createElement('div');
-    catRow.className = 'conv-row';
-    const catField = document.createElement('div');
-    catField.className = 'conv-field';
-    catField.innerHTML = '<label>Категория</label>';
-    catField.appendChild(catSelect);
-    catRow.appendChild(catField);
-    converterWrap.appendChild(catRow);
+  historySearch.addEventListener('input', renderHistory);
+  copyButton.addEventListener('click', () => lastEvaluation?.ok && copyText(lastEvaluation.result));
+  insertButton.addEventListener('click', () => commitExpression(true));
+  paletteButton.addEventListener('click', openPalette);
+  memoryButton.addEventListener('click', () => openDrawer('memory'));
+  variablesButton.addEventListener('click', () => openDrawer('variables'));
+  drawerClose.addEventListener('click', closeDrawer);
+  paletteOverlay.addEventListener('mousedown', event => { if (event.target === paletteOverlay) closePalette(); });
+  drawerOverlay.addEventListener('mousedown', event => { if (event.target === drawerOverlay) closeDrawer(); });
 
-    const fromRow = document.createElement('div');
-    fromRow.className = 'conv-row';
-    const fromField = document.createElement('div');
-    fromField.className = 'conv-field';
-    fromField.innerHTML = '<label>Из</label>';
-    fromField.appendChild(fromInput);
-    fromField.appendChild(fromSelect);
-    fromRow.appendChild(fromField);
-    fromRow.appendChild(swapBtn);
-    const toField = document.createElement('div');
-    toField.className = 'conv-field';
-    toField.innerHTML = '<label>В</label>';
-    toField.appendChild(toInput);
-    toField.appendChild(toSelect);
-    fromRow.appendChild(toField);
-    converterWrap.appendChild(fromRow);
+  angleMode.addEventListener('click', async () => {
+    const modes = ['DEG', 'RAD', 'GRAD'];
+    const next = modes[(modes.indexOf(settings.angle_mode) + 1) % modes.length];
+    applySettings(await api.set_settings({ angle_mode: next }));
+    schedulePreview(0);
+  });
 
-    populateUnits(catSelect.value);
-    convert();
+  numberBase.addEventListener('click', async () => {
+    const bases = ['DEC', 'HEX', 'OCT', 'BIN'];
+    const next = bases[(bases.indexOf(settings.number_base) + 1) % bases.length];
+    applySettings(await api.set_settings({ number_base: next }));
+    schedulePreview(0);
+  });
+
+  themeButton.addEventListener('click', () => setTheme(uiSettings.theme === 'dark' ? 'light' : 'dark'));
+  hideButton.addEventListener('click', () => api.hide_app());
+  quitButton.addEventListener('click', () => api.quit_app());
+
+  clearHistoryButton.addEventListener('click', async () => {
+    const now = Date.now();
+    if (now > clearArmedUntil) {
+      clearArmedUntil = now + 3000;
+      showToast('Нажмите ещё раз, чтобы очистить историю');
+      return;
+    }
+    clearArmedUntil = 0;
+    await api.clear_history();
+    history = [];
+    renderHistory();
+    showToast('История очищена');
+  });
+
+  async function initialize() {
+    api = await waitForBridge();
+    const data = await api.bootstrap();
+    history = data.history || [];
+    variables = data.variables || {};
+    memories = data.memories || Array(10).fill('0');
+    uiSettings = { ...uiSettings, ...(data.ui_settings || {}) };
+    applySettings(data.settings || settings);
+    setTheme(uiSettings.theme, false);
+    renderHistory();
+    setResult(null);
+    expressionInput.focus();
   }
 
-  // Вкладки
-  function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    document.getElementById('tab-' + tabName).classList.add('active');
-  }
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  initialize().catch(() => {
+    setStatus('Не удалось запустить вычислительный движок');
+    setResult({ ok: false, error: 'Python API недоступен' });
   });
-
-  // Тема
-  document.getElementById('btnTheme').addEventListener('click', function() {
-    const newTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    document.body.setAttribute('data-theme', newTheme);
-    localStorage.setItem('nlcalc_theme', newTheme);
-  });
-
-  // Очистка истории
-  btnClearHistory.addEventListener('click', clearHistory);
-
-  // Переключение режима
-  btnMode.addEventListener('click', () => {
-    isEngineerMode = !isEngineerMode;
-    btnMode.textContent = isEngineerMode ? 'Инженерный ▸ Стандартный' : 'Стандартный ▸ Инженерный';
-    buildKeypad(isEngineerMode ? 'engineer' : 'standard');
-  });
-
-  // Горячие клавиши
-  document.addEventListener('keydown', (e) => {
-    const tab = document.querySelector('.tab-content.active');
-    if (tab.id !== 'tab-calc') return;
-    
-    const key = e.key;
-    if (/^[0-9.]$/.test(key)) { handleButton(key); return; }
-    const keyMap = {
-      '+': '+', '-': '-', '*': '*', '/': '/', '%': '%',
-      'Enter': '=', 'Escape': 'C', 'Backspace': '⌫',
-      '(': '(', ')': ')',
-    };
-    if (keyMap[key]) { handleButton(keyMap[key]); e.preventDefault(); }
-  });
-
-  // Старт
-  buildKeypad('engineer');
-  buildConverter();
-  renderHistoryPanel();
-  updateDisplay();
 })();

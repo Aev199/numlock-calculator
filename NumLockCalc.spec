@@ -2,11 +2,11 @@
 
 
 a = Analysis(
-    ['app.py'],
+    ['app_keyboard.py'],
     pathex=[],
     binaries=[],
     datas=[('renderer', 'renderer')],
-    hiddenimports=[],
+    hiddenimports=['calc_engine_runtime'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -26,9 +26,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
+    upx=False,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,

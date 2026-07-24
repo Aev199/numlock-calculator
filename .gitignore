@@ -1,7 +1,11 @@
 build/
 dist/
+.venv/
+wheelhouse/
 node_modules/
-dist/
+__pycache__/
+*.py[cod]
 *.exe
+*.tmp
 .env
-
+numlock-calc-data.json
