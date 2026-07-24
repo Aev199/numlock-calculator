@@ -53,6 +53,13 @@ def install(app: Any) -> None:
         return
     app._compact_shell_installed = True
 
+    # The old prototype API is created before refinement layers are installed.
+    # Remove its document-insertion endpoint from the keyboard-first build so the
+    # feature cannot be called by renderer code or the pywebview bridge.
+    api_class = getattr(app, "AppApi", None)
+    if api_class is not None and hasattr(api_class, "commit_and_insert"):
+        delattr(api_class, "commit_and_insert")
+
     original_build_html: Callable[[], str] = app.build_html
     original_create_window = app.webview.create_window
 
