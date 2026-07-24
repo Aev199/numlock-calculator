@@ -74,6 +74,7 @@ class FakeWindow:
         self.hide_calls = 0
         self.show_calls = 0
         self.restore_calls = 0
+        self.evaluate_calls = 0
 
     def hide(self):
         self.hide_calls += 1
@@ -84,17 +85,33 @@ class FakeWindow:
     def restore(self):
         self.restore_calls += 1
 
+    def evaluate_js(self, _script):
+        self.evaluate_calls += 1
+
 
 class HotkeyTests(unittest.TestCase):
     def setUp(self):
-        self.saved = (app._window, app._visible, app._quitting, app._numlock_down)
+        self.saved = (
+            app._window,
+            app._visible,
+            getattr(app, '_renderer_focused', True),
+            app._quitting,
+            app._numlock_down,
+        )
         app._window = FakeWindow()
         app._visible = True
+        app._renderer_focused = True
         app._quitting = False
         app._numlock_down = False
 
     def tearDown(self):
-        app._window, app._visible, app._quitting, app._numlock_down = self.saved
+        (
+            app._window,
+            app._visible,
+            app._renderer_focused,
+            app._quitting,
+            app._numlock_down,
+        ) = self.saved
 
     def test_one_toggle_per_press(self):
         app.on_numlock_press()
