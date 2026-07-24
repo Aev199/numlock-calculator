@@ -6,7 +6,6 @@
 .mode-pill,
 .icon-button,
 .tool-button,
-.result-button,
 .palette-group,
 .palette-item,
 .completion-item,
@@ -57,18 +56,11 @@
   transform: translateX(1px) scale(.995);
 }
 
-.result-button.accent:not(:disabled) {
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 24%, transparent);
-}
-
-.result-button.accent:not(:disabled):hover {
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 31%, transparent);
-}
-
-/* Compact desktop layout. The keyboard hints and bottom status text duplicate
-   tooltips and NumLock behavior, so they are removed from the visible shell. */
+/* Compact desktop layout. Keyboard hints, the status bar and secondary result
+   actions duplicate the keyboard-first flow, so they stay out of the shell. */
 .hint-row,
-.statusbar {
+.statusbar,
+.result-actions {
   display: none !important;
 }
 
@@ -77,8 +69,8 @@
 }
 
 .topbar {
-  min-height: 52px;
-  padding: 7px 10px;
+  min-height: 50px;
+  padding: 6px 9px;
 }
 
 .brand-block {
@@ -86,8 +78,8 @@
 }
 
 .brand-mark {
-  width: 30px;
-  height: 30px;
+  width: 29px;
+  height: 29px;
   border-radius: 9px;
   box-shadow: 0 4px 12px rgba(82, 109, 255, .24);
 }
@@ -102,21 +94,20 @@
 
 .topbar-actions,
 .editor-tools,
-.result-actions,
 .section-actions {
   gap: 5px;
 }
 
 .mode-pill {
-  min-width: 43px;
+  min-width: 42px;
   height: 28px;
   padding: 0 8px;
   border-radius: 8px;
 }
 
 .icon-button {
-  width: 30px;
-  height: 30px;
+  width: 29px;
+  height: 29px;
   border-radius: 8px;
 }
 
@@ -126,8 +117,8 @@
 }
 
 .workspace {
-  gap: 8px;
-  padding: 8px;
+  gap: 7px;
+  padding: 7px;
 }
 
 .editor-card,
@@ -136,7 +127,7 @@
 }
 
 .editor-card {
-  padding: 10px;
+  padding: 9px;
 }
 
 .editor-toolbar {
@@ -150,16 +141,17 @@
 }
 
 .expression-input {
-  min-height: 44px;
-  max-height: 96px;
-  padding: 3px 2px 6px;
+  min-height: 42px;
+  max-height: 92px;
+  padding: 3px 2px 5px;
   font-size: clamp(15px, 3.3vw, 18px);
 }
 
 .result-block {
-  min-height: 50px;
+  min-height: 43px;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
-  padding-top: 7px;
+  padding-top: 6px;
 }
 
 .result-prefix {
@@ -168,12 +160,6 @@
 
 .result-value {
   font-size: clamp(20px, 4.7vw, 27px);
-}
-
-.result-button {
-  height: 29px;
-  padding: 0 9px;
-  border-radius: 8px;
 }
 
 .section-header {
