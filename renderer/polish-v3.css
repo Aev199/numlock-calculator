@@ -65,9 +65,157 @@
   box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 31%, transparent);
 }
 
+/* Compact desktop layout. The keyboard hints and bottom status text duplicate
+   tooltips and NumLock behavior, so they are removed from the visible shell. */
+.hint-row,
+.statusbar {
+  display: none !important;
+}
+
+.app-shell {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.topbar {
+  min-height: 52px;
+  padding: 7px 10px;
+}
+
+.brand-block {
+  gap: 8px;
+}
+
+.brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  box-shadow: 0 4px 12px rgba(82, 109, 255, .24);
+}
+
+.brand-title {
+  font-size: 13px;
+}
+
+.brand-subtitle {
+  font-size: 8px;
+}
+
+.topbar-actions,
+.editor-tools,
+.result-actions,
+.section-actions {
+  gap: 5px;
+}
+
+.mode-pill {
+  min-width: 43px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+}
+
+.icon-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.icon-button.small {
+  width: 28px;
+  height: 28px;
+}
+
+.workspace {
+  gap: 8px;
+  padding: 8px;
+}
+
+.editor-card,
+.history-card {
+  border-radius: 12px;
+}
+
+.editor-card {
+  padding: 10px;
+}
+
+.editor-toolbar {
+  margin-bottom: 2px;
+}
+
+.tool-button {
+  min-width: 28px;
+  height: 24px;
+  padding: 0 7px;
+}
+
+.expression-input {
+  min-height: 44px;
+  max-height: 96px;
+  padding: 3px 2px 6px;
+  font-size: clamp(15px, 3.3vw, 18px);
+}
+
+.result-block {
+  min-height: 50px;
+  gap: 8px;
+  padding-top: 7px;
+}
+
+.result-prefix {
+  font-size: 18px;
+}
+
+.result-value {
+  font-size: clamp(20px, 4.7vw, 27px);
+}
+
+.result-button {
+  height: 29px;
+  padding: 0 9px;
+  border-radius: 8px;
+}
+
+.section-header {
+  padding: 7px 8px;
+}
+
+.search-field {
+  height: 28px;
+}
+
+.history-list {
+  padding: 3px 4px;
+}
+
+.history-entry {
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 9px;
+}
+
+.history-meta {
+  margin-top: 2px;
+}
+
+.history-result {
+  font-size: 12px;
+}
+
 @keyframes nlcalc-pending-pulse {
   from { opacity: .45; transform: translateX(0); }
   to { opacity: 1; transform: translateX(1px); }
+}
+
+@media (max-width: 450px) {
+  .brand-subtitle {
+    display: none;
+  }
+
+  .mode-pill {
+    min-width: 39px;
+    padding: 0 6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
