@@ -1,8 +1,4 @@
-"""Keyboard-first entry point.
-
-The runtime refinement class is installed before importing the desktop shell,
-so both source runs and PyInstaller use the side-effect-free preview engine.
-"""
+"""Keyboard-first entry point."""
 
 import calc_engine
 from calc_engine_runtime import CalculatorSession
@@ -10,6 +6,9 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
+import app_stability
+
+app_stability.install(app)
 
 
 if __name__ == "__main__":
