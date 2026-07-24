@@ -25,6 +25,7 @@ def install(app: Any) -> None:
 
     original_build_html: Callable[[], str] = app.build_html
     original_create_window = app.webview.create_window
+    original_webview_start = app.webview.start
     original_main = app.main
 
     def build_html() -> str:
@@ -138,10 +139,12 @@ def install(app: Any) -> None:
         kwargs.setdefault("frameless", True)
         kwargs.setdefault("easy_drag", False)
         kwargs.setdefault("shadow", True)
-        window = original_create_window(*args, **kwargs)
-        # The window object now exists, so tray callbacks cannot race with startup.
+        return original_create_window(*args, **kwargs)
+
+    def start_webview(*args: Any, **kwargs: Any) -> Any:
+        # app._window has already been assigned by the shell before this point.
         start_tray()
-        return window
+        return original_webview_start(*args, **kwargs)
 
     def main() -> None:
         try:
@@ -151,6 +154,7 @@ def install(app: Any) -> None:
 
     app.build_html = build_html
     app.webview.create_window = create_window
+    app.webview.start = start_webview
     app.start_tray = start_tray
     app.stop_tray = stop_tray
     app.show_from_tray = show_from_tray
