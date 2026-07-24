@@ -1,7 +1,6 @@
 import json
 import sys
 import tempfile
-import time
 import types
 import unittest
 from pathlib import Path
@@ -16,6 +15,11 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
+import app_numlock_compat
+import app_stability
+
+app_stability.install(app)
+app_numlock_compat.install(app)
 
 
 class StorageAndApiTests(unittest.TestCase):
@@ -66,7 +70,7 @@ class StorageAndApiTests(unittest.TestCase):
         self.assertIn('id="expressionInput"', html)
         self.assertIn('id="historyList"', html)
         self.assertNotIn('id="keypad"', html)
-        self.assertNotIn('src="script.js"', html)
+        self.assertNotIn('src="script-v2.js"', html)
         self.assertIn('window.__NUMLOCK_PYWEBVIEW__ = true', html)
 
 
@@ -99,6 +103,7 @@ class HotkeyTests(unittest.TestCase):
             app._quitting,
             app._numlock_down,
             app._keyboard_module,
+            app._restoring_numlock,
         )
         app._window = FakeWindow()
         app._visible = True
@@ -106,6 +111,7 @@ class HotkeyTests(unittest.TestCase):
         app._quitting = False
         app._numlock_down = False
         app._keyboard_module = None
+        app._restoring_numlock = False
 
     def tearDown(self):
         (
@@ -115,19 +121,23 @@ class HotkeyTests(unittest.TestCase):
             app._quitting,
             app._numlock_down,
             app._keyboard_module,
+            app._restoring_numlock,
         ) = self.saved
 
-    def test_one_toggle_per_press(self):
-        app.on_numlock_press()
-        app.on_numlock_press()
-        self.assertEqual(app._window.hide_calls, 1)
-        app.on_numlock_release()
-        app.on_numlock_press()
-        time.sleep(0.08)
-        self.assertEqual(app._window.show_calls, 1)
-        self.assertEqual(app._window.restore_calls, 1)
+    def test_one_toggle_per_press_and_restore_schedule(self):
+        with patch.object(app, 'restore_numlock_after_toggle') as restore_numlock:
+            app.on_numlock_press()
+            app.on_numlock_press()
+            self.assertEqual(app._window.hide_calls, 1)
+            self.assertEqual(restore_numlock.call_count, 1)
 
-    def test_hotkey_registration_uses_native_or_suppressed_fallback(self):
+            app.on_numlock_release()
+            app.on_numlock_press()
+            self.assertEqual(app._window.show_calls, 1)
+            self.assertEqual(app._window.restore_calls, 1)
+            self.assertEqual(restore_numlock.call_count, 3)
+
+    def test_hotkey_registration_allows_windows_toggle(self):
         calls = []
 
         class FakeKeyboard:
@@ -157,7 +167,7 @@ class HotkeyTests(unittest.TestCase):
 
         fallback_hooks = [call for call in calls if call[0] == 'hook']
         for hook in fallback_hooks:
-            self.assertEqual(hook[1:3], ('num lock', True))
+            self.assertEqual(hook[1:3], ('num lock', False))
 
 
 if __name__ == '__main__':
