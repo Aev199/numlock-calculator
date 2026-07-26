@@ -23,21 +23,24 @@ def install(app: Any) -> None:
         renderer = Path(app.RENDERER_DIR)
         polish_css = (renderer / "polish-v3.css").read_text(encoding="utf-8")
         polish_js = (renderer / "polish-v3.js").read_text(encoding="utf-8")
+        motion_css = (renderer / "motion-v4.css").read_text(encoding="utf-8")
+        motion_js = (renderer / "motion-v4.js").read_text(encoding="utf-8")
 
-        # style-v2.css is already inlined by app_stability. Append the small polish
-        # layer to the same style block so the packaged renderer remains offline.
+        # style-v2.css is already inlined by app_stability. Append the compact
+        # interaction and motion layers to the same offline style block.
         html = html.replace(
             "</style>",
-            f"\n{polish_css}\n</style>",
+            f"\n{polish_css}\n{motion_css}\n</style>",
             1,
         )
 
-        # Install the API cache and capture-phase editor helpers before script-v2
-        # registers its listeners. This lets manual function wrapping modify the
-        # input before the normal completion and preview handlers see the event.
+        # Motion observes native input and keyboard events without changing the
+        # calculation path. Polish then installs the API cache and function helpers
+        # before script-v2 registers its normal renderer listeners.
         script_marker = "<script>\n(function () {\n  'use strict';"
         html = html.replace(
             script_marker,
+            f"<script>\n{motion_js}\n</script>\n"
             f"<script>\n{polish_js}\n</script>\n{script_marker}",
             1,
         )
