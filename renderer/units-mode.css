@@ -85,10 +85,7 @@ body[data-app-mode="units"] .app-mode-tabs::before {
   background: color-mix(in srgb, var(--soft) 86%, var(--accent-soft));
   color: var(--accent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 34%, transparent);
-  transition:
-    opacity 220ms ease,
-    transform 260ms cubic-bezier(.16,1,.3,1),
-    background 180ms ease;
+  animation: nlcalc-unit-badge-in 220ms cubic-bezier(.16,1,.3,1) both;
 }
 
 .field-unit-badge {
@@ -114,19 +111,6 @@ body[data-app-mode="units"] .app-mode-tabs::before {
   padding: 4px 8px;
   border-radius: 8px;
   font: 750 11px "Cascadia Mono", "Consolas", monospace;
-}
-
-.field-unit-badge.hidden,
-.result-unit-badge.hidden {
-  display: block !important;
-  visibility: hidden;
-  opacity: 0;
-  transform: translateY(-50%) scale(.94);
-  pointer-events: none;
-}
-
-.result-unit-badge.hidden {
-  transform: scale(.94);
 }
 
 body[data-app-mode="units"] .expression-input {
@@ -259,6 +243,20 @@ body[data-app-mode="units"] #numberBase {
   line-height: 1.45;
 }
 
+@keyframes nlcalc-unit-badge-in {
+  from { opacity: 0; transform: translateY(2px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.field-unit-badge {
+  animation-name: nlcalc-field-unit-badge-in;
+}
+
+@keyframes nlcalc-field-unit-badge-in {
+  from { opacity: 0; transform: translateY(-50%) scale(.96); }
+  to { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+
 @media (max-width: 430px) {
   .app-mode-tabs {
     margin-inline: 6px;
@@ -285,6 +283,7 @@ body[data-app-mode="units"] #numberBase {
   .result-unit-badge,
   .converter-select,
   .swap-units-button {
+    animation-duration: .01ms !important;
     transition-duration: .01ms !important;
   }
 }
