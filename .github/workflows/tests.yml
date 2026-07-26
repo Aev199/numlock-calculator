@@ -29,18 +29,7 @@ jobs:
       - name: Test compact shell
         run: python -m unittest tests.test_compact -v
       - name: Test separate units mode
-        id: units
-        continue-on-error: true
-        run: python -m unittest tests.test_units_mode -v > units.log 2>&1
-      - name: Upload units test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: units-log
-          path: units.log
-      - name: Report units test failure
-        if: steps.units.outcome == 'failure'
-        run: exit 1
+        run: python -m unittest tests.test_units_mode -v
       - name: Test full build sequence
         id: discover
         continue-on-error: true
