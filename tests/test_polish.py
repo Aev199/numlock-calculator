@@ -30,11 +30,15 @@ class RendererPolishTests(unittest.TestCase):
         app_polish.install(fake_app)
         html = fake_app.build_html()
 
-        self.assertIn("nlcalc-motion-v4", html)
-        self.assertIn("animateTypedGlyph", html)
+        self.assertIn("nlcalc-motion-v5", html)
+        self.assertIn("animateTyping", html)
+        self.assertIn("animateHistoryInsertion", html)
         self.assertIn("captureEnter", html)
         self.assertIn("captureModeClick", html)
-        self.assertIn("nlcalc-mode-in", html)
+        self.assertIn("nlcalc-enter-old-value", html)
+        self.assertIn("nlcalc-mode-panel", html)
+        self.assertNotIn("nlcalc-typed-glyph", html)
+        self.assertNotIn("createResultFlight", html)
         self.assertIn("nlcalc-polish-v3", html)
         self.assertIn("wrapTypedFunction", html)
         self.assertIn("function schedulePreview(delay = 18)", html)
@@ -55,7 +59,7 @@ class RendererPolishTests(unittest.TestCase):
         app_polish.install(fake_app)
         self.assertIs(first_builder, fake_app.build_html)
         html = fake_app.build_html()
-        self.assertEqual(html.count("nlcalc-motion-v4"), 1)
+        self.assertEqual(html.count("nlcalc-motion-v5"), 1)
         self.assertEqual(html.count("nlcalc-polish-v3"), 1)
 
 
