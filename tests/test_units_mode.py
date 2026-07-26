@@ -52,7 +52,7 @@ class UnitsModeTests(unittest.TestCase):
 <section class="editor-card"><div class="editor-toolbar"><span class="editor-label">Выражение</span><div class="editor-tools"></div></div>
 <textarea id="expressionInput" class="expression-input" rows="2" placeholder="old"></textarea>
 <div class="result-block"><div class="result-actions"></div></div></section>
-<section class="history-card"></section></main></div>
+<section class="history-card"></section>    </main></div>
 <script>
 (function () {
   'use strict';
