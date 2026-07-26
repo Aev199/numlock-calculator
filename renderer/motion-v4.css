@@ -1,67 +1,192 @@
-/* Responsive motion for typing, Enter and calculator/unit mode changes. */
+/* Continuous, restrained motion inspired by modern iOS interfaces. */
+:root {
+  --ios-fast: 125ms;
+  --ios-local: 240ms;
+  --ios-mode: 320ms;
+  --ios-ease: cubic-bezier(.16,1,.3,1);
+  --ios-settle: cubic-bezier(.2,.8,.2,1);
+}
 
-.nlcalc-typed-glyph,
-.nlcalc-enter-flight {
-  position: fixed;
-  z-index: 10000;
+.editor-card,
+.history-card,
+.mode-pill,
+.icon-button,
+.tool-button,
+.converter-select,
+.swap-units-button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Softer material hierarchy: fewer explicit borders, more surface contrast. */
+.editor-card,
+.history-card {
+  border-color: color-mix(in srgb, var(--border) 48%, transparent);
+  background: color-mix(in srgb, var(--panel) 96%, var(--soft));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 9%, transparent) inset,
+    0 6px 20px color-mix(in srgb, #000 8%, transparent);
+}
+
+.expression-input {
+  transition:
+    background var(--ios-fast) ease,
+    color var(--ios-fast) ease,
+    caret-color var(--ios-fast) ease,
+    box-shadow var(--ios-local) var(--ios-ease),
+    opacity var(--ios-fast) ease;
+}
+
+.expression-input:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 62%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--accent) 8%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 34%, transparent);
+}
+
+.result-block {
+  border-top-color: color-mix(in srgb, var(--border) 52%, transparent);
+}
+
+.result-prefix {
+  transition: color var(--ios-local) ease, opacity var(--ios-local) ease;
+}
+
+.result-block.is-pending .result-prefix {
+  animation: none !important;
+  opacity: .62;
+}
+
+.result-block.is-pending .result-value {
+  opacity: .78;
+  transform: translateY(1px);
+}
+
+.mode-pill,
+.icon-button,
+.tool-button,
+.row-button,
+.result-button {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--soft) 94%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 42%, transparent);
+}
+
+.mode-pill:hover,
+.icon-button:hover,
+.tool-button:hover,
+.row-button:hover,
+.result-button:hover {
+  border-color: transparent;
+  transform: none;
+  background: color-mix(in srgb, var(--soft) 82%, var(--accent-soft));
+}
+
+.history-entry {
+  transition:
+    background var(--ios-fast) ease,
+    transform var(--ios-local) var(--ios-ease),
+    opacity var(--ios-local) ease;
+}
+
+.history-entry:hover {
+  transform: none;
+  background: color-mix(in srgb, var(--soft) 90%, transparent);
+}
+
+.history-entry::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--border) 34%, transparent);
   pointer-events: none;
-  user-select: none;
-  white-space: pre;
+}
+
+.history-entry:last-child::after {
+  display: none;
+}
+
+.nlcalc-enter-old-value {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  max-height: 100%;
+  overflow: hidden;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  pointer-events: none;
   transform-origin: left center;
   will-change: transform, opacity;
 }
 
-.nlcalc-typed-glyph {
-  color: var(--accent);
-  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 34%, transparent);
+/* Shared geometry during Calculator / Units changes. */
+.editor-card {
+  view-transition-name: nlcalc-editor;
 }
 
-.nlcalc-enter-flight {
-  color: var(--accent);
-  text-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 24%, transparent);
+.history-card:not(.unit-converter-card):not(.hidden),
+.unit-converter-card:not(.hidden) {
+  view-transition-name: nlcalc-mode-panel;
 }
 
-.workspace {
-  view-transition-name: nlcalc-workspace;
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 
-::view-transition-old(nlcalc-workspace) {
-  animation: nlcalc-mode-out 90ms ease-in both;
+::view-transition-group(nlcalc-editor),
+::view-transition-group(nlcalc-mode-panel) {
+  animation-duration: var(--ios-mode);
+  animation-timing-function: var(--ios-ease);
 }
 
-::view-transition-new(nlcalc-workspace) {
-  animation: nlcalc-mode-in 180ms cubic-bezier(.22,1,.36,1) both;
+::view-transition-old(nlcalc-editor) {
+  animation: nlcalc-editor-old 190ms ease-in both;
 }
 
-@keyframes nlcalc-mode-out {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: .64;
-    transform: translateY(3px) scale(.997);
-  }
+::view-transition-new(nlcalc-editor) {
+  animation: nlcalc-editor-new var(--ios-mode) var(--ios-ease) both;
 }
 
-@keyframes nlcalc-mode-in {
-  from {
-    opacity: .5;
-    transform: translateY(-4px) scale(.997);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+::view-transition-old(nlcalc-mode-panel) {
+  animation: nlcalc-panel-old 120ms ease-in both;
+}
+
+::view-transition-new(nlcalc-mode-panel) {
+  animation: nlcalc-panel-new var(--ios-mode) var(--ios-ease) both;
+}
+
+@keyframes nlcalc-editor-old {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: .84; transform: translateY(1px) scale(.998); }
+}
+
+@keyframes nlcalc-editor-new {
+  from { opacity: .78; transform: translateY(2px) scale(.998); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes nlcalc-panel-old {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: .42; transform: translateY(5px) scale(.995); }
+}
+
+@keyframes nlcalc-panel-new {
+  from { opacity: .34; transform: translateY(-6px) scale(.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workspace {
-    view-transition-name: none;
+  .editor-card,
+  .history-card {
+    view-transition-name: none !important;
   }
 
-  .nlcalc-typed-glyph,
-  .nlcalc-enter-flight {
+  .nlcalc-enter-old-value {
     display: none !important;
   }
 }
