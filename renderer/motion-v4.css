@@ -1,0 +1,67 @@
+/* Responsive motion for typing, Enter and calculator/unit mode changes. */
+
+.nlcalc-typed-glyph,
+.nlcalc-enter-flight {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre;
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+.nlcalc-typed-glyph {
+  color: var(--accent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.nlcalc-enter-flight {
+  color: var(--accent);
+  text-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.workspace {
+  view-transition-name: nlcalc-workspace;
+}
+
+::view-transition-old(nlcalc-workspace) {
+  animation: nlcalc-mode-out 90ms ease-in both;
+}
+
+::view-transition-new(nlcalc-workspace) {
+  animation: nlcalc-mode-in 180ms cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes nlcalc-mode-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: .64;
+    transform: translateY(3px) scale(.997);
+  }
+}
+
+@keyframes nlcalc-mode-in {
+  from {
+    opacity: .5;
+    transform: translateY(-4px) scale(.997);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace {
+    view-transition-name: none;
+  }
+
+  .nlcalc-typed-glyph,
+  .nlcalc-enter-flight {
+    display: none !important;
+  }
+}
