@@ -1,0 +1,212 @@
+/* Separate calculator and unit-conversion modes. */
+.app-shell {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.app-mode-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 92%, var(--soft));
+}
+
+.app-mode-tab {
+  min-width: 0;
+  height: 27px;
+  flex: 1 1 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background .14s, border-color .14s, color .14s, transform .12s var(--ease);
+}
+
+.app-mode-tab:hover {
+  color: var(--text);
+  background: var(--soft);
+}
+
+.app-mode-tab:active {
+  transform: scale(.985);
+}
+
+.app-mode-tab.active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  background: var(--accent-soft);
+}
+
+.expression-field-shell {
+  position: relative;
+}
+
+.field-unit-badge {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--soft);
+  color: var(--accent);
+  font: 700 11px "Cascadia Mono", "Consolas", monospace;
+  pointer-events: none;
+}
+
+.result-unit-badge {
+  justify-self: end;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--accent);
+  font: 750 11px "Cascadia Mono", "Consolas", monospace;
+}
+
+body[data-app-mode="units"] .expression-input {
+  padding-right: 74px;
+}
+
+body[data-app-mode="units"] .result-block {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+body[data-app-mode="units"] .editor-tools,
+body[data-app-mode="units"] #angleMode,
+body[data-app-mode="units"] #numberBase {
+  display: none !important;
+}
+
+.unit-converter-card {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.unit-converter-header > div:first-child {
+  min-width: 90px;
+}
+
+.converter-caption {
+  color: var(--subtle);
+  font-size: 9px;
+}
+
+.converter-select {
+  min-width: 0;
+  height: 31px;
+  padding: 0 28px 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--soft);
+  color: var(--text);
+  font: 650 11px "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.converter-select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.category-select {
+  width: min(190px, 46vw);
+}
+
+.unit-converter-content {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 13px;
+}
+
+.unit-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+}
+
+.unit-picker-card {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.unit-picker-card > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.unit-picker-card .converter-select {
+  width: 100%;
+}
+
+.swap-units-button {
+  width: 34px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--soft);
+  color: var(--accent);
+  font-size: 17px;
+  cursor: pointer;
+  transition: transform .14s var(--ease), border-color .14s, background .14s;
+}
+
+.swap-units-button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: rotate(180deg);
+}
+
+.swap-units-button:active {
+  transform: rotate(180deg) scale(.94);
+}
+
+.converter-help {
+  margin: 0;
+  max-width: 430px;
+  color: var(--subtle);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+@media (max-width: 430px) {
+  .app-mode-tabs {
+    padding-inline: 6px;
+  }
+
+  .unit-route {
+    grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .swap-units-button {
+    width: 30px;
+  }
+
+  .converter-select {
+    padding-left: 7px;
+    font-size: 10px;
+  }
+}
