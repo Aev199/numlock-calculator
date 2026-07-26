@@ -18,6 +18,11 @@
 }
 
 /* Softer material hierarchy: fewer explicit borders, more surface contrast. */
+html[data-motion="nlcalc-motion-v5"] .editor-card,
+html[data-motion="nlcalc-motion-v5"] .history-card {
+  animation: none;
+}
+
 .editor-card,
 .history-card {
   border-color: color-mix(in srgb, var(--border) 48%, transparent);
