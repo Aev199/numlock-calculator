@@ -137,6 +137,10 @@ class UnitsModeTests(unittest.TestCase):
         self.assertIn('id="sourceUnitBadge"', html)
         self.assertIn('id="targetUnitBadge"', html)
         self.assertIn("const MODE_UNITS = 'units'", html)
+        self.assertIn(".app-mode-tabs::before", html)
+        self.assertIn('body[data-app-mode="units"] .app-mode-tabs::before', html)
+        self.assertIn("nlcalc-unit-badge-in", html)
+        self.assertNotIn("rotate(180deg)", html)
         self.assertNotIn("Функции и единицы (Ctrl+K)", html)
 
 
