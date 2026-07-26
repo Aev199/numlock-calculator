@@ -1,8 +1,10 @@
 (function () {
   'use strict';
 
-  const MOTION_MARKER = 'nlcalc-motion-v4';
-  const TYPED_GLYPH_PATTERN = /^[0-9.,+\-−*/×÷^()%]+$/;
+  const MOTION_MARKER = 'nlcalc-motion-v5';
+  const IOS_EASE = 'cubic-bezier(.16,1,.3,1)';
+  const SETTLE_EASE = 'cubic-bezier(.2,.8,.2,1)';
+  const typingAnimations = new WeakMap();
   let replayingModeClick = false;
   let modeTransitioning = false;
   let enterSequence = 0;
@@ -22,104 +24,149 @@
     return document.getElementById('expressionInput');
   }
 
-  function number(value, fallback = 0) {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
+  function nextFrame() {
+    return new Promise(resolve => window.requestAnimationFrame(resolve));
   }
 
-  function textareaCaretRect(input, index) {
-    const inputRect = input.getBoundingClientRect();
-    const style = window.getComputedStyle(input);
-    const mirror = document.createElement('div');
+  function animateTyping(event) {
+    const input = expressionInput();
+    if (!input || event.target !== input || !event.isTrusted || reducedMotion()) return;
+    if (event.isComposing || !String(event.inputType || '').startsWith('insert')) return;
 
-    const copied = [
-      'boxSizing', 'fontFamily', 'fontSize', 'fontStyle', 'fontWeight',
-      'fontStretch', 'fontVariant', 'lineHeight', 'letterSpacing',
-      'textTransform', 'textIndent', 'textAlign', 'tabSize',
-      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth',
-      'borderLeftWidth', 'wordSpacing',
-    ];
+    const length = Math.max(1, input.value.length);
+    const cursor = input.selectionStart ?? length;
+    const origin = Math.max(0, Math.min(100, (cursor / length) * 100));
+    input.style.transformOrigin = `${origin}% 50%`;
 
-    mirror.style.position = 'fixed';
-    mirror.style.visibility = 'hidden';
-    mirror.style.pointerEvents = 'none';
-    mirror.style.left = `${inputRect.left - input.scrollLeft}px`;
-    mirror.style.top = `${inputRect.top - input.scrollTop}px`;
-    mirror.style.width = `${inputRect.width}px`;
-    mirror.style.minHeight = `${inputRect.height}px`;
-    mirror.style.whiteSpace = 'pre-wrap';
-    mirror.style.overflowWrap = 'break-word';
-    mirror.style.wordBreak = 'break-word';
-    mirror.style.overflow = 'visible';
-    mirror.style.zIndex = '-1';
-    copied.forEach(property => {
-      mirror.style[property] = style[property];
-    });
+    typingAnimations.get(input)?.cancel();
+    const animation = animateElement(
+      input,
+      [
+        { opacity: .9, transform: 'scale(.998)', filter: 'brightness(1.035)' },
+        { opacity: 1, transform: 'scale(1)', filter: 'brightness(1)' },
+      ],
+      { duration: 125, easing: IOS_EASE },
+    );
+    if (animation) typingAnimations.set(input, animation);
+  }
 
-    mirror.textContent = input.value.slice(0, index);
-    const marker = document.createElement('span');
-    marker.textContent = input.value.slice(index, index + 1) || '\u200b';
-    mirror.appendChild(marker);
-    document.body.appendChild(mirror);
-
-    const markerRect = marker.getBoundingClientRect();
-    const result = {
-      left: markerRect.left,
-      top: markerRect.top,
-      height: markerRect.height || number(style.lineHeight, number(style.fontSize, 16)),
-      style,
+  function captureHistoryLayout() {
+    const list = document.getElementById('historyList');
+    const rows = list ? [...list.querySelectorAll('.history-entry')] : [];
+    return {
+      list,
+      rows,
+      rects: new Map(rows.map(row => [row, row.getBoundingClientRect()])),
+      first: rows[0] || null,
     };
-    mirror.remove();
-    return result;
   }
 
-  function trimOldTypedGlyphs() {
-    const glyphs = document.querySelectorAll('.nlcalc-typed-glyph');
-    for (let index = 0; index < glyphs.length - 8; index += 1) {
-      glyphs[index].remove();
+  function createOldValueLayer(input, text) {
+    const shell = input.closest('.expression-field-shell') || input.parentElement;
+    if (!shell || !text) return null;
+
+    const style = window.getComputedStyle(input);
+    const layer = document.createElement('div');
+    layer.className = 'nlcalc-enter-old-value';
+    layer.textContent = text;
+    layer.style.fontFamily = style.fontFamily;
+    layer.style.fontSize = style.fontSize;
+    layer.style.fontStyle = style.fontStyle;
+    layer.style.fontWeight = style.fontWeight;
+    layer.style.lineHeight = style.lineHeight;
+    layer.style.letterSpacing = style.letterSpacing;
+    layer.style.padding = [
+      style.paddingTop,
+      style.paddingRight,
+      style.paddingBottom,
+      style.paddingLeft,
+    ].join(' ');
+    layer.style.left = `${-input.scrollLeft}px`;
+    layer.style.top = `${-input.scrollTop}px`;
+    if (document.body.dataset.appMode === 'units') layer.style.right = '68px';
+    shell.appendChild(layer);
+    return layer;
+  }
+
+  function animateHistoryInsertion(snapshot) {
+    if (!snapshot?.list || document.body.dataset.appMode === 'units') return;
+    const currentRows = [...snapshot.list.querySelectorAll('.history-entry')];
+
+    for (const row of snapshot.rows) {
+      if (!row.isConnected) continue;
+      const before = snapshot.rects.get(row);
+      const after = row.getBoundingClientRect();
+      const deltaY = before ? before.top - after.top : 0;
+      if (Math.abs(deltaY) < .5) continue;
+      animateElement(
+        row,
+        [
+          { transform: `translateY(${deltaY}px)` },
+          { transform: 'translateY(0)' },
+        ],
+        { duration: 260, easing: IOS_EASE },
+      );
+    }
+
+    const inserted = currentRows.find(row => !snapshot.rects.has(row));
+    if (inserted) {
+      animateElement(
+        inserted,
+        [
+          { opacity: 0, transform: 'translateY(-6px) scale(.992)' },
+          { opacity: 1, transform: 'translateY(0) scale(1)' },
+        ],
+        { duration: 230, easing: IOS_EASE },
+      );
     }
   }
 
-  function animateTypedGlyph(event) {
-    if (reducedMotion()) return;
+  async function animateEnterCompletion(snapshot) {
     const input = expressionInput();
-    if (!input || event.target !== input) return;
-    if (event.isComposing || event.inputType !== 'insertText') return;
-    const text = String(event.data || '');
-    if (!text || text.length > 3 || !TYPED_GLYPH_PATTERN.test(text)) return;
+    if (!input) return;
 
-    const caret = input.selectionStart ?? input.value.length;
-    const start = Math.max(0, caret - text.length);
-    const position = textareaCaretRect(input, start);
-    const glyph = document.createElement('span');
-    glyph.className = 'nlcalc-typed-glyph';
-    glyph.textContent = text;
-    glyph.style.left = `${position.left}px`;
-    glyph.style.top = `${position.top}px`;
-    glyph.style.height = `${position.height}px`;
-    glyph.style.fontFamily = position.style.fontFamily;
-    glyph.style.fontSize = position.style.fontSize;
-    glyph.style.fontStyle = position.style.fontStyle;
-    glyph.style.fontWeight = position.style.fontWeight;
-    glyph.style.lineHeight = position.style.lineHeight;
-    glyph.style.letterSpacing = position.style.letterSpacing;
-    document.body.appendChild(glyph);
-    trimOldTypedGlyphs();
+    await nextFrame();
+    const oldLayer = createOldValueLayer(input, snapshot.value);
+    const resultValue = document.getElementById('resultValue');
+    const resultBlock = document.getElementById('resultBlock');
 
-    const animation = glyph.animate(
+    const oldAnimation = animateElement(
+      oldLayer,
       [
-        { opacity: 0, transform: 'translateY(5px) scale(.92)' },
-        { opacity: .88, offset: .28, transform: 'translateY(0) scale(1.03)' },
-        { opacity: 0, transform: 'translateY(-1px) scale(1)' },
+        { opacity: .56, transform: 'translateY(0) scale(1)' },
+        { opacity: 0, transform: 'translateY(-5px) scale(.992)' },
       ],
-      {
-        duration: 170,
-        easing: 'cubic-bezier(.22,1,.36,1)',
-        fill: 'both',
-      },
+      { duration: 210, easing: SETTLE_EASE, fill: 'both' },
     );
-    animation.finished.catch(() => {}).finally(() => glyph.remove());
+    animateElement(
+      input,
+      [
+        { opacity: .58, transform: 'translateY(5px) scale(.995)' },
+        { opacity: 1, transform: 'translateY(0) scale(1)' },
+      ],
+      { duration: 250, easing: IOS_EASE },
+    );
+    animateElement(
+      resultValue,
+      [
+        { opacity: .72, transform: 'translateY(2px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 180, easing: IOS_EASE },
+    );
+    animateElement(
+      resultBlock,
+      [
+        { filter: 'brightness(1.035)' },
+        { filter: 'brightness(1)' },
+      ],
+      { duration: 220, easing: SETTLE_EASE },
+    );
+    animateHistoryInsertion(snapshot.history);
+
+    Promise.resolve(oldAnimation?.finished)
+      .catch(() => {})
+      .finally(() => oldLayer?.remove());
   }
 
   function waitForInputChange(input, previousValue, sequence) {
@@ -144,117 +191,16 @@
     });
   }
 
-  function createResultFlight(text, fromRect, input) {
-    if (!text || reducedMotion()) return;
-    const inputRect = input.getBoundingClientRect();
-    const resultValue = document.getElementById('resultValue');
-    const sourceStyle = resultValue ? window.getComputedStyle(resultValue) : null;
-    const inputStyle = window.getComputedStyle(input);
-    const targetLeft = inputRect.left + number(inputStyle.paddingLeft, 6);
-    const targetTop = inputRect.top + number(inputStyle.paddingTop, 5);
-
-    const flight = document.createElement('span');
-    flight.className = 'nlcalc-enter-flight';
-    flight.textContent = text;
-    flight.style.left = `${fromRect.left}px`;
-    flight.style.top = `${fromRect.top}px`;
-    flight.style.fontFamily = sourceStyle?.fontFamily || inputStyle.fontFamily;
-    flight.style.fontSize = sourceStyle?.fontSize || inputStyle.fontSize;
-    flight.style.fontWeight = sourceStyle?.fontWeight || inputStyle.fontWeight;
-    flight.style.lineHeight = sourceStyle?.lineHeight || inputStyle.lineHeight;
-    document.body.appendChild(flight);
-
-    const dx = targetLeft - fromRect.left;
-    const dy = targetTop - fromRect.top;
-    const animation = flight.animate(
-      [
-        { opacity: .9, transform: 'translate(0, 0) scale(1)' },
-        { opacity: .72, offset: .55, transform: `translate(${dx * .72}px, ${dy * .72}px) scale(.91)` },
-        { opacity: 0, transform: `translate(${dx}px, ${dy}px) scale(.86)` },
-      ],
-      {
-        duration: 210,
-        easing: 'cubic-bezier(.22,1,.36,1)',
-        fill: 'both',
-      },
-    );
-    animation.finished.catch(() => {}).finally(() => flight.remove());
-  }
-
-  function animateEnterCompletion(snapshot) {
-    const input = expressionInput();
-    if (!input) return;
-    const mode = document.body.dataset.appMode || 'calculator';
-    const editorCard = input.closest('.editor-card');
-    const resultBlock = document.getElementById('resultBlock');
-    const historyList = document.getElementById('historyList');
-    const newHistoryRow = historyList?.firstElementChild;
-
-    animateElement(
-      input,
-      [
-        { opacity: .56, transform: 'translateY(3px) scale(.994)' },
-        { opacity: 1, transform: 'translateY(0) scale(1)' },
-      ],
-      { duration: 170, easing: 'cubic-bezier(.22,1,.36,1)' },
-    );
-    animateElement(
-      editorCard,
-      [
-        { boxShadow: 'var(--card-shadow)' },
-        { boxShadow: '0 0 0 3px var(--accent-soft), var(--card-shadow)', offset: .42 },
-        { boxShadow: 'var(--card-shadow)' },
-      ],
-      { duration: 260, easing: 'ease-out' },
-    );
-    animateElement(
-      resultBlock,
-      [
-        { opacity: .7, transform: 'translateY(-2px)' },
-        { opacity: 1, transform: 'translateY(0)' },
-      ],
-      { duration: 150, easing: 'ease-out' },
-    );
-
-    if (
-      mode === 'calculator'
-      && snapshot.resultText
-      && snapshot.resultText.trim() === input.value.trim()
-    ) {
-      createResultFlight(snapshot.resultText, snapshot.resultRect, input);
-    }
-
-    if (
-      mode === 'calculator'
-      && newHistoryRow
-      && newHistoryRow !== snapshot.historyFirst
-    ) {
-      animateElement(
-        newHistoryRow,
-        [
-          { opacity: 0, transform: 'translateY(-8px) scale(.985)' },
-          { opacity: 1, transform: 'translateY(0) scale(1)' },
-        ],
-        { duration: 190, easing: 'cubic-bezier(.22,1,.36,1)' },
-      );
-    }
-  }
-
   function captureEnter(event) {
     const input = expressionInput();
     if (!input || event.target !== input) return;
     if (event.key !== 'Enter' || event.isComposing || event.repeat) return;
 
-    const resultValue = document.getElementById('resultValue');
-    const historyList = document.getElementById('historyList');
     const sequence = ++enterSequence;
     const snapshot = {
       value: input.value,
-      resultText: String(resultValue?.textContent || '').trim(),
-      resultRect: resultValue?.getBoundingClientRect() || input.getBoundingClientRect(),
-      historyFirst: historyList?.firstElementChild || null,
+      history: captureHistoryLayout(),
     };
-
     waitForInputChange(input, snapshot.value, sequence).then(changed => {
       if (changed) animateEnterCompletion(snapshot);
     });
@@ -269,36 +215,54 @@
     }
   }
 
-  function fallbackModeTransition(tab) {
-    const workspace = document.querySelector('.workspace');
-    if (!workspace) {
-      replayModeClick(tab);
-      return;
+  function visibleModePanel() {
+    if (document.body.dataset.appMode === 'units') {
+      return document.getElementById('unitConverterCard');
     }
+    return document.querySelector('.history-card:not(.unit-converter-card)');
+  }
 
-    const outgoing = animateElement(
-      workspace,
+  function animateSharedEditor() {
+    const editor = document.querySelector('.editor-card');
+    const toolbar = editor?.querySelector('.editor-toolbar');
+    const result = editor?.querySelector('.result-block');
+    for (const element of [toolbar, result]) {
+      animateElement(
+        element,
+        [
+          { opacity: .72, transform: 'translateY(3px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+        { duration: 230, easing: IOS_EASE },
+      );
+    }
+  }
+
+  function fallbackModeTransition(tab) {
+    const outgoing = visibleModePanel();
+    const outgoingAnimation = animateElement(
+      outgoing,
       [
         { opacity: 1, transform: 'translateY(0) scale(1)' },
-        { opacity: .68, transform: 'translateY(3px) scale(.997)' },
+        { opacity: .58, transform: 'translateY(4px) scale(.995)' },
       ],
-      { duration: 80, easing: 'ease-in', fill: 'both' },
+      { duration: 85, easing: 'ease-in', fill: 'both' },
     );
 
-    Promise.resolve(outgoing?.finished).catch(() => {}).then(() => {
+    Promise.resolve(outgoingAnimation?.finished).catch(() => {}).then(() => {
       replayModeClick(tab);
       window.requestAnimationFrame(() => {
-        const incoming = animateElement(
-          workspace,
+        const incoming = visibleModePanel();
+        animateElement(
+          incoming,
           [
-            { opacity: .58, transform: 'translateY(-3px) scale(.997)' },
+            { opacity: .42, transform: 'translateY(-5px) scale(.995)' },
             { opacity: 1, transform: 'translateY(0) scale(1)' },
           ],
-          { duration: 170, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' },
+          { duration: 270, easing: IOS_EASE, fill: 'both' },
         );
-        Promise.resolve(incoming?.finished).catch(() => {}).finally(() => {
-          modeTransitioning = false;
-        });
+        animateSharedEditor();
+        window.setTimeout(() => { modeTransitioning = false; }, 280);
       });
     });
   }
@@ -328,11 +292,39 @@
     fallbackModeTransition(tab);
   }
 
+  function installPressedState() {
+    document.addEventListener('pointerdown', event => {
+      const control = event.target?.closest?.('button, .converter-select');
+      if (!control || reducedMotion()) return;
+      animateElement(
+        control,
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(.975)' },
+        ],
+        { duration: 90, easing: 'ease-out', fill: 'forwards' },
+      );
+    }, true);
+    document.addEventListener('pointerup', event => {
+      const control = event.target?.closest?.('button, .converter-select');
+      if (!control || reducedMotion()) return;
+      animateElement(
+        control,
+        [
+          { transform: 'scale(.975)' },
+          { transform: 'scale(1)' },
+        ],
+        { duration: 180, easing: IOS_EASE },
+      );
+    }, true);
+  }
+
   function install() {
     document.documentElement.dataset.motion = MOTION_MARKER;
-    document.addEventListener('input', animateTypedGlyph, true);
+    document.addEventListener('input', animateTyping, true);
     document.addEventListener('keydown', captureEnter, true);
     document.addEventListener('click', captureModeClick, true);
+    installPressedState();
   }
 
   if (document.readyState === 'loading') {
