@@ -25,15 +25,24 @@ class RendererPolishTests(unittest.TestCase):
             build_html=lambda: source,
         )
 
-    def test_polish_is_inlined_before_main_renderer(self):
+    def test_polish_and_motion_are_inlined_before_main_renderer(self):
         fake_app = self.make_app()
         app_polish.install(fake_app)
         html = fake_app.build_html()
 
+        self.assertIn("nlcalc-motion-v4", html)
+        self.assertIn("animateTypedGlyph", html)
+        self.assertIn("captureEnter", html)
+        self.assertIn("captureModeClick", html)
+        self.assertIn("nlcalc-mode-in", html)
         self.assertIn("nlcalc-polish-v3", html)
         self.assertIn("wrapTypedFunction", html)
         self.assertIn("function schedulePreview(delay = 18)", html)
         self.assertIn("nlcalc-pending-pulse", html)
+        self.assertLess(
+            html.index("const MOTION_MARKER"),
+            html.index("const POLISH_MARKER"),
+        )
         self.assertLess(
             html.index("const POLISH_MARKER"),
             html.index("function schedulePreview(delay = 18)"),
@@ -45,7 +54,9 @@ class RendererPolishTests(unittest.TestCase):
         first_builder = fake_app.build_html
         app_polish.install(fake_app)
         self.assertIs(first_builder, fake_app.build_html)
-        self.assertEqual(fake_app.build_html().count("nlcalc-polish-v3"), 1)
+        html = fake_app.build_html()
+        self.assertEqual(html.count("nlcalc-motion-v4"), 1)
+        self.assertEqual(html.count("nlcalc-polish-v3"), 1)
 
 
 if __name__ == "__main__":
