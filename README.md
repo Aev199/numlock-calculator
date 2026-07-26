@@ -117,7 +117,7 @@ span / 2
 Требуется Windows и Python 3.11–3.13.
 
 ```bat
-py -3 -m venv
+py -3 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-build.txt
 .venv\Scripts\python app_keyboard.py
 ```
