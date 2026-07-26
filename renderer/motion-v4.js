@@ -8,6 +8,7 @@
   let replayingModeClick = false;
   let modeTransitioning = false;
   let enterSequence = 0;
+  let pressedControl = null;
 
   function reducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -57,7 +58,6 @@
       list,
       rows,
       rects: new Map(rows.map(row => [row, row.getBoundingClientRect()])),
-      first: rows[0] || null,
     };
   }
 
@@ -292,10 +292,25 @@
     fallbackModeTransition(tab);
   }
 
+  function releasePressedControl() {
+    const control = pressedControl;
+    pressedControl = null;
+    if (!control || reducedMotion()) return;
+    animateElement(
+      control,
+      [
+        { transform: 'scale(.975)' },
+        { transform: 'scale(1)' },
+      ],
+      { duration: 180, easing: IOS_EASE },
+    );
+  }
+
   function installPressedState() {
     document.addEventListener('pointerdown', event => {
       const control = event.target?.closest?.('button, .converter-select');
       if (!control || reducedMotion()) return;
+      pressedControl = control;
       animateElement(
         control,
         [
@@ -305,18 +320,9 @@
         { duration: 90, easing: 'ease-out', fill: 'forwards' },
       );
     }, true);
-    document.addEventListener('pointerup', event => {
-      const control = event.target?.closest?.('button, .converter-select');
-      if (!control || reducedMotion()) return;
-      animateElement(
-        control,
-        [
-          { transform: 'scale(.975)' },
-          { transform: 'scale(1)' },
-        ],
-        { duration: 180, easing: IOS_EASE },
-      );
-    }, true);
+    document.addEventListener('pointerup', releasePressedControl, true);
+    document.addEventListener('pointercancel', releasePressedControl, true);
+    window.addEventListener('blur', releasePressedControl);
   }
 
   function install() {
