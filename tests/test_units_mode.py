@@ -22,29 +22,28 @@ class Storage:
         self.data.update(values)
 
 
-class AppApi:
-    def __init__(self, storage):
-        self._storage = storage
-        self._session = CalculatorSession()
-        self._history = []
-        self._sequence = 0
-        self._lock = threading.RLock()
-
-    def bootstrap(self):
-        return {
-            "history": list(self._history),
-            "suggestions": self._session.suggestions(),
-        }
-
-    def suggestions(self, query=""):
-        return self._session.suggestions(query)
-
-    def commit(self, expression):
-        raise AssertionError("app_units_mode must replace the prototype commit")
-
-
 class UnitsModeTests(unittest.TestCase):
     def make_app(self):
+        class AppApi:
+            def __init__(self, storage):
+                self._storage = storage
+                self._session = CalculatorSession()
+                self._history = []
+                self._sequence = 0
+                self._lock = threading.RLock()
+
+            def bootstrap(self):
+                return {
+                    "history": list(self._history),
+                    "suggestions": self._session.suggestions(),
+                }
+
+            def suggestions(self, query=""):
+                return self._session.suggestions(query)
+
+            def commit(self, expression):
+                raise AssertionError("app_units_mode must replace the prototype commit")
+
         storage = Storage()
         api = AppApi(storage)
         renderer = Path(__file__).resolve().parents[1] / "renderer"
@@ -137,7 +136,7 @@ class UnitsModeTests(unittest.TestCase):
         self.assertIn('id="targetUnitSelect"', html)
         self.assertIn('id="sourceUnitBadge"', html)
         self.assertIn('id="targetUnitBadge"', html)
-        self.assertIn("units-mode", html)
+        self.assertIn("const MODE_UNITS = 'units'", html)
         self.assertNotIn("Функции и единицы (Ctrl+K)", html)
 
 
