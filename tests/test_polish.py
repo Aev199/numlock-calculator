@@ -59,8 +59,14 @@ class RendererPolishTests(unittest.TestCase):
         app_polish.install(fake_app)
         self.assertIs(first_builder, fake_app.build_html)
         html = fake_app.build_html()
-        self.assertEqual(html.count("nlcalc-motion-v5"), 1)
-        self.assertEqual(html.count("nlcalc-polish-v3"), 1)
+        self.assertEqual(
+            html.count("const MOTION_MARKER = 'nlcalc-motion-v5';"),
+            1,
+        )
+        self.assertEqual(
+            html.count("const POLISH_MARKER = 'nlcalc-polish-v3';"),
+            1,
+        )
 
 
 if __name__ == "__main__":
