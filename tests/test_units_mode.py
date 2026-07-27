@@ -130,7 +130,7 @@ class UnitsModeTests(unittest.TestCase):
         self.assertIn('id="targetUnitSelect"', html)
         self.assertIn('id="sourceUnitBadge"', html)
         self.assertIn('id="targetUnitBadge"', html)
-        self.assertIn("state.mode === 'units'", html)
+        self.assertIn("switchMode('units')", html)
         self.assertNotIn("Функции и единицы (Ctrl+K)", html)
 
     def test_backend_does_not_mutate_renderer_builder(self):
