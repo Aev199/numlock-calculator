@@ -8,7 +8,18 @@
     [...TRIG_ORDER, ...POWER_ORDER].map((name, index) => [name, index]),
   );
   const DISPLAY_MULTIPLY = '⋅';
-  const displayExpression = value => String(value ?? '').replace(/\*/g, DISPLAY_MULTIPLY);
+
+  function displayExpression(value) {
+    let visual = String(value ?? '');
+    // Repair the same keypad separator sequences as the Python backend, so the
+    // field, history and clipboard show the expression that is actually used.
+    visual = visual.replace(
+      /(^|[^\d])[.,]{1,2}(?=\d)/g,
+      (_match, prefix) => `${prefix}0.`,
+    );
+    visual = visual.replace(/(\d)[.,]{1,2}(?=\d)/g, '$1.');
+    return visual.replace(/\*/g, DISPLAY_MULTIPLY);
+  }
 
   // Ctrl+K is intentionally retired. Tab from the expression field is the only
   // keyboard entry point; the toolbar button remains available for mouse users.
@@ -73,8 +84,8 @@
     select.replaceChildren(fragment);
   };
 
-  // Expressions are stored exactly as typed, but multiplication is presented
-  // consistently with the middle-dot glyph in the editor and history.
+  // Expressions are stored exactly as typed, but multiplication and repaired
+  // decimal separators are presented consistently in the editor and history.
   const baseUpdateHistoryNodeUx = updateHistoryNode;
   updateHistoryNode = function (slot, entry) {
     baseUpdateHistoryNodeUx(slot, entry);
@@ -132,12 +143,19 @@
 
   const baseOnInputUx = onInput;
   onInput = function (event) {
-    const start = dom.input.selectionStart ?? dom.input.value.length;
+    const raw = dom.input.value;
+    const start = dom.input.selectionStart ?? raw.length;
     const end = dom.input.selectionEnd ?? start;
-    const visual = displayExpression(dom.input.value);
-    if (visual !== dom.input.value) {
+    const visual = displayExpression(raw);
+    if (visual !== raw) {
+      const visualStart = start === raw.length
+        ? visual.length
+        : displayExpression(raw.slice(0, start)).length;
+      const visualEnd = end === raw.length
+        ? visual.length
+        : displayExpression(raw.slice(0, end)).length;
       dom.input.value = visual;
-      setSelection(start, end);
+      setSelection(visualStart, visualEnd);
     }
     baseOnInputUx(event);
     renderBracketColors();
