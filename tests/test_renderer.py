@@ -39,6 +39,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("window.__nlcalcRestoreEditorFocus", html)
         self.assertIn("event.code === 'KeyK'", html)
         self.assertIn("input-motion-layer", html)
+        self.assertIn("keydown-v2", html)
         self.assertNotIn(app_renderer.CSS_PLACEHOLDER, html)
         self.assertNotIn(app_renderer.JS_PLACEHOLDER, html)
         self.assertNotIn("nlcalc-motion-v5", html)
@@ -47,7 +48,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 12)
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 13)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
@@ -55,12 +56,17 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertTrue(source.lstrip().startswith("(function ()"))
         self.assertTrue(source.rstrip().endswith("})();"))
         self.assertEqual(source.count("nlcalc-consolidated-v2"), 1)
+        self.assertEqual(source.count("keydown-v2"), 1)
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07z.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07zzz.js"),
         )
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07zzz.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.motion-keydown.js"),
+        )
+        self.assertLess(
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.motion-keydown.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
@@ -70,11 +76,13 @@ class ConsolidatedRendererTests(unittest.TestCase):
         html = app.build_html()
 
         self.assertIn("function interceptTextInsertion(event)", html)
+        self.assertIn("function interceptPhysicalKey(event)", html)
         self.assertIn("event.preventDefault()", html)
         self.assertIn("event.stopImmediatePropagation()", html)
         self.assertIn("dom.input.value = nextValue", html)
         self.assertIn("onInput({", html)
         self.assertIn("inputType: 'insertText'", html)
+        self.assertIn("window.__NLCALC_MOTION_INPUT_RUNTIME__", html)
         self.assertNotIn("const baseSwitchMode = switchMode", html)
 
     def test_race_guards_are_present(self):
