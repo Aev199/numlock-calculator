@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+from ctypes import wintypes
 import os
 import threading
 import time
@@ -18,6 +19,29 @@ MUTEX_NAME = rf"Local\{APP_ID}.Instance"
 ACTIVATE_EVENT_NAME = rf"Local\{APP_ID}.Activate"
 
 
+def _configure_kernel32(api: Any) -> Any:
+    """Declare 64-bit-safe Win32 HANDLE signatures."""
+
+    api.CreateEventW.argtypes = [
+        ctypes.c_void_p,
+        wintypes.BOOL,
+        wintypes.BOOL,
+        wintypes.LPCWSTR,
+    ]
+    api.CreateEventW.restype = wintypes.HANDLE
+    api.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+    api.CreateMutexW.restype = wintypes.HANDLE
+    api.GetLastError.argtypes = []
+    api.GetLastError.restype = wintypes.DWORD
+    api.SetEvent.argtypes = [wintypes.HANDLE]
+    api.SetEvent.restype = wintypes.BOOL
+    api.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    api.WaitForSingleObject.restype = wintypes.DWORD
+    api.CloseHandle.argtypes = [wintypes.HANDLE]
+    api.CloseHandle.restype = wintypes.BOOL
+    return api
+
+
 def install(
     app: Any,
     *,
@@ -26,7 +50,7 @@ def install(
 ) -> None:
     """Wrap the final application entry point with a process-level guard.
 
-    A second process signals a named auto-reset event and exits.  The first
+    A second process signals a named auto-reset event and exits. The first
     process watches that event and restores/focuses its existing window.
     """
 
@@ -43,7 +67,7 @@ def install(
     def native_api() -> Any:
         if kernel32 is not None:
             return kernel32
-        return ctypes.windll.kernel32
+        return _configure_kernel32(ctypes.windll.kernel32)
 
     def close_handle(api: Any, handle: Any) -> None:
         if not handle:
