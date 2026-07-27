@@ -1,3 +1,4 @@
+    if (data.storage_warning) showToast(data.storage_warning);
     reconcileHistory();
     bindEvents();
     setInputValue(state.calculator.expression);
