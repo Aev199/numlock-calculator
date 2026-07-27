@@ -30,15 +30,16 @@ class RendererPolishTests(unittest.TestCase):
         app_polish.install(fake_app)
         html = fake_app.build_html()
 
-        self.assertIn("nlcalc-motion-v5", html)
+        self.assertIn("nlcalc-motion-v6", html)
         self.assertIn("animateTyping", html)
         self.assertIn("animateHistoryInsertion", html)
         self.assertIn("captureEnter", html)
         self.assertIn("captureModeClick", html)
         self.assertIn("nlcalc-enter-old-value", html)
-        self.assertIn("nlcalc-mode-panel", html)
+        self.assertIn("view-transition-name: none", html)
         self.assertNotIn("nlcalc-typed-glyph", html)
         self.assertNotIn("createResultFlight", html)
+        self.assertNotIn("scale(.975)", html)
         self.assertIn("nlcalc-polish-v3", html)
         self.assertIn("wrapTypedFunction", html)
         self.assertIn("function schedulePreview(delay = 18)", html)
@@ -59,14 +60,8 @@ class RendererPolishTests(unittest.TestCase):
         app_polish.install(fake_app)
         self.assertIs(first_builder, fake_app.build_html)
         html = fake_app.build_html()
-        self.assertEqual(
-            html.count("const MOTION_MARKER = 'nlcalc-motion-v5';"),
-            1,
-        )
-        self.assertEqual(
-            html.count("const POLISH_MARKER = 'nlcalc-polish-v3';"),
-            1,
-        )
+        self.assertEqual(html.count("const MOTION_MARKER = 'nlcalc-motion-v6'"), 1)
+        self.assertEqual(html.count("nlcalc-polish-v3"), 1)
 
 
 if __name__ == "__main__":
