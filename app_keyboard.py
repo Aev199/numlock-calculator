@@ -19,6 +19,7 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
+import app_diagnostics
 import app_numlock_compat
 import app_renderer
 import app_single_instance
@@ -28,13 +29,14 @@ import app_window
 
 # Native behavior is installed first. The tray wraps only application lifecycle,
 # the units backend extends only AppApi, and the consolidated renderer is installed
-# last as the sole owner of HTML, CSS and frontend JavaScript. The process guard
-# wraps the final entry point so a second launch activates the existing window.
+# last as the sole owner of HTML, CSS and frontend JavaScript. Diagnostics wrap the
+# final runtime, while the outer process guard prevents duplicate hooks and trays.
 app_window.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
 app_units_backend.install(app)
 app_renderer.install(app)
+app_diagnostics.install(app)
 app_single_instance.install(app)
 
 
