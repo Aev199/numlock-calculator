@@ -54,7 +54,7 @@ def install(app: Any) -> None:
     original_create_window = app.webview.create_window
     original_webview_start = app.webview.start
     original_main = app.main
-    original_register_hotkeys = app.register_hotkeys
+    original_register_hotkeys = getattr(app, "register_hotkeys", lambda: None)
 
     def run_async(callback: Callable[[], None]) -> None:
         threading.Thread(target=callback, daemon=True).start()
@@ -74,7 +74,8 @@ def install(app: Any) -> None:
     def autostart_command() -> str:
         if getattr(sys, "frozen", False):
             return f'"{Path(sys.executable).resolve()}"'
-        entry = Path(app.__file__).resolve().with_name("app_keyboard.py")
+        module_path = Path(getattr(app, "__file__", Path.cwd() / "app.py")).resolve()
+        entry = module_path.with_name("app_keyboard.py")
         return f'"{Path(sys.executable).resolve()}" "{entry}"'
 
     def autostart_enabled() -> bool:
@@ -185,11 +186,7 @@ def install(app: Any) -> None:
                 pystray.MenuItem("Выйти", quit_from_tray),
             )
             icon = pystray.Icon("numcalc", create_tray_image(), TRAY_TITLE, menu)
-            thread = threading.Thread(
-                target=icon.run,
-                name="NumCalcTray",
-                daemon=True,
-            )
+            thread = threading.Thread(target=icon.run, name="NumCalcTray", daemon=True)
             app._tray_icon = icon
             app._tray_thread = thread
             thread.start()
@@ -222,7 +219,8 @@ def install(app: Any) -> None:
         original_add_hotkey = keyboard.add_hotkey
 
         def filtered_add_hotkey(hotkey: str, *args: Any, **kwargs: Any) -> Any:
-            if str(hotkey).replace(" ", "").lower() == "ctrl+shift+q":
+            normalized = "".join(str(hotkey).split()).lower()
+            if normalized == "ctrl+shift+q":
                 return None
             return original_add_hotkey(hotkey, *args, **kwargs)
 
