@@ -3,7 +3,11 @@ import time
 import types
 import unittest
 
-fake_webview = types.SimpleNamespace(Window=object)
+fake_webview = types.SimpleNamespace(
+    Window=object,
+    create_window=lambda *args, **kwargs: object(),
+    start=lambda *args, **kwargs: None,
+)
 sys.modules.setdefault("webview", fake_webview)
 
 import calc_engine
@@ -13,10 +17,12 @@ calc_engine.CalculatorSession = CalculatorSession
 
 import app
 import app_numlock_compat
+import app_renderer
 import app_stability
 
 app_stability.install(app)
 app_numlock_compat.install(app)
+app_renderer.install(app)
 
 
 class FakeWindow:
@@ -108,12 +114,13 @@ class StabilityTests(unittest.TestCase):
         )
         self.assertNotEqual(app_numlock_compat.NUMLOCK_INJECTION_TAG, 0)
 
-    def test_v2_html_contains_layout_independent_shortcut_and_groups(self):
+    def test_consolidated_html_contains_layout_independent_shortcut_and_focus(self):
         html = app.build_html()
         self.assertIn('id="paletteGroups"', html)
         self.assertIn("event.code === 'KeyK'", html)
         self.assertIn("__nlcalcRestoreEditorFocus", html)
-        self.assertIn("input?.select();", html)
+        self.assertIn("restoreEditorFocus(true)", html)
+        self.assertIn("nlcalc-consolidated-v1", html)
 
 
 if __name__ == "__main__":
