@@ -16,9 +16,11 @@ STYLE_PARTS = (
     "app-shell.css",
     "app-shell-motion.css",
 )
-SCRIPT_PARTS = tuple(
-    f"app-shell-v2.part{index:02d}.js"
-    for index in range(9)
+SCRIPT_PARTS = (
+    *(f"app-shell-v2.part{index:02d}.js" for index in range(8)),
+    "app-shell-v2.part07z.js",
+    "app-shell-v2.part07zz.js",
+    "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
 JS_PLACEHOLDER = "/*__NUMLOCK_CALC_JS__*/"
@@ -53,7 +55,7 @@ def install(app: Any) -> None:
             )
         if javascript.count("nlcalc-consolidated-v2") != 1:
             raise RuntimeError("Consolidated renderer controller is incomplete")
-        if "nlcalc-input-pulse" not in css:
+        if "nlcalc-caret-glyph" not in css:
             raise RuntimeError("Consolidated renderer motion layer is incomplete")
 
         return (
