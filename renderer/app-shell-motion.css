@@ -24,20 +24,15 @@ body[data-motion="full"] .expression-field-shell.is-typing::after {
   box-shadow: inherit;
 }
 
-.typing-glyph,
-.input-motion-layer {
+.input-motion-layer,
+.typing-reveal,
+.typing-caret-copy {
   position: fixed;
   z-index: 1300;
   display: block;
   pointer-events: none;
   color: var(--text);
   contain: layout paint style;
-  will-change: transform, opacity;
-}
-
-.typing-glyph {
-  white-space: pre;
-  transform-origin: left bottom;
 }
 
 .input-motion-layer {
@@ -45,6 +40,27 @@ body[data-motion="full"] .expression-field-shell.is-typing::after {
   text-overflow: ellipsis;
   transform-origin: left center;
   backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+.typing-reveal {
+  overflow: hidden;
+  white-space: pre;
+  will-change: width, opacity;
+}
+
+.typing-reveal > span {
+  display: block;
+  white-space: pre;
+}
+
+.typing-caret-copy {
+  width: 1.5px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--accent) 44%, transparent);
+  transform-origin: center;
+  will-change: transform, opacity;
 }
 
 .input-motion-layer.commit-incoming {
@@ -97,7 +113,8 @@ body[data-motion="full"] .field-unit-badge {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body:not([data-motion="full"]) .typing-glyph,
+  body:not([data-motion="full"]) .typing-reveal,
+  body:not([data-motion="full"]) .typing-caret-copy,
   body:not([data-motion="full"]) .input-motion-layer,
   body:not([data-motion="full"]) .commit-roll-layer {
     display: none !important;
