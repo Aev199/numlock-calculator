@@ -15,19 +15,17 @@ jobs:
         with:
           python-version: '3.13'
       - name: Compile Python sources
-        run: python -m py_compile app.py app_keyboard.py app_stability.py app_polish.py app_numlock_compat.py app_tray.py app_compact.py app_units_mode.py calc_engine.py calc_engine_runtime.py
+        run: python -m py_compile app.py app_keyboard.py app_stability.py app_numlock_compat.py app_tray.py app_units_mode.py app_renderer.py calc_engine.py calc_engine_runtime.py
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
         run: python -m unittest tests.test_app -v
       - name: Test focus and NumLock stability
         run: python -m unittest tests.test_stability -v
-      - name: Test renderer polish
-        run: python -m unittest tests.test_polish -v
+      - name: Test consolidated renderer
+        run: python -m unittest tests.test_renderer -v
       - name: Test frameless tray shell
         run: python -m unittest tests.test_tray -v
-      - name: Test compact shell
-        run: python -m unittest tests.test_compact -v
       - name: Test separate units mode
         run: python -m unittest tests.test_units_mode -v
       - name: Test full build sequence
@@ -45,11 +43,5 @@ jobs:
         run: |
           cat discover.log
           exit 1
-      - name: Check renderer JavaScript
-        run: |
-          node --check renderer/script.js
-          node --check renderer/script-v2.js
-          node --check renderer/polish-v3.js
-          node --check renderer/motion-v4.js
-          node --check renderer/enter-fast.js
-          node --check renderer/units-mode.js
+      - name: Check consolidated renderer JavaScript
+        run: node --check renderer/app-shell.js
