@@ -3,7 +3,7 @@ name: tests
 on:
   push:
     branches:
-      - redesign/keyboard-first
+      - main
   pull_request:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Compile Python sources
-        run: python -m py_compile app.py app_keyboard.py app_window.py app_numlock_compat.py app_tray.py app_units_backend.py app_renderer.py unit_conversion.py calc_engine.py calc_engine_runtime.py
+        run: python -m py_compile app.py app_keyboard.py app_window.py app_numlock_compat.py app_tray.py app_units_backend.py app_renderer.py input_normalization.py unit_conversion.py calc_engine.py calc_engine_runtime.py
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
@@ -58,5 +58,7 @@ jobs:
           assert 'keydown-v2' not in source
           assert 'interceptTextInsertion' not in source
           assert 'interceptPhysicalKey' not in source
+          assert "const DISPLAY_MULTIPLY = '⋅';" in source
+          assert "event.code === 'KeyC'" in source
           PY
           node --check renderer-check.js
