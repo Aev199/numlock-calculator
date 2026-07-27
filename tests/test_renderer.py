@@ -38,6 +38,8 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("function reconcileHistory", html)
         self.assertIn("window.__nlcalcRestoreEditorFocus", html)
         self.assertIn("event.code === 'KeyK'", html)
+        self.assertIn("animateInsertedGlyph", html)
+        self.assertIn("commit-roll-layer", html)
         self.assertNotIn(app_renderer.CSS_PLACEHOLDER, html)
         self.assertNotIn(app_renderer.JS_PLACEHOLDER, html)
         self.assertNotIn("nlcalc-motion-v5", html)
@@ -46,7 +48,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 9)
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 11)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
@@ -54,6 +56,10 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertTrue(source.lstrip().startswith("(function ()"))
         self.assertTrue(source.rstrip().endswith("})();"))
         self.assertEqual(source.count("nlcalc-consolidated-v2"), 1)
+        self.assertLess(
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07z.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
+        )
 
     def test_race_guards_are_present(self):
         app, _calls = self.make_app()
