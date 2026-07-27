@@ -5,6 +5,7 @@ from pathlib import Path
 
 import calc_engine
 import unit_conversion
+from calculation_limits import install_calculator_limits, install_unit_limits
 from input_normalization import (
     install_calculator_normalization,
     install_unit_normalization,
@@ -12,6 +13,8 @@ from input_normalization import (
 
 install_calculator_normalization(calc_engine)
 install_unit_normalization(unit_conversion)
+install_calculator_limits(calc_engine)
+install_unit_limits(unit_conversion)
 
 from calc_engine_runtime import CalculatorSession, make_history_entry
 
@@ -91,6 +94,14 @@ class UnitsModeTests(unittest.TestCase):
         for expression, expected in cases.items():
             with self.subTest(expression=expression):
                 self.assertEqual(unit_conversion.evaluate_simple(expression), expected)
+
+    def test_simple_arithmetic_resource_limits(self):
+        with self.assertRaisesRegex(ValueError, "длин"):
+            unit_conversion.evaluate_simple("1+" * 140 + "1")
+        with self.assertRaisesRegex(ValueError, "глубин"):
+            unit_conversion.evaluate_simple("-" * 80 + "1")
+        with self.assertRaisesRegex(ValueError, "показатель"):
+            unit_conversion.evaluate_simple("2^101")
 
     def test_conversion_catalog_and_temperature(self):
         app, api, _storage = self.make_app()
