@@ -109,6 +109,13 @@ class UnitsModeTests(unittest.TestCase):
         categories = {item["id"] for item in unit_conversion.unit_payload()}
         self.assertTrue({"distributed_force", "moment", "speed", "acceleration", "specific_weight"} <= categories)
 
+        payload = api.units_bootstrap()["categories"]
+        force = next(item for item in payload if item["id"] == "force")
+        self.assertIn(
+            {"symbol": "tf", "label": "Тонна-сила — тс"},
+            force["units"],
+        )
+
     def test_calculator_handoff_revision_and_converter_state(self):
         app, api, storage = self.make_app()
         app_units_backend.install(app)
@@ -153,7 +160,6 @@ class UnitsModeTests(unittest.TestCase):
         self.assertIn('id="sourceUnitBadge"', html)
         self.assertIn('id="targetUnitBadge"', html)
         self.assertIn("switchMode('units')", html)
-        self.assertIn("Тонна-сила — тс", html)
         self.assertNotIn("Функции и единицы (Ctrl+K)", html)
 
     def test_backend_does_not_mutate_renderer_builder(self):
