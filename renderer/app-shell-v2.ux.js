@@ -7,6 +7,8 @@
   const FUNCTION_RANK = new Map(
     [...TRIG_ORDER, ...POWER_ORDER].map((name, index) => [name, index]),
   );
+  const DISPLAY_MULTIPLY = '⋅';
+  const displayExpression = value => String(value ?? '').replace(/\*/g, DISPLAY_MULTIPLY);
 
   // Ctrl+K is intentionally retired. Tab from the expression field is the only
   // keyboard entry point; the toolbar button remains available for mouse users.
@@ -71,6 +73,14 @@
     select.replaceChildren(fragment);
   };
 
+  // Expressions are stored exactly as typed, but multiplication is presented
+  // consistently with the middle-dot glyph in the editor and history.
+  const baseUpdateHistoryNodeUx = updateHistoryNode;
+  updateHistoryNode = function (slot, entry) {
+    baseUpdateHistoryNodeUx(slot, entry);
+    slot.querySelector('.history-expression').textContent = displayExpression(entry.expression);
+  };
+
   const bracketOverlay = document.createElement('div');
   bracketOverlay.className = 'bracket-color-overlay';
   bracketOverlay.setAttribute('aria-hidden', 'true');
@@ -116,9 +126,98 @@
 
   const baseSetInputValueUx = setInputValue;
   setInputValue = function (value, selection = null) {
-    baseSetInputValueUx(value, selection);
+    baseSetInputValueUx(displayExpression(value), selection);
     renderBracketColors();
   };
+
+  const baseOnInputUx = onInput;
+  onInput = function (event) {
+    const start = dom.input.selectionStart ?? dom.input.value.length;
+    const end = dom.input.selectionEnd ?? start;
+    const visual = displayExpression(dom.input.value);
+    if (visual !== dom.input.value) {
+      dom.input.value = visual;
+      setSelection(start, end);
+    }
+    baseOnInputUx(event);
+    renderBracketColors();
+  };
+
+  async function copyCurrentCalculation() {
+    const expression = normalize(dom.input.value);
+    if (!expression) {
+      showToast('Нет выражения для копирования');
+      return;
+    }
+
+    let response;
+    let text;
+    try {
+      if (state.mode === 'calculator') {
+        response = (
+          state.calculator.previewExpression === state.calculator.expression
+          && state.calculator.preview?.ok
+        ) ? state.calculator.preview : await state.api.preview(expression);
+        if (!response?.ok) {
+          showToast(response?.error || 'Нет результата для копирования');
+          return;
+        }
+        text = `${displayExpression(expression)} = ${response.result}`;
+      } else {
+        response = (
+          state.units.previewExpression === state.units.expression
+          && state.units.previewContext === unitContext()
+          && state.units.preview?.ok
+        ) ? state.units.preview : await state.api.convert_units(
+          expression,
+          state.units.category,
+          state.units.from_unit,
+          state.units.to_unit,
+          false,
+          state.units.imported_revision,
+        );
+        if (!response?.ok) {
+          showToast(response?.error || 'Нет результата для копирования');
+          return;
+        }
+        text = `${displayExpression(expression)} ${state.units.from_unit} = ${response.result} ${state.units.to_unit}`;
+      }
+
+      const copied = await state.api.copy_text(text);
+      showToast(copied ? 'Вычисление скопировано' : 'Не удалось открыть буфер обмена');
+    } catch (_) {
+      showToast('Не удалось скопировать вычисление');
+    }
+  }
+
+  // Global shortcuts work from the editor, selects, history and popovers.
+  // Capture prevents WebView navigation on Alt+Left/Right.
+  document.addEventListener('keydown', event => {
+    if (
+      event.altKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && !event.shiftKey
+      && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeTransientUi();
+      switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units');
+      return;
+    }
+
+    if (
+      (event.ctrlKey || event.metaKey)
+      && !event.altKey
+      && !event.shiftKey
+      && event.code === 'KeyC'
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      void copyCurrentCalculation();
+    }
+  }, { capture: true });
 
   dom.input.addEventListener('input', renderBracketColors);
   dom.input.addEventListener('scroll', renderBracketColors, { passive: true });
