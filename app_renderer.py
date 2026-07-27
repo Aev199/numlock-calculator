@@ -1,6 +1,6 @@
 """Single-source renderer for the keyboard-first NumLock Calc UI.
 
-The desktop shell, calculation engine and persistence stay in Python.  This
+The desktop shell, calculation engine and persistence stay in Python. This
 module owns the complete frontend document and performs only deterministic
 placeholder substitution for the bundled CSS and JavaScript assets.
 """
@@ -16,6 +16,9 @@ STYLE_NAME = "app-shell.css"
 SCRIPT_NAME = "app-shell.js"
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
 JS_PLACEHOLDER = "/*__NUMLOCK_CALC_JS__*/"
+DEFAULT_WIDTH = 480
+DEFAULT_HEIGHT = 540
+MIN_SIZE = (390, 400)
 
 
 def install(app: Any) -> None:
@@ -24,6 +27,7 @@ def install(app: Any) -> None:
     if getattr(app, "_consolidated_renderer_installed", False):
         return
     app._consolidated_renderer_installed = True
+    original_create_window = app.webview.create_window
 
     def build_html() -> str:
         renderer = Path(app.RENDERER_DIR)
@@ -39,4 +43,11 @@ def install(app: Any) -> None:
             .replace(JS_PLACEHOLDER, javascript, 1)
         )
 
+    def create_window(*args: Any, **kwargs: Any) -> Any:
+        kwargs["width"] = DEFAULT_WIDTH
+        kwargs["height"] = DEFAULT_HEIGHT
+        kwargs["min_size"] = MIN_SIZE
+        return original_create_window(*args, **kwargs)
+
     app.build_html = build_html
+    app.webview.create_window = create_window
