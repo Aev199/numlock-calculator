@@ -15,12 +15,14 @@ TEMPLATE_NAME = "app-shell.html"
 STYLE_PARTS = (
     "app-shell.css",
     "app-shell-motion.css",
+    "app-shell-ux.css",
 )
 SCRIPT_PARTS = (
     *(f"app-shell-v2.part{index:02d}.js" for index in range(8)),
     "app-shell-v2.part07z.js",
     "app-shell-v2.part07zz.js",
     "app-shell-v2.part07zzz.js",
+    "app-shell-v2.ux.js",
     "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
@@ -56,6 +58,8 @@ def install(app: Any) -> None:
             )
         if javascript.count("nlcalc-consolidated-v2") != 1:
             raise RuntimeError("Consolidated renderer controller is incomplete")
+        if "TRIG_ORDER" not in javascript or "bracket-color-overlay" not in css:
+            raise RuntimeError("Consolidated renderer keyboard UX is incomplete")
         if "nlcalc-caret-glyph" not in css:
             raise RuntimeError("Consolidated renderer motion layer is incomplete")
 
