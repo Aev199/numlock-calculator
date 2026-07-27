@@ -1,0 +1,77 @@
+/* Visible motion overrides for the consolidated renderer.
+   Motion is restricted to isolated overlays and decorative surfaces. */
+
+body[data-motion="full"] .mode-indicator {
+  transition: none !important;
+}
+
+body[data-motion="full"] .mode-panel {
+  transition: none !important;
+}
+
+body[data-motion="full"] .calculator-setting,
+body[data-motion="full"] .calculator-only,
+body[data-motion="full"] .field-unit-badge,
+body[data-motion="full"] .result-unit-badge {
+  transition-duration: 220ms !important;
+}
+
+/* Do not flash the complete input surface for every character. */
+body[data-motion="full"] .expression-field-shell::after,
+body[data-motion="full"] .expression-field-shell.is-typing::after {
+  content: none !important;
+  animation: none !important;
+}
+
+body[data-motion="full"] .expression-input {
+  position: relative;
+  z-index: 1;
+}
+
+/* Keep the source unit anchored to the first text line. The previous generic
+   z-index rule changed it from absolute to relative positioning. */
+body[data-motion="full"] .field-unit-badge {
+  position: absolute !important;
+  z-index: 3;
+  top: 7px !important;
+  right: 7px !important;
+  left: auto !important;
+  transform: none !important;
+}
+
+body[data-motion="full"] .history-slot {
+  transition-duration: 300ms !important;
+  transition-timing-function: cubic-bezier(.22, .8, .2, 1) !important;
+}
+
+body[data-motion="full"] .history-slot.entering .history-entry {
+  background: color-mix(in srgb, var(--accent-soft) 58%, transparent);
+}
+
+body[data-motion="full"] .commit-overlay {
+  color: var(--accent);
+  text-shadow: 0 5px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+  isolation: isolate;
+  contain: layout paint style;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+body[data-motion="full"] .result-value.updating {
+  opacity: .48;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The in-app full-motion mode intentionally overrides the Windows setting. */
+  body[data-motion="full"] .calculator-setting,
+  body[data-motion="full"] .calculator-only,
+  body[data-motion="full"] .field-unit-badge,
+  body[data-motion="full"] .result-unit-badge,
+  body[data-motion="full"] .history-slot {
+    transition-duration: 220ms !important;
+  }
+
+  body[data-motion="full"] .commit-overlay.active {
+    display: block !important;
+  }
+}
