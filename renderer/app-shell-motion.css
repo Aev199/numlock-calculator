@@ -1,5 +1,5 @@
 /* Visible motion for the consolidated renderer.
-   Only temporary visual copies move; live textarea glyphs stay fixed. */
+   Only temporary visual copies move; live textarea geometry stays fixed. */
 
 body[data-motion="full"] .mode-indicator {
   transition-duration: 360ms !important;
@@ -24,17 +24,39 @@ body[data-motion="full"] .expression-field-shell.is-typing::after {
   box-shadow: inherit;
 }
 
-.typing-glyph {
+.typing-glyph,
+.input-motion-layer {
   position: fixed;
   z-index: 1300;
   display: block;
   pointer-events: none;
-  white-space: pre;
   color: var(--text);
-  text-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 24%, transparent);
-  transform-origin: left bottom;
   contain: layout paint style;
   will-change: transform, opacity;
+}
+
+.typing-glyph {
+  white-space: pre;
+  transform-origin: left bottom;
+}
+
+.input-motion-layer {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: left center;
+  backface-visibility: hidden;
+}
+
+.input-motion-layer.commit-incoming {
+  color: var(--text);
+}
+
+.expression-input.typing-hidden,
+.expression-input.commit-hidden,
+.result-value.commit-source-hidden {
+  color: transparent !important;
+  caret-color: transparent !important;
+  text-shadow: none !important;
 }
 
 .commit-roll-layer {
@@ -50,18 +72,6 @@ body[data-motion="full"] .expression-field-shell.is-typing::after {
   backface-visibility: hidden;
   contain: layout paint style;
   will-change: transform, opacity;
-}
-
-.commit-roll-layer.incoming {
-  color: var(--accent);
-  text-shadow: 0 5px 18px color-mix(in srgb, var(--accent) 28%, transparent);
-}
-
-.expression-input.commit-hidden,
-.result-value.commit-source-hidden {
-  color: transparent !important;
-  caret-color: transparent !important;
-  text-shadow: none !important;
 }
 
 body[data-motion="full"] .history-slot {
@@ -88,6 +98,7 @@ body[data-motion="full"] .field-unit-badge {
 
 @media (prefers-reduced-motion: reduce) {
   body:not([data-motion="full"]) .typing-glyph,
+  body:not([data-motion="full"]) .input-motion-layer,
   body:not([data-motion="full"]) .commit-roll-layer {
     display: none !important;
   }
