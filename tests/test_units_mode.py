@@ -7,7 +7,7 @@ from calc_engine_runtime import CalculatorSession, make_history_entry
 
 import app_renderer
 import app_units_backend
-import app_units_mode
+import unit_conversion
 
 
 class Storage:
@@ -63,12 +63,12 @@ class UnitsModeTests(unittest.TestCase):
         return app, api, storage
 
     def test_simple_arithmetic_rejects_functions_and_units(self):
-        self.assertEqual(app_units_mode.evaluate_simple("(100 + 25) / 2"), 62.5)
-        self.assertEqual(app_units_mode.evaluate_simple("2,5 × 4"), 10.0)
+        self.assertEqual(unit_conversion.evaluate_simple("(100 + 25) / 2"), 62.5)
+        self.assertEqual(unit_conversion.evaluate_simple("2,5 × 4"), 10.0)
         with self.assertRaises(ValueError):
-            app_units_mode.evaluate_simple("sin(30)")
+            unit_conversion.evaluate_simple("sin(30)")
         with self.assertRaises(ValueError):
-            app_units_mode.evaluate_simple("10 kN")
+            unit_conversion.evaluate_simple("10 kN")
 
     def test_conversion_catalog_and_temperature(self):
         app, api, _storage = self.make_app()
