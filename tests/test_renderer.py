@@ -23,12 +23,12 @@ class ConsolidatedRendererTests(unittest.TestCase):
         )
         return app, calls
 
-    def test_single_template_inlines_exactly_one_css_and_script(self):
+    def test_single_template_inlines_one_controller(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
         html = app.build_html()
 
-        self.assertIn("nlcalc-consolidated-v1", html)
+        self.assertEqual(html.count("nlcalc-consolidated-v2"), 1)
         self.assertIn('id="calculatorModeTab"', html)
         self.assertIn('id="unitsModeTab"', html)
         self.assertIn('id="calculatorPanel"', html)
@@ -43,6 +43,31 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertNotIn("nlcalc-motion-v5", html)
         self.assertNotIn("nlcalc-polish-v3", html)
         self.assertNotIn("nlcalc-enter-fast", html)
+
+    def test_controller_parts_are_complete_and_ordered(self):
+        renderer = ROOT / "renderer"
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 9)
+        source = "\n".join(
+            (renderer / name).read_text(encoding="utf-8")
+            for name in app_renderer.SCRIPT_PARTS
+        )
+        self.assertTrue(source.lstrip().startswith("(function ()"))
+        self.assertTrue(source.rstrip().endswith("})();"))
+        self.assertEqual(source.count("nlcalc-consolidated-v2"), 1)
+
+    def test_race_guards_are_present(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("pendingCommits", html)
+        self.assertIn("historyEpoch", html)
+        self.assertIn("state.calculator.expression === visibleCommittedValue", html)
+        self.assertIn("unitContext() === context", html)
+        self.assertIn("incomingRevision < currentRevision", html)
+        self.assertIn("if (event.repeat) return", html)
+        self.assertIn("event.stopPropagation()", html)
+        self.assertIn("cancelCommitAnimation()", html)
 
     def test_both_mode_panels_are_permanent_dom_siblings(self):
         app, _calls = self.make_app()
@@ -61,18 +86,25 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("opacity: 0", html)
         self.assertIn(".mode-panel.active", html)
 
-    def test_keyboard_entry_point_uses_only_final_renderer_layers(self):
+    def test_keyboard_entry_point_uses_renderer_agnostic_layers(self):
         source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")
+        self.assertIn("import app_window", source)
         self.assertIn("import app_renderer", source)
         self.assertIn("import app_units_backend", source)
+        self.assertIn("app_window.install(app)", source)
         self.assertIn("app_units_backend.install(app)", source)
         self.assertIn("app_renderer.install(app)", source)
+        self.assertNotIn("import app_stability", source)
         self.assertNotIn("import app_polish", source)
         self.assertNotIn("import app_compact", source)
         self.assertNotIn("import app_units_mode", source)
-        self.assertNotIn("app_polish.install", source)
-        self.assertNotIn("app_compact.install", source)
-        self.assertNotIn("app_units_mode.install", source)
+
+    def test_window_and_tray_layers_do_not_modify_html(self):
+        window_source = (ROOT / "app_window.py").read_text(encoding="utf-8")
+        tray_source = (ROOT / "app_tray.py").read_text(encoding="utf-8")
+        for source in (window_source, tray_source):
+            self.assertNotIn("build_html", source)
+            self.assertNotIn(".replace(", source)
 
     def test_window_size_is_owned_by_renderer_shell(self):
         app, calls = self.make_app()
