@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Compile Python sources
-        run: python -m py_compile app.py app_keyboard.py app_stability.py app_numlock_compat.py app_tray.py app_units_mode.py app_units_backend.py app_renderer.py calc_engine.py calc_engine_runtime.py
+        run: python -m py_compile app.py app_keyboard.py app_stability.py app_numlock_compat.py app_tray.py app_units_backend.py app_renderer.py unit_conversion.py calc_engine.py calc_engine_runtime.py
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
