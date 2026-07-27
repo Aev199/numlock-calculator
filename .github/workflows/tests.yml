@@ -15,7 +15,13 @@ jobs:
         with:
           python-version: '3.13'
       - name: Compile Python sources
-        run: python -m py_compile app.py app_keyboard.py app_window.py app_numlock_compat.py app_tray.py app_units_backend.py app_renderer.py input_normalization.py unit_conversion.py calc_engine.py calc_engine_runtime.py
+        run: >-
+          python -m py_compile
+          app.py app_keyboard.py app_window.py app_numlock_compat.py
+          app_tray.py app_units_backend.py app_renderer.py
+          app_diagnostics.py app_product.py app_single_instance.py app_storage.py
+          input_normalization.py product_info.py unit_conversion.py
+          calc_engine.py calc_engine_runtime.py
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
@@ -36,7 +42,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: discover-log
+          name: discover-log-linux
           path: discover.log
       - name: Report full build test failure
         if: steps.discover.outcome == 'failure'
@@ -60,5 +66,40 @@ jobs:
           assert 'interceptPhysicalKey' not in source
           assert "const DISPLAY_MULTIPLY = '⋅';" in source
           assert "event.code === 'KeyC'" in source
+          assert 'reportRendererDiagnostic' in source
           PY
           node --check renderer-check.js
+
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Run full Windows test suite
+        run: python -m unittest discover -s tests -v
+      - name: Build NumCalc one-file executable
+        run: python -m PyInstaller --noconfirm --clean NumLockCalc.spec
+      - name: Verify executable and write SHA-256
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath 'dist\NumCalc.exe')) {
+            throw 'dist\NumCalc.exe was not created'
+          }
+          $file = Get-Item -LiteralPath 'dist\NumCalc.exe'
+          if ($file.Length -le 0) {
+            throw 'dist\NumCalc.exe is empty'
+          }
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
+          Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
+      - name: Upload Windows release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: NumCalc-windows-rc
+          path: |
+            dist/NumCalc.exe
+            dist/NumCalc.exe.sha256.txt
+          if-no-files-found: error
