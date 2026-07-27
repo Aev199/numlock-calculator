@@ -2,13 +2,15 @@
 
 ## Автоматическая проверка
 
-- [ ] Linux CI: компиляция активных Python-модулей.
-- [ ] Linux CI: полный `unittest discover`.
-- [ ] Linux CI: `node --check` собранного renderer.
-- [ ] Windows CI: полный `unittest discover`.
-- [ ] Windows CI: PyInstaller создаёт `dist\NumCalc.exe`.
-- [ ] Windows CI: создан и опубликован SHA-256.
-- [ ] Свойства EXE содержат `NumCalc 1.0.0-rc.1`.
+- [x] Linux CI: компиляция активных Python-модулей.
+- [x] Linux CI: полный `unittest discover`.
+- [x] Linux CI: `node --check` собранного renderer.
+- [x] Windows CI: полный `unittest discover`.
+- [x] Windows CI: PyInstaller создаёт `dist\NumCalc.exe`.
+- [x] Windows CI: создан и опубликован SHA-256.
+- [x] Свойства EXE содержат `NumCalc 1.0.0-rc.1`.
+
+Последняя автоматическая проверка должна оставаться зелёной после каждого изменения release-candidate ветки.
 
 ## Ручная приёмка
 
@@ -26,7 +28,7 @@
 - [ ] Все блокирующие дефекты закрыты.
 - [ ] `APP_VERSION` изменена с `1.0.0-rc.1` на `1.0.0`.
 - [ ] Перегенерирован `version_info.txt`.
-- [ ] Обновлены `README.md` и `CHANGELOG.md`.
-- [ ] Финальный EXE собран из отмеченного коммита.
-- [ ] SHA-256 опубликован рядом с EXE.
+- [x] Обновлены `README.md` и `CHANGELOG.md` для release candidate.
+- [x] Release-candidate EXE собран из проверенного коммита.
+- [x] SHA-256 опубликован рядом с release-candidate EXE.
 - [ ] Создан GitHub Release `v1.0.0`.
