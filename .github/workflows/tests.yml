@@ -45,11 +45,16 @@ jobs:
           exit 1
       - name: Check consolidated renderer JavaScript
         run: |
-          cat renderer/app-shell-v2.part*.js > renderer-check.js
-          node --check renderer-check.js
           python - <<'PY'
+          from pathlib import Path
           import app_renderer
-          expected = list(app_renderer.SCRIPT_PARTS)
-          actual = [path.name for path in sorted(__import__('pathlib').Path('renderer').glob('app-shell-v2.part*.js'))]
-          assert actual == expected, (actual, expected)
+
+          renderer = Path('renderer')
+          source = '\n'.join(
+              (renderer / name).read_text(encoding='utf-8')
+              for name in app_renderer.SCRIPT_PARTS
+          )
+          Path('renderer-check.js').write_text(source, encoding='utf-8')
+          assert source.count('keydown-v2') == 1
           PY
+          node --check renderer-check.js
