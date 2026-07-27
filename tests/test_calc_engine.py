@@ -1,5 +1,10 @@
 import unittest
 
+import calc_engine
+from input_normalization import install_calculator_normalization
+
+install_calculator_normalization(calc_engine)
+
 from calc_engine import prepare_for_ast
 from calc_engine_runtime import CalculatorSession
 
@@ -74,6 +79,23 @@ class CalculatorEngineTests(unittest.TestCase):
         self.assertEqual(prepare_for_ast('250 kPa'), '250*kPa')
         self.assertEqual(prepare_for_ast('2 × (3 + 4)').replace(' ', ''), '2*(3+4)')
         self.assertEqual(prepare_for_ast('5!'), 'factorial(5)')
+
+    def test_forgiving_decimal_and_visual_multiply_input(self):
+        cases = {
+            '3100*.,1': '310',
+            '3100*,1': '310',
+            '3100⋅,1': '310',
+            '3100⋅.1': '310',
+            '.1': '0.1',
+            ',1': '0.1',
+            '2*-0,5': '-1',
+            '1e-3': '0.001',
+        }
+        for expression, expected in cases.items():
+            with self.subTest(expression=expression):
+                self.assertResult(expression, expected)
+        self.assertEqual(prepare_for_ast('3100*.,1'), '3100*0.1')
+        self.assertEqual(prepare_for_ast('3100⋅,1'), '3100*0.1')
 
 
 if __name__ == '__main__':
