@@ -20,8 +20,12 @@ jobs:
           app.py app_keyboard.py app_window.py app_numlock_compat.py
           app_tray.py app_units_backend.py app_renderer.py
           app_diagnostics.py app_product.py app_single_instance.py app_storage.py
-          input_normalization.py product_info.py unit_conversion.py
-          calc_engine.py calc_engine_runtime.py
+          generate_version_info.py input_normalization.py product_info.py
+          unit_conversion.py calc_engine.py calc_engine_runtime.py
+      - name: Verify generated product metadata
+        run: |
+          python generate_version_info.py
+          git diff --exit-code -- version_info.txt
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
@@ -81,6 +85,8 @@ jobs:
         run: python -m pip install -r requirements-build.txt
       - name: Run full Windows test suite
         run: python -m unittest discover -s tests -v
+      - name: Generate Windows version metadata
+        run: python generate_version_info.py
       - name: Build NumCalc one-file executable
         run: python -m PyInstaller --noconfirm --clean NumLockCalc.spec
       - name: Verify executable and write SHA-256
