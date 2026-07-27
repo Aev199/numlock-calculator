@@ -20,6 +20,7 @@ SCRIPT_PARTS = (
     *(f"app-shell-v2.part{index:02d}.js" for index in range(8)),
     "app-shell-v2.part07z.js",
     "app-shell-v2.part07zz.js",
+    "app-shell-v2.part07zzz.js",
     "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
