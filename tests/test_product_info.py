@@ -1,8 +1,13 @@
 import types
 import unittest
+from pathlib import Path
 
 import app_product
+import generate_version_info
 import product_info
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class ProductInfoTests(unittest.TestCase):
@@ -12,6 +17,12 @@ class ProductInfoTests(unittest.TestCase):
         self.assertEqual(product_info.APP_ID, "Aev199.NumCalc")
         self.assertEqual(product_info.EXECUTABLE_NAME, "NumCalc")
         self.assertEqual(product_info.version_tuple(), (1, 0, 0, 0))
+
+    def test_generated_windows_metadata_is_checked_in(self):
+        checked_in = (ROOT / "version_info.txt").read_text(encoding="utf-8")
+        self.assertEqual(checked_in, generate_version_info.render())
+        self.assertIn(product_info.APP_VERSION, checked_in)
+        self.assertIn("NumCalc.exe", checked_in)
 
     def test_product_identity_updates_runtime_and_tray(self):
         app = types.SimpleNamespace(APP_NAME="legacy")
