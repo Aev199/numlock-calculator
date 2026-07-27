@@ -2,17 +2,19 @@
 
 import calc_engine
 import unit_conversion
+from calculation_limits import install_calculator_limits, install_unit_limits
 from input_normalization import (
     install_calculator_normalization,
     install_unit_normalization,
 )
 
-# Install the forgiving keypad/display normalization before runtime classes and
-# backend functions are imported.  The wrappers preserve all original parser
-# rules and only repair decimal-separator typos plus the visual multiplication
-# glyph used by the renderer.
+# Install shared input rules and resource limits before runtime classes and
+# backend functions are imported. The wrappers preserve the existing AST engine
+# while repairing keypad input and bounding unusually large expressions.
 install_calculator_normalization(calc_engine)
 install_unit_normalization(unit_conversion)
+install_calculator_limits(calc_engine)
+install_unit_limits(unit_conversion)
 
 from calc_engine_runtime import CalculatorSession
 
