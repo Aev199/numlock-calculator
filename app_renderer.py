@@ -1,4 +1,4 @@
-"""Single-source renderer for the keyboard-first NumLock Calc UI.
+"""Single-source renderer for the keyboard-first NumCalc UI.
 
 The desktop shell, calculation engine and persistence stay in Python. This
 module owns the complete frontend document and performs only deterministic
@@ -16,6 +16,7 @@ STYLE_PARTS = (
     "app-shell.css",
     "app-shell-motion.css",
     "app-shell-ux.css",
+    "app-shell-product.css",
 )
 SCRIPT_PARTS = (
     *(f"app-shell-v2.part{index:02d}.js" for index in range(8)),
@@ -60,6 +61,8 @@ def install(app: Any) -> None:
             raise RuntimeError("Consolidated renderer controller is incomplete")
         if "TRIG_ORDER" not in javascript or "bracket-color-overlay" not in css:
             raise RuntimeError("Consolidated renderer keyboard UX is incomplete")
+        if "pywebview-no-drag" not in css or "NumCalc" not in template:
+            raise RuntimeError("NumCalc product shell is incomplete")
         if "nlcalc-caret-glyph" not in css:
             raise RuntimeError("Consolidated renderer motion layer is incomplete")
 
