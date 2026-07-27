@@ -9,7 +9,7 @@
 /*__NUMLOCK_CALC_CSS__*/
   </style>
 </head>
-<body data-theme="dark" data-app-mode="calculator">
+<body data-theme="dark" data-app-mode="calculator" data-motion="full">
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-block pywebview-drag-region" title="Перетащить окно">
@@ -48,7 +48,6 @@
         <div class="expression-field-shell" id="expressionFieldShell">
           <textarea id="expressionInput" class="expression-input" rows="2" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Например: (120 + 30) / 5" aria-label="Введите выражение"></textarea>
           <span class="field-unit-badge" id="sourceUnitBadge" aria-hidden="true"></span>
-          <div class="commit-overlay" id="commitOverlay" aria-hidden="true"></div>
         </div>
         <div class="completion-popover hidden" id="completionPopover" role="listbox"></div>
 
@@ -109,6 +108,8 @@
       </div>
     </main>
   </div>
+
+  <div class="commit-overlay" id="commitOverlay" aria-hidden="true"></div>
 
   <div class="overlay hidden" id="paletteOverlay" aria-hidden="true">
     <section class="palette" role="dialog" aria-modal="true" aria-label="Команды">
