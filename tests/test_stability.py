@@ -20,6 +20,13 @@ import app_numlock_compat
 import app_renderer
 import app_stability
 
+# Full unittest discovery may import another test's minimal webview stub first.
+# Add only the methods this test's renderer installer needs.
+if not hasattr(app.webview, "create_window"):
+    app.webview.create_window = lambda *args, **kwargs: object()
+if not hasattr(app.webview, "start"):
+    app.webview.start = lambda *args, **kwargs: None
+
 app_stability.install(app)
 app_numlock_compat.install(app)
 app_renderer.install(app)
