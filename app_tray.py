@@ -1,7 +1,7 @@
 """Frameless window and Windows system-tray integration.
 
-This layer intentionally stays independent from the calculator engine and the
-NumLock hook.  It only adjusts window chrome and application lifecycle.
+This module stays independent from the renderer, calculator engine and NumLock
+hook. It only adjusts native window chrome and application lifecycle.
 """
 
 from __future__ import annotations
@@ -23,25 +23,9 @@ def install(app: Any) -> None:
     app._tray_icon = None
     app._tray_thread = None
 
-    original_build_html: Callable[[], str] = app.build_html
     original_create_window = app.webview.create_window
     original_webview_start = app.webview.start
     original_main = app.main
-
-    def build_html() -> str:
-        html = original_build_html()
-        html = html.replace(
-            'class="brand-block"',
-            'class="brand-block pywebview-drag-region" title="Перетащить окно"',
-            1,
-        )
-        html = html.replace(
-            "</style>",
-            "\n.brand-block.pywebview-drag-region{cursor:move;user-select:none}\n"
-            ".topbar-actions,.topbar-actions *{cursor:default}\n</style>",
-            1,
-        )
-        return html
 
     def run_async(callback: Callable[[], None]) -> None:
         threading.Thread(target=callback, daemon=True).start()
@@ -152,7 +136,6 @@ def install(app: Any) -> None:
         finally:
             stop_tray()
 
-    app.build_html = build_html
     app.webview.create_window = create_window
     app.webview.start = start_webview
     app.start_tray = start_tray
