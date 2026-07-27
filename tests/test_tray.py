@@ -31,6 +31,7 @@ class TrayShellTests(unittest.TestCase):
             hide_window=lambda: None,
             toggle_window=lambda: None,
             request_quit=lambda: None,
+            copy_diagnostics=lambda: True,
         )
         return app, create_calls, start_calls
 
@@ -73,6 +74,14 @@ class TrayShellTests(unittest.TestCase):
         self.assertTrue(callable(app.show_from_tray))
         self.assertTrue(callable(app.hide_from_tray))
         self.assertTrue(callable(app.quit_from_tray))
+        self.assertTrue(callable(app.copy_diagnostics_from_tray))
+
+    def test_help_documents_product_shortcuts(self):
+        self.assertIn("Ctrl+C", app_tray.HELP_TEXT)
+        self.assertIn("Alt+← / Alt+→", app_tray.HELP_TEXT)
+        self.assertIn("Копировать диагностику", (
+            'pystray.MenuItem("Копировать диагностику"'
+        ))
 
     def test_install_is_idempotent(self):
         app, _, _ = self.make_app()
