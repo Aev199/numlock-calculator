@@ -3,11 +3,20 @@ import types
 import unittest
 from pathlib import Path
 
+import calc_engine
+import unit_conversion
+from input_normalization import (
+    install_calculator_normalization,
+    install_unit_normalization,
+)
+
+install_calculator_normalization(calc_engine)
+install_unit_normalization(unit_conversion)
+
 from calc_engine_runtime import CalculatorSession, make_history_entry
 
 import app_renderer
 import app_units_backend
-import unit_conversion
 
 
 class Storage:
@@ -69,6 +78,19 @@ class UnitsModeTests(unittest.TestCase):
             unit_conversion.evaluate_simple("sin(30)")
         with self.assertRaises(ValueError):
             unit_conversion.evaluate_simple("10 kN")
+
+    def test_forgiving_decimal_input_matches_calculator(self):
+        cases = {
+            "3100*.,1": 310.0,
+            "3100*,1": 310.0,
+            "3100⋅,1": 310.0,
+            "3100⋅.1": 310.0,
+            ",1": 0.1,
+            "2*-0,5": -1.0,
+        }
+        for expression, expected in cases.items():
+            with self.subTest(expression=expression):
+                self.assertEqual(unit_conversion.evaluate_simple(expression), expected)
 
     def test_conversion_catalog_and_temperature(self):
         app, api, _storage = self.make_app()
