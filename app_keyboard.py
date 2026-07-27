@@ -21,6 +21,7 @@ calc_engine.CalculatorSession = CalculatorSession
 import app
 import app_diagnostics
 import app_numlock_compat
+import app_product
 import app_renderer
 import app_single_instance
 import app_storage
@@ -28,10 +29,11 @@ import app_tray
 import app_units_backend
 import app_window
 
-# Storage is selected before backend layers inspect AppApi. Native behavior is
-# installed next; the renderer remains the sole owner of HTML/CSS/JavaScript.
-# Diagnostics wrap the final runtime, while the outer process guard prevents
-# duplicate hooks, trays and concurrent writes.
+# Product identity and storage are selected before backend layers inspect AppApi.
+# Native behavior is installed next; the renderer remains the sole owner of
+# HTML/CSS/JavaScript. Diagnostics wrap the final runtime, while the outer
+# process guard prevents duplicate hooks, trays and concurrent writes.
+app_product.install(app, app_tray)
 app_storage.install(app)
 app_window.install(app)
 app_numlock_compat.install(app)
