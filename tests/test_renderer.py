@@ -95,6 +95,16 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units')", html)
         self.assertIn("Вычисление скопировано", html)
 
+    def test_renderer_reports_errors_and_storage_fallbacks(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("function reportRendererDiagnostic", html)
+        self.assertIn("report_diagnostic", html)
+        self.assertIn("unhandledrejection", html)
+        self.assertIn("data.storage_warning", html)
+
     def test_race_guards_are_present(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
@@ -128,14 +138,25 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_keyboard_entry_point_uses_renderer_agnostic_layers(self):
         source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")
-        self.assertIn("import app_window", source)
-        self.assertIn("import app_renderer", source)
-        self.assertIn("import app_units_backend", source)
+        for module in (
+            "app_product",
+            "app_storage",
+            "app_window",
+            "app_renderer",
+            "app_units_backend",
+            "app_diagnostics",
+            "app_single_instance",
+        ):
+            self.assertIn(f"import {module}", source)
         self.assertIn("install_calculator_normalization(calc_engine)", source)
         self.assertIn("install_unit_normalization(unit_conversion)", source)
+        self.assertIn("app_product.install(app, app_tray)", source)
+        self.assertIn("app_storage.install(app)", source)
         self.assertIn("app_window.install(app)", source)
         self.assertIn("app_units_backend.install(app)", source)
         self.assertIn("app_renderer.install(app)", source)
+        self.assertIn("app_diagnostics.install(app)", source)
+        self.assertIn("app_single_instance.install(app)", source)
         self.assertNotIn("import app_stability", source)
         self.assertNotIn("import app_polish", source)
         self.assertNotIn("import app_compact", source)
