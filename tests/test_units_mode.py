@@ -5,6 +5,8 @@ from pathlib import Path
 
 from calc_engine_runtime import CalculatorSession, make_history_entry
 
+import app_renderer
+import app_units_backend
 import app_units_mode
 
 
@@ -42,30 +44,21 @@ class UnitsModeTests(unittest.TestCase):
                 return self._session.suggestions(query)
 
             def commit(self, expression):
-                raise AssertionError("app_units_mode must replace the prototype commit")
+                raise AssertionError("app_units_backend must replace the prototype commit")
 
         storage = Storage()
         api = AppApi(storage)
         renderer = Path(__file__).resolve().parents[1] / "renderer"
-        html = """<html><head><style>base</style></head><body data-theme="dark">
-<div class="app-shell"><header class="topbar"></header><main class="workspace">
-<section class="editor-card"><div class="editor-toolbar"><span class="editor-label">Выражение</span><div class="editor-tools"></div></div>
-<textarea id="expressionInput" class="expression-input" rows="2" placeholder="old"></textarea>
-<div class="result-block"><div class="result-actions"></div></div></section>
-<section class="history-card"></section>    </main></div>
-<script>
-(function () {
-  'use strict';
-  const expressionInput = document.getElementById('expressionInput');
-})();
-</script></body></html>"""
         app = types.SimpleNamespace(
             AppApi=AppApi,
             _api=api,
             MAX_HISTORY=500,
             make_history_entry=make_history_entry,
             RENDERER_DIR=renderer,
-            build_html=lambda: html,
+            build_html=lambda: "legacy",
+            webview=types.SimpleNamespace(
+                create_window=lambda *args, **kwargs: object(),
+            ),
         )
         return app, api, storage
 
@@ -79,7 +72,7 @@ class UnitsModeTests(unittest.TestCase):
 
     def test_conversion_catalog_and_temperature(self):
         app, api, _storage = self.make_app()
-        app_units_mode.install(app)
+        app_units_backend.install(app)
 
         response = api.convert_units("(100 + 25) / 2", "length", "cm", "m")
         self.assertTrue(response["ok"], response.get("error"))
@@ -95,7 +88,7 @@ class UnitsModeTests(unittest.TestCase):
 
     def test_calculator_handoff_revision_and_converter_state(self):
         app, api, storage = self.make_app()
-        app_units_mode.install(app)
+        app_units_backend.install(app)
 
         first = api.commit("1250 / 4")
         self.assertTrue(first["ok"], first.get("error"))
@@ -118,7 +111,7 @@ class UnitsModeTests(unittest.TestCase):
 
     def test_units_are_removed_from_calculator_suggestions(self):
         app, api, _storage = self.make_app()
-        app_units_mode.install(app)
+        app_units_backend.install(app)
         items = api.suggestions("")
         self.assertTrue(items)
         self.assertFalse(any(item.get("kind") == "unit" for item in items))
@@ -127,21 +120,24 @@ class UnitsModeTests(unittest.TestCase):
 
     def test_renderer_contains_two_modes_and_unit_pickers(self):
         app, _api, _storage = self.make_app()
-        app_units_mode.install(app)
+        app_units_backend.install(app)
+        app_renderer.install(app)
         html = app.build_html()
         self.assertIn('id="calculatorModeTab"', html)
         self.assertIn('id="unitsModeTab"', html)
-        self.assertIn('id="unitConverterCard"', html)
+        self.assertIn('id="unitsPanel"', html)
         self.assertIn('id="sourceUnitSelect"', html)
         self.assertIn('id="targetUnitSelect"', html)
         self.assertIn('id="sourceUnitBadge"', html)
         self.assertIn('id="targetUnitBadge"', html)
-        self.assertIn("const MODE_UNITS = 'units'", html)
-        self.assertIn(".app-mode-tabs::before", html)
-        self.assertIn('body[data-app-mode="units"] .app-mode-tabs::before', html)
-        self.assertIn("nlcalc-unit-badge-in", html)
-        self.assertNotIn("rotate(180deg)", html)
+        self.assertIn("state.mode === 'units'", html)
         self.assertNotIn("Функции и единицы (Ctrl+K)", html)
+
+    def test_backend_does_not_mutate_renderer_builder(self):
+        app, _api, _storage = self.make_app()
+        original = app.build_html
+        app_units_backend.install(app)
+        self.assertIs(app.build_html, original)
 
 
 if __name__ == "__main__":
