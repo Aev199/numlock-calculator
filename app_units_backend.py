@@ -6,10 +6,10 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
-import calc_engine as core
 from unit_conversion import (
     CATEGORY_BY_ID,
     category_symbols,
+    convert_value,
     ensure_state,
     evaluate_simple,
     filter_suggestions,
@@ -124,10 +124,12 @@ def install(app: Any) -> None:
 
             try:
                 source_value = evaluate_simple(expression)
-                source = core.UNIT_DEFS[source_symbol.lower()]
-                target = core.UNIT_DEFS[target_symbol.lower()]
-                base_value = source.to_base(source_value)
-                converted = target.from_base(base_value)
+                converted = convert_value(
+                    source_value,
+                    category_id,
+                    source_symbol,
+                    target_symbol,
+                )
                 precision = self._session.settings.precision
                 source_text = format_number(source_value, precision)
                 result_text = format_number(converted, precision)
