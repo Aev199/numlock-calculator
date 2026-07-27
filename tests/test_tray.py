@@ -1,8 +1,12 @@
 import types
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import app_tray
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class TrayShellTests(unittest.TestCase):
@@ -76,12 +80,11 @@ class TrayShellTests(unittest.TestCase):
         self.assertTrue(callable(app.quit_from_tray))
         self.assertTrue(callable(app.copy_diagnostics_from_tray))
 
-    def test_help_documents_product_shortcuts(self):
+    def test_help_and_menu_document_product_shortcuts(self):
+        source = (ROOT / "app_tray.py").read_text(encoding="utf-8")
         self.assertIn("Ctrl+C", app_tray.HELP_TEXT)
         self.assertIn("Alt+← / Alt+→", app_tray.HELP_TEXT)
-        self.assertIn("Копировать диагностику", (
-            'pystray.MenuItem("Копировать диагностику"'
-        ))
+        self.assertIn('pystray.MenuItem("Копировать диагностику"', source)
 
     def test_install_is_idempotent(self):
         app, _, _ = self.make_app()
