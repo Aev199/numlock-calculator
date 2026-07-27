@@ -1,6 +1,6 @@
 
-  // Reference-matched number motion: each inserted glyph rises from the caret,
-  // while Enter rolls the outgoing expression up and the result in from below.
+  // Reference-matched number motion: inserted glyphs are revealed by a moving
+  // caret, while Enter rolls the outgoing expression up and the result in.
   function inputContentRect() {
     const rect = dom.input.getBoundingClientRect();
     const style = getComputedStyle(dom.input);
@@ -36,6 +36,16 @@
     return layer;
   }
 
+  function measuredTextWidth(text, style) {
+    const canvas = measuredTextWidth.canvas || (
+      measuredTextWidth.canvas = document.createElement('canvas')
+    );
+    const context = canvas.getContext('2d');
+    context.font = style.font;
+    const spacing = Number.parseFloat(style.letterSpacing || '0');
+    return Math.max(1, context.measureText(text).width + spacing * Math.max(0, text.length - 1));
+  }
+
   function clearTypingMotion() {
     const active = state.typingAnimation;
     state.typingAnimation = null;
@@ -43,8 +53,9 @@
       try { active.cancel(); } catch (_) {}
     }
     dom.input.classList.remove('typing-hidden');
-    document.querySelectorAll('.input-motion-layer.typing-copy, .typing-glyph')
-      .forEach(node => node.remove());
+    document.querySelectorAll(
+      '.input-motion-layer.typing-copy, .typing-reveal, .typing-caret-copy',
+    ).forEach(node => node.remove());
   }
 
   typingFeedback = function (event) {
@@ -59,51 +70,69 @@
     const oldValue = newValue.slice(0, start) + newValue.slice(end);
     const point = caretPoint(start);
     const oldLayer = makeInputTextLayer(oldValue, 'typing-copy');
-    const glyph = document.createElement('span');
-    glyph.className = 'typing-glyph';
-    glyph.textContent = inserted;
-    Object.assign(glyph.style, {
+    const width = measuredTextWidth(inserted, point.style);
+
+    const reveal = document.createElement('span');
+    reveal.className = 'typing-reveal';
+    Object.assign(reveal.style, {
       left: `${point.left}px`,
       top: `${point.top}px`,
+      width: '0px',
+      height: point.style.lineHeight,
       font: point.style.font,
       letterSpacing: point.style.letterSpacing,
       lineHeight: point.style.lineHeight,
     });
-    document.body.appendChild(glyph);
+    const glyph = document.createElement('span');
+    glyph.textContent = inserted;
+    reveal.appendChild(glyph);
+
+    const caret = document.createElement('span');
+    caret.className = 'typing-caret-copy';
+    Object.assign(caret.style, {
+      left: `${point.left}px`,
+      top: `${point.top}px`,
+      height: point.style.lineHeight,
+    });
+    document.body.append(reveal, caret);
     dom.input.classList.add('typing-hidden');
 
     let cancelled = false;
-    let oldAnimation;
-    let glyphAnimation;
+    let revealAnimation;
+    let caretAnimation;
     requestAnimationFrame(() => {
       if (cancelled) return;
-      oldAnimation = oldLayer.animate(
+      revealAnimation = reveal.animate(
         [
-          { opacity: 1, transform: 'translate3d(0,0,0)' },
-          { opacity: 1, transform: 'translate3d(-1px,0,0)' },
+          { width: '0px', opacity: .35 },
+          { width: `${width}px`, opacity: 1 },
         ],
-        { duration: 185, easing: 'cubic-bezier(.2,.75,.2,1)', fill: 'both' },
+        { duration: 175, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' },
       );
-      glyphAnimation = glyph.animate(
+      caretAnimation = caret.animate(
         [
-          { opacity: 0, transform: 'translate3d(0,10px,0) scale(.92)' },
-          { opacity: 1, offset: .72, transform: 'translate3d(0,-1px,0) scale(1)' },
-          { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' },
+          { transform: 'translate3d(0,0,0)', opacity: 1 },
+          { transform: `translate3d(${width}px,0,0)`, opacity: 1 },
         ],
-        { duration: 185, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' },
+        { duration: 175, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' },
       );
-      Promise.allSettled([oldAnimation.finished, glyphAnimation.finished]).then(() => {
-        if (state.typingAnimation === group) clearTypingMotion();
+      Promise.allSettled([revealAnimation.finished, caretAnimation.finished]).then(() => {
+        if (state.typingAnimation !== group) return;
+        dom.input.classList.remove('typing-hidden');
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (state.typingAnimation === group) clearTypingMotion();
+        }));
       });
     });
 
     const group = {
       cancel() {
         cancelled = true;
-        try { oldAnimation?.cancel(); } catch (_) {}
-        try { glyphAnimation?.cancel(); } catch (_) {}
+        try { revealAnimation?.cancel(); } catch (_) {}
+        try { caretAnimation?.cancel(); } catch (_) {}
         oldLayer.remove();
-        glyph.remove();
+        reveal.remove();
+        caret.remove();
       },
     };
     state.typingAnimation = group;
@@ -151,7 +180,16 @@
         { duration: 330, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' },
       );
       Promise.allSettled([oldAnimation.finished, newAnimation.finished]).then(() => {
-        if (state.commitAnimation === group) cancelCommitAnimation();
+        if (state.commitAnimation !== group) return;
+        // Reveal the real value first. Keep the final overlay for two painted
+        // frames so WebView2 never exposes an empty or duplicate intermediate.
+        dom.input.classList.remove('commit-hidden');
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (state.commitAnimation !== group) return;
+          state.commitAnimation = null;
+          oldLayer.remove();
+          newLayer.remove();
+        }));
       });
     }));
 
@@ -162,6 +200,7 @@
         try { newAnimation?.cancel(); } catch (_) {}
         oldLayer.remove();
         newLayer.remove();
+        dom.input.classList.remove('commit-hidden');
       },
     };
     state.commitAnimation = group;
