@@ -20,11 +20,7 @@ class TrayShellTests(unittest.TestCase):
 
         webview = types.SimpleNamespace(create_window=create_window, start=start)
         app = types.SimpleNamespace(
-            build_html=lambda: (
-                '<html><head><style>base</style></head><body>'
-                '<div class="brand-block">NumLock Calc</div>'
-                '</body></html>'
-            ),
+            build_html=lambda: "renderer-owned",
             webview=webview,
             main=lambda: None,
             _window=None,
@@ -42,32 +38,31 @@ class TrayShellTests(unittest.TestCase):
         app, calls, _ = self.make_app()
         app_tray.install(app)
 
-        app.webview.create_window('test', html='x')
+        app.webview.create_window("test", html="x")
 
         self.assertEqual(len(calls), 1)
         kwargs = calls[0][1]
-        self.assertTrue(kwargs['frameless'])
-        self.assertFalse(kwargs['easy_drag'])
-        self.assertTrue(kwargs['shadow'])
+        self.assertTrue(kwargs["frameless"])
+        self.assertFalse(kwargs["easy_drag"])
+        self.assertTrue(kwargs["shadow"])
 
-    def test_drag_region_is_added_to_custom_header(self):
+    def test_tray_does_not_patch_renderer_markup(self):
         app, _, _ = self.make_app()
+        original_builder = app.build_html
         app_tray.install(app)
 
-        html = app.build_html()
-
-        self.assertIn('brand-block pywebview-drag-region', html)
-        self.assertIn('Перетащить окно', html)
+        self.assertIs(app.build_html, original_builder)
+        self.assertEqual(app.build_html(), "renderer-owned")
 
     def test_tray_starts_when_webview_loop_starts(self):
         app, _, start_calls = self.make_app()
         app_tray.install(app)
 
-        with patch.object(app, 'start_tray', return_value=True) as start_tray:
+        with patch.object(app, "start_tray", return_value=True) as start_tray:
             app.webview.start(private_mode=True)
 
         start_tray.assert_called_once_with()
-        self.assertEqual(start_calls, [((), {'private_mode': True})])
+        self.assertEqual(start_calls, [((), {"private_mode": True})])
 
     def test_tray_entry_points_are_exposed(self):
         app, _, _ = self.make_app()
@@ -87,5 +82,5 @@ class TrayShellTests(unittest.TestCase):
         self.assertIs(first_main, app.main)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
