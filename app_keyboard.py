@@ -1,6 +1,19 @@
 """Keyboard-first entry point."""
 
 import calc_engine
+import unit_conversion
+from input_normalization import (
+    install_calculator_normalization,
+    install_unit_normalization,
+)
+
+# Install the forgiving keypad/display normalization before runtime classes and
+# backend functions are imported.  The wrappers preserve all original parser
+# rules and only repair decimal-separator typos plus the visual multiplication
+# glyph used by the renderer.
+install_calculator_normalization(calc_engine)
+install_unit_normalization(unit_conversion)
+
 from calc_engine_runtime import CalculatorSession
 
 calc_engine.CalculatorSession = CalculatorSession
