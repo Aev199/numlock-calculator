@@ -4,6 +4,7 @@
   let currentResult = '0';
   let memory = 0;
   let isEngineerMode = true;
+  let lastCalculation = null;
   let history = JSON.parse(localStorage.getItem('nlcalc_history') || '[]');
   let theme = localStorage.getItem('nlcalc_theme') || 'light';
 
@@ -22,7 +23,7 @@
   const standardButtons = [
     ['MC', 'MR', 'M+', 'M-', 'C'],
     ['7', '8', '9', '/', '√'],
-    ['4', '5', '6', '*', '%'],
+    ['4', '5', '6', '⋅', '%'],
     ['1', '2', '3', '-', '1/x'],
     ['0', '.', '±', '+', '='],
   ];
@@ -33,7 +34,7 @@
     ['x²', 'x³', 'xⁿ', '√', '∛', 'π'],
     ['(', ')', 'EXP', 'n!', 'MC', 'MR'],
     ['7', '8', '9', '/', 'M+', 'M-'],
-    ['4', '5', '6', '*', '±', '%'],
+    ['4', '5', '6', '⋅', '±', '%'],
     ['1', '2', '3', '-', '.', '1/x'],
     ['0', '=', '+', '', '', ''],
   ];
@@ -56,7 +57,7 @@
         btn.classList.add('btn');
 
         if (/^[0-9.]$/.test(label)) btn.classList.add('btn--number');
-        else if (['+', '-', '*', '/', '%'].includes(label)) btn.classList.add('btn--operator');
+        else if (['+', '-', '⋅', '/', '%'].includes(label)) btn.classList.add('btn--operator');
         else if (label === '=') btn.classList.add('btn--equals');
         else if (['MC', 'MR', 'M+', 'M-'].includes(label)) btn.classList.add('btn--memory');
         else btn.classList.add('btn--func');
@@ -72,9 +73,11 @@
       case 'C':
         currentExpr = '';
         currentResult = '0';
+        lastCalculation = null;
         break;
       case '⌫':
         currentExpr = currentExpr.slice(0, -1);
+        lastCalculation = null;
         evaluateExpr();
         break;
       case '=':
@@ -115,10 +118,22 @@
 
   function appendToExpr(val) {
     if (currentResult === 'Error') { currentExpr = ''; currentResult = '0'; }
+
+    lastCalculation = null;
+    if (val === '*') val = '⋅';
+    if (val === ',') val = '.';
+
+    if (val === '.') {
+      const tail = currentExpr.split(/[+\-⋅*/%^()]/).pop();
+      if (tail.includes('.')) return;
+      if (!tail) currentExpr += '0';
+    }
+
     currentExpr += val;
   }
 
   function toggleSign() {
+    lastCalculation = null;
     if (currentResult !== '0' && currentResult !== 'Error' && currentExpr === '') {
       currentExpr = String(-parseFloat(currentResult));
       currentResult = currentExpr;
@@ -133,6 +148,7 @@
   }
 
   function applyUnary(func) {
+    lastCalculation = null;
     try {
       let val = parseFloat(currentResult);
       if (isNaN(val)) val = 0;
@@ -180,9 +196,11 @@
     if (!currentExpr) { currentResult = '0'; return; }
     try {
       let expr = currentExpr
+        .replace(/⋅/g, '*')
+        .replace(/,/g, '.')
         .replace(/\^/g, '**')
         .replace(/π/g, String(Math.PI))
-        .replace(/(?<![0-9)])e(?![0-9+\-*/^(])/, String(Math.E));
+        .replace(/(?<![0-9])e(?![0-9+\-*/^(])/, String(Math.E));
       const sanitized = expr.replace(/[^0-9+\-*/().%eE\s]/g, '');
       if (!sanitized) { currentResult = '0'; return; }
       // eslint-disable-next-line no-new-func
@@ -202,6 +220,7 @@
     evaluateExpr();
     if (currentResult !== 'Error' && expr) {
       addToHistory(expr, currentResult);
+      lastCalculation = { expr, res: currentResult };
     }
     currentExpr = currentResult !== 'Error' ? currentResult : '';
     updateDisplay();
@@ -216,8 +235,27 @@
   }
 
   function updateDisplay() {
-    exprLine.textContent = currentExpr;
+    exprLine.textContent = currentExpr.replace(/\*/g, '⋅');
     resultLine.textContent = currentResult;
+  }
+
+  async function copyCalculation() {
+    const calculation = lastCalculation || { expr: currentExpr, res: currentResult };
+    if (!calculation.expr || calculation.res === 'Error') return;
+
+    const text = `${calculation.expr.replace(/\*/g, '⋅')} = ${calculation.res}`;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
   }
 
   // История в основном окне
@@ -236,7 +274,7 @@
     }
     historyScroll.innerHTML = history.slice(0, 20).map((h, i) => `
       <div class="history-item" data-index="${i}">
-        <span class="history-expr" title="${escapeHtml(h.expr)}">${escapeHtml(h.expr)}</span>
+        <span class="history-expr" title="${escapeHtml(h.expr)}">${escapeHtml(h.expr.replace(/\*/g, '⋅'))}</span>
         <span class="history-res">${escapeHtml(h.res)}</span>
       </div>
     `).join('');
@@ -245,8 +283,9 @@
       item.addEventListener('click', () => {
         const idx = parseInt(item.dataset.index);
         const entry = history[idx];
-        currentExpr = entry.expr;
+        currentExpr = entry.expr.replace(/\*/g, '⋅');
         currentResult = entry.res;
+        lastCalculation = { expr: currentExpr, res: currentResult };
         updateDisplay();
       });
     });
@@ -364,7 +403,6 @@
     swapBtn.textContent = '⇄';
     swapBtn.addEventListener('click', () => {
       const tmpUnit = fromSelect.value;
-      const tmpVal = fromInput.value;
       fromSelect.value = toSelect.value;
       fromInput.value = toInput.value;
       toSelect.value = tmpUnit;
@@ -433,13 +471,25 @@
 
   // Горячие клавиши
   document.addEventListener('keydown', (e) => {
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      switchTab(e.key === 'ArrowLeft' ? 'calc' : 'converter');
+      e.preventDefault();
+      return;
+    }
+
     const tab = document.querySelector('.tab-content.active');
     if (tab.id !== 'tab-calc') return;
-    
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+      copyCalculation();
+      e.preventDefault();
+      return;
+    }
+
     const key = e.key;
-    if (/^[0-9.]$/.test(key)) { handleButton(key); return; }
+    if (/^[0-9.,]$/.test(key)) { handleButton(key); e.preventDefault(); return; }
     const keyMap = {
-      '+': '+', '-': '-', '*': '*', '/': '/', '%': '%',
+      '+': '+', '-': '-', '*': '⋅', '/': '/', '%': '%',
       'Enter': '=', 'Escape': 'C', 'Backspace': '⌫',
       '(': '(', ')': ')',
     };
