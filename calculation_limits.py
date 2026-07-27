@@ -32,6 +32,11 @@ def validate_ast(tree: ast.AST, error_type: type[Exception] = ValueError) -> Non
         stack.extend((child, depth + 1) for child in ast.iter_child_nodes(node))
 
 
+def _nested_syntax_error(exc: SyntaxError) -> bool:
+    message = str(getattr(exc, "msg", exc)).lower()
+    return "too many nested" in message or "recursion" in message
+
+
 def install_calculator_limits(calc_engine: Any) -> None:
     if getattr(calc_engine, "_numcalc_limits_installed", False):
         return
@@ -45,7 +50,9 @@ def install_calculator_limits(calc_engine: Any) -> None:
             raise calc_engine.CalculationError("Выражение слишком длинное")
         try:
             tree = ast.parse(expression, mode="eval")
-        except SyntaxError:
+        except SyntaxError as exc:
+            if _nested_syntax_error(exc):
+                raise calc_engine.CalculationError("Слишком большая глубина выражения") from exc
             return original_evaluate(self, expression)
         except RecursionError as exc:
             raise calc_engine.CalculationError("Слишком большая глубина выражения") from exc
@@ -81,7 +88,9 @@ def install_unit_limits(unit_conversion: Any) -> None:
             raise ValueError("Выражение слишком длинное")
         try:
             tree = ast.parse(prepared, mode="eval")
-        except SyntaxError:
+        except SyntaxError as exc:
+            if _nested_syntax_error(exc):
+                raise ValueError("Слишком большая глубина выражения") from exc
             return original_evaluate(expression)
         except RecursionError as exc:
             raise ValueError("Слишком большая глубина выражения") from exc
