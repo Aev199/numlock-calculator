@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 import os
 import platform
 import sys
+import tempfile
 import threading
 import time
 from datetime import datetime, timezone
@@ -30,32 +31,49 @@ def default_log_dir() -> Path:
 
 
 def configure_logger(log_dir: Path | None = None) -> tuple[logging.Logger, Path]:
-    directory = Path(log_dir) if log_dir is not None else default_log_dir()
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / LOG_FILENAME
+    """Configure a rotating file logger, falling back to the temp directory."""
+
+    requested = Path(log_dir) if log_dir is not None else default_log_dir()
+    candidates = [requested]
+    fallback = Path(tempfile.gettempdir()) / APP_NAME / "logs"
+    if fallback != requested:
+        candidates.append(fallback)
+
     logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(logging.INFO)
     logger.propagate = False
 
-    resolved = str(path.resolve())
-    for handler in logger.handlers:
-        if getattr(handler, "baseFilename", None) == resolved:
+    for directory in candidates:
+        path = directory / LOG_FILENAME
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            resolved = str(path.resolve())
+            for handler in logger.handlers:
+                if getattr(handler, "baseFilename", None) == resolved:
+                    return logger, path
+            handler = RotatingFileHandler(
+                path,
+                maxBytes=MAX_LOG_BYTES,
+                backupCount=BACKUP_COUNT,
+                encoding="utf-8",
+            )
+            handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s %(levelname)s [%(threadName)s] %(message)s",
+                    "%Y-%m-%d %H:%M:%S",
+                )
+            )
+            logger.addHandler(handler)
+            if directory != requested:
+                logger.warning("Primary log directory is unavailable; using %s", directory)
             return logger, path
+        except OSError:
+            continue
 
-    handler = RotatingFileHandler(
-        path,
-        maxBytes=MAX_LOG_BYTES,
-        backupCount=BACKUP_COUNT,
-        encoding="utf-8",
-    )
-    handler.setFormatter(
-        logging.Formatter(
-            "%(asctime)s %(levelname)s [%(threadName)s] %(message)s",
-            "%Y-%m-%d %H:%M:%S",
-        )
-    )
-    logger.addHandler(handler)
-    return logger, path
+    # Diagnostics must never prevent the calculator from starting.
+    if not logger.handlers:
+        logger.addHandler(logging.NullHandler())
+    return logger, requested / LOG_FILENAME
 
 
 def install(app: Any, *, log_dir: Path | None = None) -> None:
