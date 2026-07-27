@@ -1,10 +1,9 @@
-/* Continuous, restrained motion inspired by modern iOS interfaces. */
+/* Stable, restrained motion for WebView2. */
 :root {
   --ios-fast: 125ms;
-  --ios-local: 240ms;
-  --ios-mode: 320ms;
+  --ios-local: 220ms;
+  --ios-mode: 260ms;
   --ios-ease: cubic-bezier(.16,1,.3,1);
-  --ios-settle: cubic-bezier(.2,.8,.2,1);
 }
 
 .editor-card,
@@ -17,12 +16,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Softer material hierarchy: fewer explicit borders, more surface contrast. */
-html[data-motion="nlcalc-motion-v5"] .editor-card,
-html[data-motion="nlcalc-motion-v5"] .history-card {
-  animation: none;
-}
-
+/* Softer material hierarchy without animated geometry. */
 .editor-card,
 .history-card {
   border-color: color-mix(in srgb, var(--border) 48%, transparent);
@@ -32,7 +26,12 @@ html[data-motion="nlcalc-motion-v5"] .history-card {
     0 6px 20px color-mix(in srgb, #000 8%, transparent);
 }
 
+.expression-field-shell {
+  transition: background-color var(--ios-fast) var(--ios-ease);
+}
+
 .expression-input {
+  transform: none !important;
   transition:
     background var(--ios-fast) ease,
     color var(--ios-fast) ease,
@@ -50,6 +49,7 @@ html[data-motion="nlcalc-motion-v5"] .history-card {
 
 .result-block {
   border-top-color: color-mix(in srgb, var(--border) 52%, transparent);
+  transform: none !important;
 }
 
 .result-prefix {
@@ -63,7 +63,7 @@ html[data-motion="nlcalc-motion-v5"] .history-card {
 
 .result-block.is-pending .result-value {
   opacity: .78;
-  transform: translateY(1px);
+  transform: none !important;
 }
 
 .mode-pill,
@@ -87,9 +87,10 @@ html[data-motion="nlcalc-motion-v5"] .history-card {
 }
 
 .history-entry {
+  animation: none !important;
+  transform: none !important;
   transition:
     background var(--ios-fast) ease,
-    transform var(--ios-local) var(--ios-ease),
     opacity var(--ios-local) ease;
 }
 
@@ -123,74 +124,24 @@ html[data-motion="nlcalc-motion-v5"] .history-card {
   white-space: pre-wrap;
   overflow-wrap: break-word;
   pointer-events: none;
-  transform-origin: left center;
-  will-change: transform, opacity;
+  transform: none !important;
+  will-change: opacity;
 }
 
-/* Shared geometry during Calculator / Units changes. */
-.editor-card {
-  view-transition-name: nlcalc-editor;
+/* Disable View Transitions for text-bearing surfaces. They rasterize textarea
+   content in WebView2 and can produce visible subpixel jumps. */
+.editor-card,
+.history-card,
+.workspace {
+  view-transition-name: none !important;
 }
 
-.history-card:not(.unit-converter-card):not(.hidden),
-.unit-converter-card:not(.hidden) {
-  view-transition-name: nlcalc-mode-panel;
-}
-
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-
-::view-transition-group(nlcalc-editor),
-::view-transition-group(nlcalc-mode-panel) {
-  animation-duration: var(--ios-mode);
-  animation-timing-function: var(--ios-ease);
-}
-
-::view-transition-old(nlcalc-editor) {
-  animation: nlcalc-editor-old 190ms ease-in both;
-}
-
-::view-transition-new(nlcalc-editor) {
-  animation: nlcalc-editor-new var(--ios-mode) var(--ios-ease) both;
-}
-
-::view-transition-old(nlcalc-mode-panel) {
-  animation: nlcalc-panel-old 120ms ease-in both;
-}
-
-::view-transition-new(nlcalc-mode-panel) {
-  animation: nlcalc-panel-new var(--ios-mode) var(--ios-ease) both;
-}
-
-@keyframes nlcalc-editor-old {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: .84; transform: translateY(1px) scale(.998); }
-}
-
-@keyframes nlcalc-editor-new {
-  from { opacity: .78; transform: translateY(2px) scale(.998); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes nlcalc-panel-old {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: .42; transform: translateY(5px) scale(.995); }
-}
-
-@keyframes nlcalc-panel-new {
-  from { opacity: .34; transform: translateY(-6px) scale(.995); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+html[data-motion="nlcalc-motion-v6"] .editor-card,
+html[data-motion="nlcalc-motion-v6"] .history-card {
+  animation: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .editor-card,
-  .history-card {
-    view-transition-name: none !important;
-  }
-
   .nlcalc-enter-old-value {
     display: none !important;
   }
