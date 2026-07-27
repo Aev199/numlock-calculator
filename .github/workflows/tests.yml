@@ -89,7 +89,7 @@ jobs:
         run: python generate_version_info.py
       - name: Build NumCalc one-file executable
         run: python -m PyInstaller --noconfirm --clean NumLockCalc.spec
-      - name: Verify executable and write SHA-256
+      - name: Verify executable metadata and write SHA-256
         shell: pwsh
         run: |
           if (-not (Test-Path -LiteralPath 'dist\NumCalc.exe')) {
@@ -98,6 +98,16 @@ jobs:
           $file = Get-Item -LiteralPath 'dist\NumCalc.exe'
           if ($file.Length -le 0) {
             throw 'dist\NumCalc.exe is empty'
+          }
+          $info = $file.VersionInfo
+          if ($info.ProductName -ne 'NumCalc') {
+            throw "Unexpected ProductName: $($info.ProductName)"
+          }
+          if ($info.FileVersion -ne '1.0.0-rc.1') {
+            throw "Unexpected FileVersion: $($info.FileVersion)"
+          }
+          if ($info.ProductVersion -ne '1.0.0-rc.1') {
+            throw "Unexpected ProductVersion: $($info.ProductVersion)"
           }
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
           Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
