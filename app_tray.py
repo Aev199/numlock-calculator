@@ -19,6 +19,8 @@ HELP_TEXT = """NumCalc — компактный клавиатурный кал�
 • Введите выражение и нажмите Enter для фиксации результата.
 • Поддерживаются скобки, степени, проценты, тригонометрия, логарифмы и другие функции.
 • Tab открывает палитру функций; стрелки выбирают группу и функцию, Enter вставляет её.
+• Ctrl+C копирует текущее выражение вместе с результатом.
+• Alt+← / Alt+→ переключают вкладки «Калькулятор» и «Единицы».
 • История хранит предыдущие выражения и результаты. Запись можно вернуть в поле, скопировать или удалить.
 • Режим «Единицы» преобразует инженерные величины, включая силы, давления, моменты, распределённые нагрузки, скорости и ускорения.
 
@@ -146,6 +148,17 @@ def install(app: Any) -> None:
     def show_about(_icon: Any = None, _item: Any = None) -> None:
         run_async(lambda: message_box("О программе", ABOUT_TEXT))
 
+    def copy_diagnostics_from_tray(_icon: Any = None, _item: Any = None) -> None:
+        def copy() -> None:
+            callback = getattr(app, "copy_diagnostics", None)
+            if callback is None or not callback():
+                message_box(
+                    "Диагностика NumCalc",
+                    "Не удалось скопировать диагностику в буфер обмена.",
+                )
+
+        run_async(copy)
+
     def quit_from_tray(icon: Any = None, _item: Any = None) -> None:
         if icon is not None:
             try:
@@ -182,6 +195,7 @@ def install(app: Any) -> None:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Справка", show_help),
                 pystray.MenuItem("О программе", show_about),
+                pystray.MenuItem("Копировать диагностику", copy_diagnostics_from_tray),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Выйти", quit_from_tray),
             )
@@ -261,4 +275,5 @@ def install(app: Any) -> None:
     app.set_autostart = set_autostart
     app.show_help = show_help
     app.show_about = show_about
+    app.copy_diagnostics_from_tray = copy_diagnostics_from_tray
     app.main = main
