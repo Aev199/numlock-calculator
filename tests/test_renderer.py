@@ -83,6 +83,18 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("TRIG_ORDER = ['sin', 'cos', 'tan', 'atan', 'asin', 'acos']", html)
         self.assertIn("POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt']", html)
 
+    def test_product_keyboard_shortcuts_and_multiply_display(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("const DISPLAY_MULTIPLY = '⋅';", html)
+        self.assertIn("function copyCurrentCalculation()", html)
+        self.assertIn("event.code === 'KeyC'", html)
+        self.assertIn("event.key === 'ArrowLeft' || event.key === 'ArrowRight'", html)
+        self.assertIn("switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units')", html)
+        self.assertIn("Вычисление скопировано", html)
+
     def test_race_guards_are_present(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
@@ -119,6 +131,8 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("import app_window", source)
         self.assertIn("import app_renderer", source)
         self.assertIn("import app_units_backend", source)
+        self.assertIn("install_calculator_normalization(calc_engine)", source)
+        self.assertIn("install_unit_normalization(unit_conversion)", source)
         self.assertIn("app_window.install(app)", source)
         self.assertIn("app_units_backend.install(app)", source)
         self.assertIn("app_renderer.install(app)", source)
