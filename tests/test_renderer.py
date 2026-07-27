@@ -64,6 +64,19 @@ class ConsolidatedRendererTests(unittest.TestCase):
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
+    def test_motion_intercepts_native_insertion_before_paint(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("function interceptTextInsertion(event)", html)
+        self.assertIn("event.preventDefault()", html)
+        self.assertIn("event.stopImmediatePropagation()", html)
+        self.assertIn("dom.input.value = nextValue", html)
+        self.assertIn("onInput({", html)
+        self.assertIn("inputType: 'insertText'", html)
+        self.assertNotIn("const baseSwitchMode = switchMode", html)
+
     def test_race_guards_are_present(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
