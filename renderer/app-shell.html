@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NumLock Calc</title>
+  <title>NumCalc</title>
   <script>window.__NUMLOCK_PYWEBVIEW__ = true;</script>
   <style>
 /*__NUMLOCK_CALC_CSS__*/
@@ -11,20 +11,20 @@
 </head>
 <body data-theme="dark" data-app-mode="calculator" data-motion="full">
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand-block pywebview-drag-region" title="Перетащить окно">
+    <header class="topbar pywebview-drag-region">
+      <div class="brand-block" title="Перетащить окно">
         <span class="brand-mark">N</span>
         <div class="brand-copy">
-          <div class="brand-title">NumLock Calc</div>
+          <div class="brand-title">NumCalc</div>
           <div class="brand-subtitle">keyboard-first</div>
         </div>
       </div>
-      <div class="topbar-actions">
+      <div class="topbar-actions pywebview-no-drag">
         <button class="mode-pill calculator-setting" id="angleMode" type="button" title="Режим углов">DEG</button>
         <button class="mode-pill calculator-setting" id="numberBase" type="button" title="Формат чисел">DEC</button>
         <button class="icon-button" id="themeButton" type="button" title="Сменить тему" aria-label="Сменить тему">◐</button>
         <button class="icon-button" id="hideButton" type="button" title="Скрыть окно" aria-label="Скрыть окно">—</button>
-        <button class="icon-button danger" id="quitButton" type="button" title="Полностью выйти" aria-label="Полностью выйти">×</button>
+        <button class="hidden" id="quitButton" type="button" aria-hidden="true" tabindex="-1">×</button>
       </div>
     </header>
 
