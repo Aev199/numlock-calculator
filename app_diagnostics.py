@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from product_info import APP_NAME, APP_VERSION
+
 LOGGER_NAME = "numcalc"
 LOG_FILENAME = "numcalc.log"
 MAX_LOG_BYTES = 1_000_000
@@ -23,8 +25,8 @@ DIAGNOSTIC_TAIL_BYTES = 200_000
 def default_log_dir() -> Path:
     local = os.environ.get("LOCALAPPDATA")
     if local:
-        return Path(local) / "NumCalc" / "logs"
-    return Path.home() / ".numcalc" / "logs"
+        return Path(local) / APP_NAME / "logs"
+    return Path.home() / f".{APP_NAME.lower()}" / "logs"
 
 
 def configure_logger(log_dir: Path | None = None) -> tuple[logging.Logger, Path]:
@@ -71,18 +73,30 @@ def install(app: Any, *, log_dir: Path | None = None) -> None:
         source_text = str(source or "frontend")[:80]
         message_text = str(message or "")[:4000]
         details_text = str(details or "")[:16000]
-        logger.error("%s: %s%s", source_text, message_text, f"\n{details_text}" if details_text else "")
+        logger.error(
+            "%s: %s%s",
+            source_text,
+            message_text,
+            f"\n{details_text}" if details_text else "",
+        )
         return True
 
     def diagnostic_text() -> str:
         hook_mode = str(getattr(app, "_numlock_hook_mode", "unknown"))
+        storage_path = str(getattr(app, "DATA_FILE", "unknown"))
+        storage_mode = str(getattr(app, "_storage_mode", "legacy"))
+        storage_warning = str(getattr(app, "_storage_warning", "") or "")
         header = [
-            "NumCalc diagnostics",
+            f"{APP_NAME} diagnostics",
+            f"Version: {APP_VERSION}",
             f"Generated: {datetime.now(timezone.utc).isoformat()}",
             f"Python: {platform.python_version()}",
             f"Platform: {platform.platform()}",
             f"Frozen: {bool(getattr(sys, 'frozen', False))}",
             f"NumLock hook: {hook_mode}",
+            f"Storage mode: {storage_mode}",
+            f"Storage: {storage_path}",
+            f"Storage warning: {storage_warning or '-'}",
             f"Log: {log_path}",
             "",
             "--- log tail ---",
@@ -144,11 +158,19 @@ def install(app: Any, *, log_dir: Path | None = None) -> None:
             threading.excepthook = thread_hook
 
         logger.info(
-            "Starting NumCalc; Python=%s platform=%s frozen=%s",
+            "Starting %s %s; Python=%s platform=%s frozen=%s storage=%s (%s)",
+            APP_NAME,
+            APP_VERSION,
             platform.python_version(),
             platform.platform(),
             bool(getattr(sys, "frozen", False)),
+            getattr(app, "DATA_FILE", "unknown"),
+            getattr(app, "_storage_mode", "legacy"),
         )
+        if getattr(app, "_storage_warning", None):
+            logger.warning("Storage fallback: %s", app._storage_warning)
+        if getattr(app, "_storage_migrated", False):
+            logger.info("Legacy user data migrated to %s", getattr(app, "DATA_FILE", "unknown"))
         threading.Thread(
             target=log_runtime_state,
             name="NumCalcRuntimeDiagnostics",
@@ -160,7 +182,7 @@ def install(app: Any, *, log_dir: Path | None = None) -> None:
             logger.exception("Fatal application error")
             raise
         finally:
-            logger.info("NumCalc stopped")
+            logger.info("%s stopped", APP_NAME)
             sys.excepthook = previous_sys_hook
             if previous_thread_hook is not None:
                 threading.excepthook = previous_thread_hook
