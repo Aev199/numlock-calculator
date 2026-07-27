@@ -23,14 +23,16 @@ import app_diagnostics
 import app_numlock_compat
 import app_renderer
 import app_single_instance
+import app_storage
 import app_tray
 import app_units_backend
 import app_window
 
-# Native behavior is installed first. The tray wraps only application lifecycle,
-# the units backend extends only AppApi, and the consolidated renderer is installed
-# last as the sole owner of HTML, CSS and frontend JavaScript. Diagnostics wrap the
-# final runtime, while the outer process guard prevents duplicate hooks and trays.
+# Storage is selected before backend layers inspect AppApi. Native behavior is
+# installed next; the renderer remains the sole owner of HTML/CSS/JavaScript.
+# Diagnostics wrap the final runtime, while the outer process guard prevents
+# duplicate hooks, trays and concurrent writes.
+app_storage.install(app)
 app_window.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
