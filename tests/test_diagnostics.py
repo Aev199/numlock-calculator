@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 import app_diagnostics
+from product_info import APP_VERSION
 
 
 class DiagnosticsTests(unittest.TestCase):
@@ -18,6 +19,10 @@ class DiagnosticsTests(unittest.TestCase):
             copy_text_to_clipboard=lambda text: clipboard.append(text) or True,
             _numlock_hook_mode="native",
             _quitting=False,
+            DATA_FILE=Path("C:/Users/Test/AppData/Local/NumCalc/data.json"),
+            _storage_mode="normal",
+            _storage_warning=None,
+            _storage_migrated=False,
         )
 
     def test_frontend_error_is_written_and_copyable(self):
@@ -33,7 +38,9 @@ class DiagnosticsTests(unittest.TestCase):
 
             diagnostics = app.diagnostic_text()
             self.assertIn("NumCalc diagnostics", diagnostics)
+            self.assertIn(f"Version: {APP_VERSION}", diagnostics)
             self.assertIn("NumLock hook: native", diagnostics)
+            self.assertIn("Storage mode: normal", diagnostics)
             self.assertIn("renderer: boom", diagnostics)
             self.assertIn("stack line", diagnostics)
             self.assertTrue(api.copy_diagnostics())
