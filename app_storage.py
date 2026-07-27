@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from product_info import APP_NAME
+
 PORTABLE_MARKER = "portable.mode"
 NORMAL_DATA_FILENAME = "data.json"
 
@@ -16,8 +18,8 @@ NORMAL_DATA_FILENAME = "data.json"
 def local_data_dir() -> Path:
     root = os.environ.get("LOCALAPPDATA")
     if root:
-        return Path(root) / "NumCalc"
-    return Path.home() / ".numcalc"
+        return Path(root) / APP_NAME
+    return Path.home() / f".{APP_NAME.lower()}"
 
 
 def portable_requested(app_dir: Path, argv: list[str] | None = None) -> bool:
@@ -41,37 +43,56 @@ def directory_is_writable(directory: Path) -> bool:
         return False
 
 
+def _fallback_candidates(app_dir: Path) -> tuple[tuple[Path, str, str], ...]:
+    return (
+        (
+            local_data_dir(),
+            "normal-fallback",
+            "Папка portable-версии недоступна для записи; данные сохраняются в профиле пользователя.",
+        ),
+        (
+            Path.home() / APP_NAME,
+            "home-fallback",
+            "Стандартная папка данных недоступна; используется папка NumCalc профиля пользователя.",
+        ),
+        (
+            Path(tempfile.gettempdir()) / APP_NAME,
+            "temporary-fallback",
+            "Постоянное хранилище недоступно; данные временно сохраняются в системной папке TEMP.",
+        ),
+        (
+            app_dir,
+            "legacy-fallback",
+            "Стандартное хранилище недоступно; используется папка приложения.",
+        ),
+    )
+
+
 def resolve_storage(app: Any, argv: list[str] | None = None) -> tuple[Path, str, str | None]:
     app_dir = Path(app.application_dir())
     portable = portable_requested(app_dir, argv)
-    if portable:
-        portable_path = app_dir / app.DATA_FILENAME
-        if directory_is_writable(app_dir):
-            return portable_path, "portable", None
-        fallback = local_data_dir() / NORMAL_DATA_FILENAME
-        directory_is_writable(fallback.parent)
-        return (
-            fallback,
-            "normal-fallback",
-            "Папка portable-версии недоступна для записи; данные сохраняются в профиле пользователя.",
-        )
+    if portable and directory_is_writable(app_dir):
+        return app_dir / app.DATA_FILENAME, "portable", None
 
-    target = local_data_dir() / NORMAL_DATA_FILENAME
-    if directory_is_writable(target.parent):
-        return target, "normal", None
+    target_dir = local_data_dir()
+    if not portable and directory_is_writable(target_dir):
+        return target_dir / NORMAL_DATA_FILENAME, "normal", None
 
-    fallback_dir = Path.home() / "NumCalc"
-    if directory_is_writable(fallback_dir):
-        return (
-            fallback_dir / NORMAL_DATA_FILENAME,
-            "home-fallback",
-            "LOCALAPPDATA недоступна; данные сохраняются в папке NumCalc профиля пользователя.",
-        )
+    seen: set[Path] = set()
+    for directory, mode, warning in _fallback_candidates(app_dir):
+        normalized = directory.resolve()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        if directory_is_writable(directory):
+            return directory / NORMAL_DATA_FILENAME, mode, warning
 
+    # This path should be practically unreachable, but preserving a concrete
+    # target lets the existing Storage layer return a visible write error.
     return (
         app_dir / app.DATA_FILENAME,
-        "legacy-fallback",
-        "Не удалось открыть стандартное хранилище; используется папка приложения.",
+        "unavailable",
+        "Не найдено доступное для записи хранилище. Изменения могут не сохраниться.",
     )
 
 
