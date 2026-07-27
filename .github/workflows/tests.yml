@@ -27,7 +27,20 @@ jobs:
       - name: Test frameless tray shell
         run: python -m unittest tests.test_tray -v
       - name: Test separate units mode
-        run: python -m unittest tests.test_units_mode -v
+        id: units
+        continue-on-error: true
+        run: python -m unittest tests.test_units_mode -v > units.log 2>&1
+      - name: Upload unit backend test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: units-log
+          path: units.log
+      - name: Report unit backend test failure
+        if: steps.units.outcome == 'failure'
+        run: |
+          cat units.log
+          exit 1
       - name: Test full build sequence
         id: discover
         continue-on-error: true
