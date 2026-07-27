@@ -1,6 +1,6 @@
 
-  // Reference-matched number motion. Native insertion is cancelled during
-  // beforeinput; the real textarea is updated only after its visual layers exist.
+  // Character input stays completely native. Only Enter uses temporary visual
+  // layers; the textarea is never intercepted or rewritten for ordinary typing.
   function inputContentRect() {
     const rect = dom.input.getBoundingClientRect();
     const style = getComputedStyle(dom.input);
@@ -36,170 +36,9 @@
     return layer;
   }
 
-  function measuredTextWidth(text, style) {
-    const canvas = measuredTextWidth.canvas || (
-      measuredTextWidth.canvas = document.createElement('canvas')
-    );
-    const context = canvas.getContext('2d');
-    context.font = style.font;
-    const spacing = Number.parseFloat(style.letterSpacing || '0');
-    return Math.max(1, context.measureText(text).width + spacing * Math.max(0, text.length - 1));
-  }
-
-  function clearTypingMotion(revealInput = true) {
-    const active = state.typingAnimation;
-    state.typingAnimation = null;
-    if (active) {
-      try { active.cancel(); } catch (_) {}
-    }
-    if (revealInput) dom.input.classList.remove('typing-hidden');
-    dom.input.style.removeProperty('opacity');
-    document.querySelectorAll(
-      '.input-motion-layer.typing-copy, .typing-reveal, .typing-caret-copy',
-    ).forEach(node => node.remove());
-  }
-
-  // onInput remains the single state/update owner. Typing motion is now fully
-  // handled by beforeinput, so its normal callback must not start a second effect.
+  // Disable every earlier decorative typing hook while preserving the normal
+  // input handler, preview updates, completion and function wrapping.
   typingFeedback = function () {};
-
-  function interceptTextInsertion(event) {
-    if (
-      !event.isTrusted
-      || event.isComposing
-      || event.inputType !== 'insertText'
-      || !event.cancelable
-      || typeof dom.input.animate !== 'function'
-    ) return;
-
-    const inserted = String(event.data || '');
-    if (!inserted || inserted.includes('\n') || inserted.length > 3 || reducedMotion()) return;
-
-    // Prevent Chromium/WebView2 from ever committing and painting its own first
-    // frame. From this point the value change is entirely controlled below.
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    clearTypingMotion(false);
-
-    const oldValue = dom.input.value;
-    const start = dom.input.selectionStart ?? oldValue.length;
-    const end = dom.input.selectionEnd ?? start;
-    const point = caretPoint(start);
-    const oldLayer = makeInputTextLayer(oldValue, 'typing-copy');
-    const width = measuredTextWidth(inserted, point.style);
-
-    const reveal = document.createElement('span');
-    reveal.className = 'typing-reveal';
-    Object.assign(reveal.style, {
-      left: `${point.left}px`,
-      top: `${point.top}px`,
-      width: '0px',
-      height: point.style.lineHeight,
-      font: point.style.font,
-      letterSpacing: point.style.letterSpacing,
-      lineHeight: point.style.lineHeight,
-    });
-    const glyph = document.createElement('span');
-    glyph.textContent = inserted;
-    reveal.appendChild(glyph);
-
-    const caret = document.createElement('span');
-    caret.className = 'typing-caret-copy';
-    Object.assign(caret.style, {
-      left: `${point.left}px`,
-      top: `${point.top}px`,
-      height: point.style.lineHeight,
-    });
-    document.body.append(reveal, caret);
-
-    dom.input.classList.add('typing-hidden');
-    const nextValue = oldValue.slice(0, start) + inserted + oldValue.slice(end);
-    dom.input.value = nextValue;
-    setSelection(start + inserted.length);
-
-    let cancelled = false;
-    let revealAnimation;
-    let caretAnimation;
-    let liveFade;
-    let oldFade;
-    let revealFade;
-    const group = {
-      cancel() {
-        cancelled = true;
-        for (const animation of [
-          revealAnimation,
-          caretAnimation,
-          liveFade,
-          oldFade,
-          revealFade,
-        ]) {
-          try { animation?.cancel(); } catch (_) {}
-        }
-        oldLayer.remove();
-        reveal.remove();
-        caret.remove();
-        dom.input.style.removeProperty('opacity');
-      },
-    };
-    state.typingAnimation = group;
-
-    // Update the calculator/converter state exactly once. Assigning .value does
-    // not emit an input event, which is intentional because native insertion was
-    // cancelled above.
-    onInput({
-      isTrusted: false,
-      isComposing: false,
-      inputType: 'insertText',
-      data: inserted,
-    });
-
-    requestAnimationFrame(() => {
-      if (cancelled || state.typingAnimation !== group) return;
-      revealAnimation = reveal.animate(
-        [
-          { width: '0px', opacity: 1 },
-          { width: `${width}px`, opacity: 1 },
-        ],
-        { duration: 175, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' },
-      );
-      caretAnimation = caret.animate(
-        [
-          { transform: 'translate3d(0,0,0)', opacity: 1 },
-          { transform: `translate3d(${width}px,0,0)`, opacity: 1 },
-        ],
-        { duration: 175, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both' },
-      );
-
-      Promise.allSettled([revealAnimation.finished, caretAnimation.finished]).then(() => {
-        if (cancelled || state.typingAnimation !== group) return;
-        dom.input.style.opacity = '0';
-        dom.input.classList.remove('typing-hidden');
-        liveFade = dom.input.animate(
-          [{ opacity: 0 }, { opacity: 1 }],
-          { duration: 45, easing: 'linear', fill: 'both' },
-        );
-        oldFade = oldLayer.animate(
-          [{ opacity: 1 }, { opacity: 0 }],
-          { duration: 45, easing: 'linear', fill: 'both' },
-        );
-        revealFade = reveal.animate(
-          [{ opacity: 1 }, { opacity: 0 }],
-          { duration: 45, easing: 'linear', fill: 'both' },
-        );
-        Promise.allSettled([liveFade.finished, oldFade.finished, revealFade.finished]).then(() => {
-          if (state.typingAnimation !== group) return;
-          state.typingAnimation = null;
-          dom.input.style.removeProperty('opacity');
-          dom.input.classList.remove('typing-hidden');
-          oldLayer.remove();
-          reveal.remove();
-          caret.remove();
-        });
-      });
-    });
-  }
-
-  dom.input.addEventListener('beforeinput', interceptTextInsertion, { capture: true });
 
   const cancelReferenceCommitMotion = cancelCommitAnimation;
   cancelCommitAnimation = function () {
@@ -212,7 +51,6 @@
 
   animateCommit = function (result) {
     cancelCommitAnimation();
-    clearTypingMotion();
     if (reducedMotion() || !result) return;
     const pending = state.calculator.history.find(entry => entry.pending);
     const outgoing = pending?.expression || state.calculator.historyDraft || '';
@@ -258,10 +96,6 @@
       );
       Promise.allSettled([oldAnimation.finished, newAnimation.finished]).then(() => {
         if (state.commitAnimation !== group) return;
-
-        // Prepare the real value invisibly behind the final overlay, then swap
-        // the two in one animation frame. There is never a frame with two fully
-        // visible copies or with neither copy visible.
         dom.input.style.opacity = '0';
         dom.input.classList.remove('commit-hidden');
         requestAnimationFrame(() => {
