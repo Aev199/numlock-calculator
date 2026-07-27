@@ -1,0 +1,15 @@
+.topbar.pywebview-drag-region {
+  cursor: move;
+}
+
+.topbar-actions,
+.topbar-actions *,
+.pywebview-no-drag,
+.pywebview-no-drag * {
+  -webkit-app-region: no-drag;
+  cursor: default;
+}
+
+.topbar-actions button {
+  cursor: pointer;
+}
