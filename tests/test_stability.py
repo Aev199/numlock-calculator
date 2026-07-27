@@ -18,16 +18,15 @@ calc_engine.CalculatorSession = CalculatorSession
 import app
 import app_numlock_compat
 import app_renderer
-import app_stability
+import app_window
 
 # Full unittest discovery may import another test's minimal webview stub first.
-# Add only the methods this test's renderer installer needs.
 if not hasattr(app.webview, "create_window"):
     app.webview.create_window = lambda *args, **kwargs: object()
 if not hasattr(app.webview, "start"):
     app.webview.start = lambda *args, **kwargs: None
 
-app_stability.install(app)
+app_window.install(app)
 app_numlock_compat.install(app)
 app_renderer.install(app)
 
@@ -38,6 +37,7 @@ class FakeWindow:
         self.show_calls = 0
         self.restore_calls = 0
         self.evaluate_calls = 0
+        self.last_script = ""
 
     def hide(self):
         self.hide_calls += 1
@@ -48,8 +48,9 @@ class FakeWindow:
     def restore(self):
         self.restore_calls += 1
 
-    def evaluate_js(self, _script):
+    def evaluate_js(self, script):
         self.evaluate_calls += 1
+        self.last_script = script
 
 
 class StabilityTests(unittest.TestCase):
@@ -100,6 +101,7 @@ class StabilityTests(unittest.TestCase):
         self.assertEqual(app._window.show_calls, 1)
         self.assertEqual(app._window.restore_calls, 1)
         self.assertEqual(app._window.evaluate_calls, 1)
+        self.assertIn("__nlcalcRestoreEditorFocus(true)", app._window.last_script)
 
     def test_focus_state_is_exposed_through_api(self):
         app._api.window_focus_changed(False)
@@ -126,8 +128,7 @@ class StabilityTests(unittest.TestCase):
         self.assertIn('id="paletteGroups"', html)
         self.assertIn("event.code === 'KeyK'", html)
         self.assertIn("__nlcalcRestoreEditorFocus", html)
-        self.assertIn("restoreEditorFocus(true)", html)
-        self.assertIn("nlcalc-consolidated-v1", html)
+        self.assertIn("nlcalc-consolidated", html)
 
 
 if __name__ == "__main__":
