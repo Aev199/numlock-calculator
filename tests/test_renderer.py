@@ -5,6 +5,9 @@ from pathlib import Path
 import app_renderer
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 class ConsolidatedRendererTests(unittest.TestCase):
     def make_app(self):
         calls = []
@@ -14,7 +17,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
             return object()
 
         app = types.SimpleNamespace(
-            RENDERER_DIR=Path(__file__).resolve().parents[1] / "renderer",
+            RENDERER_DIR=ROOT / "renderer",
             webview=types.SimpleNamespace(create_window=create_window),
             build_html=lambda: "legacy",
         )
@@ -57,6 +60,19 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("position: absolute", html)
         self.assertIn("opacity: 0", html)
         self.assertIn(".mode-panel.active", html)
+
+    def test_keyboard_entry_point_uses_only_final_renderer_layers(self):
+        source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")
+        self.assertIn("import app_renderer", source)
+        self.assertIn("import app_units_backend", source)
+        self.assertIn("app_units_backend.install(app)", source)
+        self.assertIn("app_renderer.install(app)", source)
+        self.assertNotIn("import app_polish", source)
+        self.assertNotIn("import app_compact", source)
+        self.assertNotIn("import app_units_mode", source)
+        self.assertNotIn("app_polish.install", source)
+        self.assertNotIn("app_compact.install", source)
+        self.assertNotIn("app_units_mode.install", source)
 
     def test_window_size_is_owned_by_renderer_shell(self):
         app, calls = self.make_app()
