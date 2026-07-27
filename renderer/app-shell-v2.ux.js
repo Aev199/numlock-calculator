@@ -5,6 +5,10 @@
   const POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt'];
   const FUNCTION_GROUP_ORDER = ['Тригонометрия', 'Степени и логарифмы', 'Прочие функции'];
 
+  // Ctrl+K is intentionally retired. Tab from the expression field is the only
+  // keyboard entry point; the toolbar button remains available for mouse users.
+  isPaletteShortcut = function () { return false; };
+
   const baseSetCatalog = setCatalog;
   setCatalog = function (items) {
     const prepared = (Array.isArray(items) ? items : []).map(item => {
