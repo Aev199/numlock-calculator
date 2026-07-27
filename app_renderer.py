@@ -2,7 +2,7 @@
 
 The desktop shell, calculation engine and persistence stay in Python. This
 module owns the complete frontend document and performs only deterministic
-placeholder substitution for the bundled CSS and JavaScript assets.
+placeholder substitution for the bundled CSS and JavaScript sources.
 """
 
 from __future__ import annotations
@@ -13,7 +13,10 @@ from typing import Any
 
 TEMPLATE_NAME = "app-shell.html"
 STYLE_NAME = "app-shell.css"
-SCRIPT_NAME = "app-shell.js"
+SCRIPT_PARTS = tuple(
+    f"app-shell-v2.part{index:02d}.js"
+    for index in range(9)
+)
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
 JS_PLACEHOLDER = "/*__NUMLOCK_CALC_JS__*/"
 DEFAULT_WIDTH = 480
@@ -33,10 +36,17 @@ def install(app: Any) -> None:
         renderer = Path(app.RENDERER_DIR)
         template = (renderer / TEMPLATE_NAME).read_text(encoding="utf-8")
         css = (renderer / STYLE_NAME).read_text(encoding="utf-8")
-        javascript = (renderer / SCRIPT_NAME).read_text(encoding="utf-8")
+        javascript = "\n".join(
+            (renderer / name).read_text(encoding="utf-8")
+            for name in SCRIPT_PARTS
+        )
 
         if CSS_PLACEHOLDER not in template or JS_PLACEHOLDER not in template:
-            raise RuntimeError("Consolidated renderer template is missing asset placeholders")
+            raise RuntimeError(
+                "Consolidated renderer template is missing asset placeholders"
+            )
+        if javascript.count("nlcalc-consolidated-v2") != 1:
+            raise RuntimeError("Consolidated renderer controller is incomplete")
 
         return (
             template.replace(CSS_PLACEHOLDER, css, 1)
