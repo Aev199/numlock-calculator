@@ -1,9 +1,11 @@
 import unittest
 
 import calc_engine
+from calculation_limits import install_calculator_limits
 from input_normalization import install_calculator_normalization
 
 install_calculator_normalization(calc_engine)
+install_calculator_limits(calc_engine)
 
 from calc_engine import prepare_for_ast
 from calc_engine_runtime import CalculatorSession
@@ -96,6 +98,19 @@ class CalculatorEngineTests(unittest.TestCase):
                 self.assertResult(expression, expected)
         self.assertEqual(prepare_for_ast('3100*.,1'), '3100*0.1')
         self.assertEqual(prepare_for_ast('3100⋅,1'), '3100*0.1')
+
+    def test_resource_limits_return_user_facing_errors(self):
+        too_long = self.engine.evaluate('1+' * 1100 + '1')
+        self.assertFalse(too_long.ok)
+        self.assertIn('длин', too_long.error.lower())
+
+        too_deep = self.engine.evaluate('(' * 80 + '1' + ')' * 80)
+        self.assertFalse(too_deep.ok)
+        self.assertIn('глубин', too_deep.error.lower())
+
+        exponent = self.engine.evaluate('2^1001')
+        self.assertFalse(exponent.ok)
+        self.assertIn('показатель', exponent.error.lower())
 
 
 if __name__ == '__main__':
