@@ -1,0 +1,42 @@
+/* Keyboard UX additions: non-invasive bracket depth overlay. */
+
+.expression-field-shell {
+  isolation: isolate;
+}
+
+.bracket-color-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 5px 72px 6px 6px;
+  border-radius: 8px;
+  pointer-events: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  color: transparent;
+  font: clamp(15px, 3.3vw, 18px)/1.45 "Cascadia Mono", "Consolas", monospace;
+}
+
+.expression-input {
+  position: relative;
+  z-index: 1;
+}
+
+.bracket-color-overlay .bracket {
+  font-weight: 800;
+  text-shadow: 0 0 5px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.bracket-color-overlay .depth-0 { color: #63a8ff; }
+.bracket-color-overlay .depth-1 { color: #b68cff; }
+.bracket-color-overlay .depth-2 { color: #ff9f68; }
+.bracket-color-overlay .depth-3 { color: #55cfa5; }
+.bracket-color-overlay .depth-4 { color: #f27fa5; }
+.bracket-color-overlay .depth-5 { color: #d0b55a; }
+
+body[data-app-mode="units"] .bracket-color-overlay .bracket {
+  opacity: .8;
+}
