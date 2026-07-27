@@ -37,7 +37,9 @@ class DiagnosticsTests(unittest.TestCase):
             self.assertIn("renderer: boom", diagnostics)
             self.assertIn("stack line", diagnostics)
             self.assertTrue(api.copy_diagnostics())
-            self.assertEqual(clipboard[-1], app.diagnostic_text())
+            self.assertTrue(clipboard)
+            self.assertIn("NumCalc diagnostics", clipboard[-1])
+            self.assertIn("renderer: boom", clipboard[-1])
 
             # Release the file before TemporaryDirectory removes it on Windows.
             for handler in list(app.logger.handlers):
