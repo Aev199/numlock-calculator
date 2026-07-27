@@ -4,41 +4,71 @@
   const TRIG_ORDER = ['sin', 'cos', 'tan', 'atan', 'asin', 'acos'];
   const POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt'];
   const FUNCTION_GROUP_ORDER = ['Тригонометрия', 'Степени и логарифмы', 'Прочие функции'];
+  const FUNCTION_RANK = new Map(
+    [...TRIG_ORDER, ...POWER_ORDER].map((name, index) => [name, index]),
+  );
 
   // Ctrl+K is intentionally retired. Tab from the expression field is the only
   // keyboard entry point; the toolbar button remains available for mouse users.
   isPaletteShortcut = function () { return false; };
 
-  const baseSetCatalog = setCatalog;
-  setCatalog = function (items) {
-    const prepared = (Array.isArray(items) ? items : []).map(item => {
+  function prepareCatalog(items) {
+    return (Array.isArray(items) ? items : []).map(item => {
       if (item?.kind !== 'function') return item;
       const name = String(item.label || '').toLowerCase();
       if (TRIG_ORDER.includes(name)) return { ...item, group: 'Тригонометрия' };
       if (POWER_ORDER.includes(name)) return { ...item, group: 'Степени и логарифмы' };
       return { ...item, group: 'Прочие функции' };
     });
+  }
 
-    prepared.sort((left, right) => {
-      const leftGroup = left?.group || left?.kind || 'Команды';
-      const rightGroup = right?.group || right?.kind || 'Команды';
-      const leftGroupIndex = FUNCTION_GROUP_ORDER.indexOf(leftGroup);
-      const rightGroupIndex = FUNCTION_GROUP_ORDER.indexOf(rightGroup);
-      const groupA = leftGroupIndex >= 0 ? leftGroupIndex : 100;
-      const groupB = rightGroupIndex >= 0 ? rightGroupIndex : 100;
-      if (groupA !== groupB) return groupA - groupB;
+  function compareCatalogItems(left, right) {
+    const leftGroup = left?.group || left?.kind || 'Команды';
+    const rightGroup = right?.group || right?.kind || 'Команды';
+    const leftGroupIndex = FUNCTION_GROUP_ORDER.indexOf(leftGroup);
+    const rightGroupIndex = FUNCTION_GROUP_ORDER.indexOf(rightGroup);
+    const groupA = leftGroupIndex >= 0 ? leftGroupIndex : 100;
+    const groupB = rightGroupIndex >= 0 ? rightGroupIndex : 100;
+    if (groupA !== groupB) return groupA - groupB;
 
-      const nameA = String(left?.label || '').toLowerCase();
-      const nameB = String(right?.label || '').toLowerCase();
-      const order = leftGroup === 'Тригонометрия' ? TRIG_ORDER : POWER_ORDER;
-      const indexA = order.indexOf(nameA);
-      const indexB = order.indexOf(nameB);
-      if (indexA >= 0 || indexB >= 0) {
-        return (indexA >= 0 ? indexA : 100) - (indexB >= 0 ? indexB : 100);
-      }
-      return nameA.localeCompare(nameB, 'ru');
-    });
+    const nameA = String(left?.label || '').toLowerCase();
+    const nameB = String(right?.label || '').toLowerCase();
+    if (left?.kind === 'function' || right?.kind === 'function') {
+      const rankA = FUNCTION_RANK.has(nameA) ? FUNCTION_RANK.get(nameA) : 1000;
+      const rankB = FUNCTION_RANK.has(nameB) ? FUNCTION_RANK.get(nameB) : 1000;
+      if (rankA !== rankB) return rankA - rankB;
+    }
+    return nameA.localeCompare(nameB, 'ru');
+  }
+
+  const baseSetCatalog = setCatalog;
+  setCatalog = function (items) {
+    const prepared = prepareCatalog(items).sort(compareCatalogItems);
     baseSetCatalog(prepared);
+  };
+
+  // Enforce the requested order again at render time. This prevents any backend
+  // or search-result sorting from changing the visible sequence in the palette.
+  activePaletteItems = function () {
+    const group = state.palette.groups[state.palette.groupIndex];
+    return state.palette.items
+      .filter(item => (item.group || item.kind || 'Команды') === group)
+      .slice()
+      .sort(compareCatalogItems);
+  };
+
+  // Unit labels supplied by the backend are already Russian and user-facing.
+  // Do not append the internal Latin conversion key a second time.
+  fillSelect = function (select, items, selected, isCategory = false) {
+    const fragment = document.createDocumentFragment();
+    for (const item of items) {
+      const option = document.createElement('option');
+      option.value = isCategory ? item.id : item.symbol;
+      option.textContent = item.label;
+      option.selected = option.value === selected;
+      fragment.appendChild(option);
+    }
+    select.replaceChildren(fragment);
   };
 
   const bracketOverlay = document.createElement('div');
