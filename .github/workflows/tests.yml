@@ -55,6 +55,8 @@ jobs:
               for name in app_renderer.SCRIPT_PARTS
           )
           Path('renderer-check.js').write_text(source, encoding='utf-8')
-          assert source.count('keydown-v2') == 1
+          assert 'keydown-v2' not in source
+          assert 'interceptTextInsertion' not in source
+          assert 'interceptPhysicalKey' not in source
           PY
           node --check renderer-check.js
