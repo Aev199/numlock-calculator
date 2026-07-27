@@ -86,6 +86,29 @@ class UnitsModeTests(unittest.TestCase):
         invalid = api.convert_units("sin(30)", "length", "m", "mm")
         self.assertFalse(invalid["ok"])
 
+    def test_engineering_force_and_derived_units(self):
+        app, api, _storage = self.make_app()
+        app_units_backend.install(app)
+
+        tonne_force = api.convert_units("1", "force", "tf", "kN")
+        self.assertTrue(tonne_force["ok"], tonne_force.get("error"))
+        self.assertAlmostEqual(float(tonne_force["result"]), 9.80665, places=6)
+
+        distributed = api.convert_units("4", "distributed_force", "tf/m", "kgf/m")
+        self.assertTrue(distributed["ok"], distributed.get("error"))
+        self.assertEqual(distributed["result"], "4000")
+
+        pressure = api.convert_units("1", "pressure", "tf/m2", "kPa")
+        self.assertTrue(pressure["ok"], pressure.get("error"))
+        self.assertAlmostEqual(float(pressure["result"]), 9.80665, places=6)
+
+        acceleration = api.convert_units("1", "acceleration", "g0", "m/s2")
+        self.assertTrue(acceleration["ok"], acceleration.get("error"))
+        self.assertAlmostEqual(float(acceleration["result"]), 9.80665, places=6)
+
+        categories = {item["id"] for item in unit_conversion.unit_payload()}
+        self.assertTrue({"distributed_force", "moment", "speed", "acceleration", "specific_weight"} <= categories)
+
     def test_calculator_handoff_revision_and_converter_state(self):
         app, api, storage = self.make_app()
         app_units_backend.install(app)
@@ -103,7 +126,6 @@ class UnitsModeTests(unittest.TestCase):
         self.assertEqual(converted["state"]["imported_revision"], 1)
         self.assertEqual(storage.get("unit_converter_state")["expression"], "312.5")
 
-        # A dimensional calculator result does not overwrite the plain numeric handoff.
         dimensional = api.commit("2 m")
         self.assertTrue(dimensional["ok"], dimensional.get("error"))
         self.assertEqual(dimensional["calculator_handoff"]["revision"], 1)
@@ -131,6 +153,7 @@ class UnitsModeTests(unittest.TestCase):
         self.assertIn('id="sourceUnitBadge"', html)
         self.assertIn('id="targetUnitBadge"', html)
         self.assertIn("switchMode('units')", html)
+        self.assertIn("Тонна-сила — тс", html)
         self.assertNotIn("Функции и единицы (Ctrl+K)", html)
 
     def test_backend_does_not_mutate_renderer_builder(self):
