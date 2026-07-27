@@ -37,8 +37,9 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("function commitUnits()", html)
         self.assertIn("function reconcileHistory", html)
         self.assertIn("window.__nlcalcRestoreEditorFocus", html)
-        self.assertIn("event.code === 'KeyK'", html)
         self.assertIn("input-motion-layer", html)
+        self.assertIn("bracket-color-overlay", html)
+        self.assertIn("Функции (Tab)", html)
         self.assertNotIn("keydown-v2", html)
         self.assertNotIn(app_renderer.CSS_PLACEHOLDER, html)
         self.assertNotIn(app_renderer.JS_PLACEHOLDER, html)
@@ -48,7 +49,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 12)
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 13)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
@@ -58,15 +59,15 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertEqual(source.count("nlcalc-consolidated-v2"), 1)
         self.assertNotIn("app-shell-v2.motion-keydown.js", app_renderer.SCRIPT_PARTS)
         self.assertLess(
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07z.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07zzz.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.ux.js"),
         )
         self.assertLess(
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07zzz.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.ux.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
-    def test_character_input_is_native_and_not_intercepted(self):
+    def test_character_input_is_native_and_tab_opens_palette(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
         html = app.build_html()
@@ -75,8 +76,12 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertNotIn("function interceptTextInsertion(event)", html)
         self.assertNotIn("function interceptPhysicalKey(event)", html)
         self.assertNotIn("window.__NLCALC_MOTION_INPUT_RUNTIME__", html)
-        self.assertNotIn("event.stopImmediatePropagation()", html)
         self.assertNotIn("dom.input.value = nextValue", html)
+        self.assertIn("event.key === 'Tab'", html)
+        self.assertIn("isPaletteShortcut = function () { return false; };", html)
+        self.assertIn("dom.input.setRangeText(`(${selected})`", html)
+        self.assertIn("TRIG_ORDER = ['sin', 'cos', 'tan', 'atan', 'asin', 'acos']", html)
+        self.assertIn("POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt']", html)
 
     def test_race_guards_are_present(self):
         app, _calls = self.make_app()
