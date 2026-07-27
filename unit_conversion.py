@@ -12,12 +12,12 @@ from typing import Any
 UNIT_CATEGORIES: tuple[dict[str, Any], ...] = (
     {
         "id": "length",
-        "label": "Длина",
+        "label": "Линейные размеры",
         "units": (
-            ("mm", "Миллиметр"),
-            ("cm", "Сантиметр"),
-            ("m", "Метр"),
-            ("km", "Километр"),
+            ("mm", "Миллиметр — мм"),
+            ("cm", "Сантиметр — см"),
+            ("m", "Метр — м"),
+            ("km", "Километр — км"),
             ("in", "Дюйм"),
             ("ft", "Фут"),
             ("mi", "Миля"),
@@ -25,25 +25,25 @@ UNIT_CATEGORIES: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "area",
-        "label": "Площадь",
+        "label": "Площади",
         "units": (
-            ("mm2", "Квадратный миллиметр"),
-            ("cm2", "Квадратный сантиметр"),
-            ("m2", "Квадратный метр"),
+            ("mm2", "Квадратный миллиметр — мм²"),
+            ("cm2", "Квадратный сантиметр — см²"),
+            ("m2", "Квадратный метр — м²"),
             ("ha", "Гектар"),
-            ("km2", "Квадратный километр"),
+            ("km2", "Квадратный километр — км²"),
             ("in2", "Квадратный дюйм"),
             ("ft2", "Квадратный фут"),
         ),
     },
     {
         "id": "volume",
-        "label": "Объём",
+        "label": "Объёмы",
         "units": (
             ("mL", "Миллилитр"),
-            ("cm3", "Кубический сантиметр"),
+            ("cm3", "Кубический сантиметр — см³"),
             ("L", "Литр"),
-            ("m3", "Кубический метр"),
+            ("m3", "Кубический метр — м³"),
             ("gal", "Галлон США"),
             ("ft3", "Кубический фут"),
         ),
@@ -52,11 +52,91 @@ UNIT_CATEGORIES: tuple[dict[str, Any], ...] = (
         "id": "mass",
         "label": "Масса",
         "units": (
-            ("g", "Грамм"),
-            ("kg", "Килограмм"),
-            ("t", "Тонна"),
+            ("g", "Грамм — г"),
+            ("kg", "Килограмм — кг"),
+            ("t", "Метрическая тонна — т"),
             ("oz", "Унция"),
             ("lb", "Фунт"),
+        ),
+    },
+    {
+        "id": "force",
+        "label": "Силы",
+        "units": (
+            ("N", "Ньютон — Н"),
+            ("kgf", "Килограмм-сила — кгс"),
+            ("tf", "Тонна-сила — тс"),
+            ("kN", "Килоньютон — кН"),
+            ("MN", "Меганьютон — МН"),
+            ("daN", "Деканьютон — daN"),
+            ("lbf", "Фунт-сила"),
+            ("kip", "Килофунт-сила — kip"),
+        ),
+    },
+    {
+        "id": "distributed_force",
+        "label": "Распределённые силы",
+        "units": (
+            ("N/m", "Н/м"),
+            ("kgf/m", "кгс/м"),
+            ("tf/m", "тс/м"),
+            ("kN/m", "кН/м"),
+            ("MN/m", "МН/м"),
+        ),
+    },
+    {
+        "id": "moment",
+        "label": "Моменты сил",
+        "units": (
+            ("N*m", "Н·м"),
+            ("kgf*m", "кгс·м"),
+            ("tf*m", "тс·м"),
+            ("kN*m", "кН·м"),
+            ("MN*m", "МН·м"),
+        ),
+    },
+    {
+        "id": "speed",
+        "label": "Скорости",
+        "units": (
+            ("m/s", "м/с"),
+            ("km/h", "км/ч"),
+            ("ft/s", "фут/с"),
+        ),
+    },
+    {
+        "id": "acceleration",
+        "label": "Ускорения",
+        "units": (
+            ("m/s2", "м/с²"),
+            ("g0", "g"),
+            ("ft/s2", "фут/с²"),
+        ),
+    },
+    {
+        "id": "pressure",
+        "label": "Давления",
+        "units": (
+            ("kgf/m2", "кгс/м²"),
+            ("tf/m2", "тс/м²"),
+            ("Pa", "Паскаль — Па"),
+            ("kPa", "Килопаскаль — кПа"),
+            ("MPa", "Мегапаскаль — МПа"),
+            ("GPa", "Гигапаскаль — ГПа"),
+            ("bar", "Бар"),
+            ("atm", "Атмосфера"),
+            ("mmHg", "мм рт. ст."),
+            ("psi", "psi"),
+        ),
+    },
+    {
+        "id": "specific_weight",
+        "label": "Удельный вес",
+        "units": (
+            ("N/m3", "Н/м³"),
+            ("kgf/m3", "кгс/м³"),
+            ("tf/m3", "тс/м³"),
+            ("kN/m3", "кН/м³"),
         ),
     },
     {
@@ -75,30 +155,6 @@ UNIT_CATEGORIES: tuple[dict[str, Any], ...] = (
             ("degC", "Градус Цельсия"),
             ("K", "Кельвин"),
             ("degF", "Градус Фаренгейта"),
-        ),
-    },
-    {
-        "id": "force",
-        "label": "Сила",
-        "units": (
-            ("N", "Ньютон"),
-            ("kN", "Килоньютон"),
-            ("kgf", "Килограмм-сила"),
-            ("lbf", "Фунт-сила"),
-        ),
-    },
-    {
-        "id": "pressure",
-        "label": "Давление",
-        "units": (
-            ("Pa", "Паскаль"),
-            ("kPa", "Килопаскаль"),
-            ("MPa", "Мегапаскаль"),
-            ("GPa", "Гигапаскаль"),
-            ("bar", "Бар"),
-            ("atm", "Атмосфера"),
-            ("mmHg", "Миллиметр ртутного столба"),
-            ("psi", "Фунт на квадратный дюйм"),
         ),
     },
 )
@@ -125,6 +181,22 @@ ALLOWED_BINARY = {
 ALLOWED_UNARY = {
     ast.UAdd: lambda value: value,
     ast.USub: lambda value: -value,
+}
+
+G0 = 9.80665
+UNIT_SCALES: dict[str, dict[str, float]] = {
+    "length": {"mm": 1e-3, "cm": 1e-2, "m": 1.0, "km": 1e3, "in": 0.0254, "ft": 0.3048, "mi": 1609.344},
+    "area": {"mm2": 1e-6, "cm2": 1e-4, "m2": 1.0, "ha": 1e4, "km2": 1e6, "in2": 0.00064516, "ft2": 0.09290304},
+    "volume": {"mL": 1e-6, "cm3": 1e-6, "L": 1e-3, "m3": 1.0, "gal": 0.003785411784, "ft3": 0.028316846592},
+    "mass": {"g": 1e-3, "kg": 1.0, "t": 1e3, "oz": 0.028349523125, "lb": 0.45359237},
+    "force": {"N": 1.0, "kgf": G0, "tf": 1000 * G0, "kN": 1e3, "MN": 1e6, "daN": 10.0, "lbf": 4.4482216152605, "kip": 4448.2216152605},
+    "distributed_force": {"N/m": 1.0, "kgf/m": G0, "tf/m": 1000 * G0, "kN/m": 1e3, "MN/m": 1e6},
+    "moment": {"N*m": 1.0, "kgf*m": G0, "tf*m": 1000 * G0, "kN*m": 1e3, "MN*m": 1e6},
+    "speed": {"m/s": 1.0, "km/h": 1 / 3.6, "ft/s": 0.3048},
+    "acceleration": {"m/s2": 1.0, "g0": G0, "ft/s2": 0.3048},
+    "pressure": {"kgf/m2": G0, "tf/m2": 1000 * G0, "Pa": 1.0, "kPa": 1e3, "MPa": 1e6, "GPa": 1e9, "bar": 1e5, "atm": 101325.0, "mmHg": 133.3223684211, "psi": 6894.757293168},
+    "specific_weight": {"N/m3": 1.0, "kgf/m3": G0, "tf/m3": 1000 * G0, "kN/m3": 1e3},
+    "time": {"s": 1.0, "min": 60.0, "h": 3600.0},
 }
 
 
@@ -249,6 +321,30 @@ def evaluate_simple(expression: str) -> float:
     return evaluate_node(tree)
 
 
+def convert_value(value: float, category: str, from_unit: str, to_unit: str) -> float:
+    if category == "temperature":
+        if from_unit == "degC":
+            kelvin = value + 273.15
+        elif from_unit == "degF":
+            kelvin = (value + 459.67) * 5 / 9
+        elif from_unit == "K":
+            kelvin = value
+        else:
+            raise ValueError("Неизвестная единица температуры")
+        if to_unit == "degC":
+            return kelvin - 273.15
+        if to_unit == "degF":
+            return kelvin * 9 / 5 - 459.67
+        if to_unit == "K":
+            return kelvin
+        raise ValueError("Неизвестная единица температуры")
+
+    scales = UNIT_SCALES.get(category)
+    if not scales or from_unit not in scales or to_unit not in scales:
+        raise ValueError("Неизвестная единица измерения")
+    return value * scales[from_unit] / scales[to_unit]
+
+
 def format_number(value: float, precision: int = 12) -> str:
     if not math.isfinite(value):
         raise ValueError("Результат не является конечным числом")
@@ -281,5 +377,4 @@ def filter_suggestions(items: Any) -> list[dict[str, Any]]:
 
 def copy_state(value: dict[str, Any]) -> dict[str, Any]:
     """Return a defensive copy for API payloads."""
-
     return deepcopy(value)
