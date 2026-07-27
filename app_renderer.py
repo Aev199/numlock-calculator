@@ -12,7 +12,10 @@ from typing import Any
 
 
 TEMPLATE_NAME = "app-shell.html"
-STYLE_NAME = "app-shell.css"
+STYLE_PARTS = (
+    "app-shell.css",
+    "app-shell-motion.css",
+)
 SCRIPT_PARTS = tuple(
     f"app-shell-v2.part{index:02d}.js"
     for index in range(9)
@@ -35,7 +38,10 @@ def install(app: Any) -> None:
     def build_html() -> str:
         renderer = Path(app.RENDERER_DIR)
         template = (renderer / TEMPLATE_NAME).read_text(encoding="utf-8")
-        css = (renderer / STYLE_NAME).read_text(encoding="utf-8")
+        css = "\n".join(
+            (renderer / name).read_text(encoding="utf-8")
+            for name in STYLE_PARTS
+        )
         javascript = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in SCRIPT_PARTS
@@ -47,6 +53,8 @@ def install(app: Any) -> None:
             )
         if javascript.count("nlcalc-consolidated-v2") != 1:
             raise RuntimeError("Consolidated renderer controller is incomplete")
+        if "nlcalc-input-pulse" not in css:
+            raise RuntimeError("Consolidated renderer motion layer is incomplete")
 
         return (
             template.replace(CSS_PLACEHOLDER, css, 1)
