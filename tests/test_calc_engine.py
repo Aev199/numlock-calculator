@@ -104,7 +104,7 @@ class CalculatorEngineTests(unittest.TestCase):
         self.assertFalse(too_long.ok)
         self.assertIn('длин', too_long.error.lower())
 
-        too_deep = self.engine.evaluate('(' * 80 + '1' + ')' * 80)
+        too_deep = self.engine.evaluate('-' * 80 + '1')
         self.assertFalse(too_deep.ok)
         self.assertIn('глубин', too_deep.error.lower())
 
