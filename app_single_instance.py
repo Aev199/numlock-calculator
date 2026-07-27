@@ -8,12 +8,14 @@ import threading
 import time
 from typing import Any
 
+from product_info import APP_ID
+
 ERROR_ALREADY_EXISTS = 183
 WAIT_OBJECT_0 = 0
 WAIT_FAILED = 0xFFFFFFFF
 INFINITE = 0xFFFFFFFF
-MUTEX_NAME = r"Local\Aev199.NumCalc.Instance"
-ACTIVATE_EVENT_NAME = r"Local\Aev199.NumCalc.Activate"
+MUTEX_NAME = rf"Local\{APP_ID}.Instance"
+ACTIVATE_EVENT_NAME = rf"Local\{APP_ID}.Activate"
 
 
 def install(
