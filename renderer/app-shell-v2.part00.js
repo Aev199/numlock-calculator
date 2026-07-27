@@ -101,9 +101,12 @@
 
   const normalize = value => String(value ?? '').trim();
   const isPlainNumber = value => PLAIN_NUMBER.test(normalize(value));
-  const reducedMotion = () => Boolean(
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-  );
+  const reducedMotion = () => {
+    if (document.body?.dataset.motion === 'full') return false;
+    return Boolean(
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    );
+  };
 
   function waitForBridge() {
     if (window.pywebview?.api) return Promise.resolve(window.pywebview.api);
@@ -193,11 +196,13 @@
   function typingFeedback(event) {
     if (!event.isTrusted || event.isComposing) return;
     if (!String(event.inputType || '').startsWith('insert')) return;
+    dom.fieldShell.classList.remove('is-typing');
+    void dom.fieldShell.offsetWidth;
     dom.fieldShell.classList.add('is-typing');
     window.clearTimeout(state.typingTimer);
     state.typingTimer = window.setTimeout(
       () => dom.fieldShell.classList.remove('is-typing'),
-      105,
+      185,
     );
   }
 
