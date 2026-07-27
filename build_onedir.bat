@@ -16,10 +16,11 @@ if not exist .venv\Scripts\python.exe (
 .venv\Scripts\python -m pip install -r requirements-build.txt || exit /b 1
 .venv\Scripts\python -m unittest discover -s tests -v || exit /b 1
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0prepare_build.ps1" -TargetPath "dist\NumLockCalc" || exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0prepare_build.ps1" -TargetPath "dist\NumCalc" || exit /b 1
 .venv\Scripts\python -m PyInstaller --noconfirm --clean NumLockCalc-folder.spec || exit /b 1
+powershell -NoProfile -Command "$hash=(Get-FileHash -Algorithm SHA256 'dist\NumCalc\NumCalc.exe').Hash.ToLower(); Set-Content -Encoding ascii 'dist\NumCalc\NumCalc.exe.sha256.txt' ($hash + '  NumCalc.exe')" || exit /b 1
 
 echo.
-echo Folder build complete: dist\NumLockCalc\NumLockCalc.exe
-echo This build uses one NumLockCalc runtime process on Windows.
+echo Folder build complete: dist\NumCalc\NumCalc.exe
+echo This build uses one NumCalc runtime process on Windows.
 endlocal
