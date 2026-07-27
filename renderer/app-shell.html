@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NumLock Calc</title>
+  <script>window.__NUMLOCK_PYWEBVIEW__ = true;</script>
+  <style>
+/*__NUMLOCK_CALC_CSS__*/
+  </style>
+</head>
+<body data-theme="dark" data-app-mode="calculator">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block pywebview-drag-region" title="Перетащить окно">
+        <span class="brand-mark">N</span>
+        <div class="brand-copy">
+          <div class="brand-title">NumLock Calc</div>
+          <div class="brand-subtitle">keyboard-first</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="mode-pill calculator-setting" id="angleMode" type="button" title="Режим углов">DEG</button>
+        <button class="mode-pill calculator-setting" id="numberBase" type="button" title="Формат чисел">DEC</button>
+        <button class="icon-button" id="themeButton" type="button" title="Сменить тему" aria-label="Сменить тему">◐</button>
+        <button class="icon-button" id="hideButton" type="button" title="Скрыть окно" aria-label="Скрыть окно">—</button>
+        <button class="icon-button danger" id="quitButton" type="button" title="Полностью выйти" aria-label="Полностью выйти">×</button>
+      </div>
+    </header>
+
+    <nav class="mode-switch" id="modeSwitch" aria-label="Режим приложения">
+      <span class="mode-indicator" id="modeIndicator" aria-hidden="true"></span>
+      <button class="mode-switch-button active" id="calculatorModeTab" type="button" data-mode="calculator" aria-selected="true">Калькулятор</button>
+      <button class="mode-switch-button" id="unitsModeTab" type="button" data-mode="units" aria-selected="false">Единицы</button>
+    </nav>
+
+    <main class="workspace">
+      <section class="editor-card" aria-label="Рабочее значение">
+        <div class="editor-toolbar">
+          <span class="editor-label" id="editorLabel">Выражение</span>
+          <div class="editor-tools calculator-only" id="editorTools">
+            <button class="tool-button" id="paletteButton" type="button" title="Функции (Ctrl+K)">ƒx</button>
+            <button class="tool-button" id="memoryButton" type="button" title="Память">M</button>
+            <button class="tool-button" id="variablesButton" type="button" title="Переменные">x</button>
+          </div>
+        </div>
+
+        <div class="expression-field-shell" id="expressionFieldShell">
+          <textarea id="expressionInput" class="expression-input" rows="2" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Например: (120 + 30) / 5" aria-label="Введите выражение"></textarea>
+          <span class="field-unit-badge" id="sourceUnitBadge" aria-hidden="true"></span>
+          <div class="commit-overlay" id="commitOverlay" aria-hidden="true"></div>
+        </div>
+        <div class="completion-popover hidden" id="completionPopover" role="listbox"></div>
+
+        <div class="result-block" id="resultBlock">
+          <div class="result-prefix">=</div>
+          <div class="result-main">
+            <div class="result-value muted" id="resultValue">Введите выражение</div>
+            <div class="result-error hidden" id="resultError"></div>
+          </div>
+          <span class="result-unit-badge" id="targetUnitBadge" aria-hidden="true"></span>
+        </div>
+      </section>
+
+      <div class="mode-stage" id="modeStage">
+        <section class="mode-panel history-card active" id="calculatorPanel" data-mode-panel="calculator" aria-label="История вычислений" aria-hidden="false">
+          <div class="section-header">
+            <div class="section-heading">
+              <h2>История</h2>
+              <span class="section-counter" id="historyCounter">0</span>
+            </div>
+            <div class="section-actions">
+              <label class="search-field">
+                <span>⌕</span>
+                <input id="historySearch" type="search" placeholder="Поиск" autocomplete="off">
+              </label>
+              <button class="icon-button small" id="clearHistoryButton" type="button" title="Очистить историю">⌫</button>
+            </div>
+          </div>
+          <div class="history-list" id="historyList"></div>
+        </section>
+
+        <section class="mode-panel unit-converter-card" id="unitsPanel" data-mode-panel="units" aria-label="Преобразование единиц" aria-hidden="true">
+          <div class="section-header unit-converter-header">
+            <div class="section-heading converter-heading">
+              <h2>Единицы</h2>
+              <span class="converter-caption">простая арифметика</span>
+            </div>
+            <label class="compact-select-shell category-select-shell">
+              <span class="sr-only">Категория величины</span>
+              <select class="converter-select category-select" id="unitCategory" aria-label="Категория величины"></select>
+            </label>
+          </div>
+          <div class="unit-converter-content">
+            <div class="unit-route">
+              <label class="unit-picker-card">
+                <span>Исходная единица</span>
+                <select class="converter-select" id="sourceUnitSelect"></select>
+              </label>
+              <button class="swap-units-button" id="swapUnitsButton" type="button" title="Поменять единицы местами" aria-label="Поменять единицы местами">⇄</button>
+              <label class="unit-picker-card">
+                <span>Целевая единица</span>
+                <select class="converter-select" id="targetUnitSelect"></select>
+              </label>
+            </div>
+            <p class="converter-help">Введите число или выражение с операциями + − × ÷, степенью и скобками. Enter упрощает исходное выражение.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="overlay hidden" id="paletteOverlay" aria-hidden="true">
+    <section class="palette" role="dialog" aria-modal="true" aria-label="Команды">
+      <div class="palette-search-wrap">
+        <span>⌕</span>
+        <input id="paletteSearch" class="palette-search" type="search" placeholder="Поиск команды…" autocomplete="off">
+        <kbd>Esc</kbd>
+      </div>
+      <nav class="palette-groups" id="paletteGroups" aria-label="Группы команд"></nav>
+      <div class="palette-results" id="paletteResults"></div>
+      <div class="palette-footer">
+        <span><kbd>←</kbd><kbd>→</kbd> группы</span>
+        <span><kbd>↑</kbd><kbd>↓</kbd> выбор</span>
+        <span><kbd>Enter</kbd> вставить</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="overlay hidden" id="drawerOverlay" aria-hidden="true">
+    <section class="drawer" role="dialog" aria-modal="true" aria-label="Данные калькулятора">
+      <div class="drawer-header">
+        <div>
+          <h2 id="drawerTitle">Память</h2>
+          <p id="drawerSubtitle"></p>
+        </div>
+        <button class="icon-button" id="drawerClose" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div class="drawer-content" id="drawerContent"></div>
+    </section>
+  </div>
+
+  <div class="toast hidden" id="toast" role="status"></div>
+  <script>
+/*__NUMLOCK_CALC_JS__*/
+  </script>
+</body>
+</html>
