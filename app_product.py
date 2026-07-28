@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
+import app_native_dialogs
 from product_info import (
     APP_NAME,
     APP_VERSION,
@@ -12,6 +14,9 @@ from product_info import (
     LICENSE_NAME,
     REPOSITORY_URL,
 )
+
+
+_TRUSTED_PRODUCT_LINKS = (INSPIRATION_URL, REPOSITORY_URL)
 
 
 def install(app: Any, tray_module: Any) -> None:
@@ -40,3 +45,39 @@ def install(app: Any, tray_module: Any) -> None:
         "от Владимира Потапова.\n\n"
         f"Лицензия исходного кода NumCalc: {LICENSE_NAME}"
     )
+
+    def open_product_link(self: Any, url: str) -> bool:
+        return app_native_dialogs.open_external_url(url, _TRUSTED_PRODUCT_LINKS)
+
+    app.AppApi.open_product_link = open_product_link
+
+    # Keep the tray implementation unchanged, but replace its unreliable native
+    # TaskDialog path with the renderer-owned modal. The function is invoked only
+    # after pywebview has started, so the main window and JavaScript bridge exist.
+    def show_about_in_renderer(
+        _title: str,
+        _instruction: str,
+        _content: str,
+        _links: Any,
+    ) -> bool:
+        window = getattr(app, "_window", None)
+        if window is None:
+            return False
+        try:
+            app.show_window()
+        except Exception:
+            pass
+
+        for delay in (0.0, 0.08, 0.16):
+            if delay:
+                time.sleep(delay)
+            try:
+                window.evaluate_js(
+                    "window.__nlcalcShowAbout && window.__nlcalcShowAbout()"
+                )
+                return True
+            except Exception:
+                continue
+        return False
+
+    tray_module.app_native_dialogs.show_link_dialog = show_about_in_renderer
