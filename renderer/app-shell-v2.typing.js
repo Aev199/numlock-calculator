@@ -14,6 +14,18 @@
     try { node?.remove(); } catch (_) {}
   }
 
+  function reportCaretGlyphFailure(error) {
+    try {
+      if (typeof reportRendererDiagnostic === 'function') {
+        void reportRendererDiagnostic(
+          'caret-glyph',
+          String(error?.message || error || 'Typing motion failed'),
+          String(error?.stack || ''),
+        );
+      }
+    } catch (_) {}
+  }
+
   function settleCaretGlyphMotion() {
     const pending = caretGlyphPending;
     const active = caretGlyphMotion;
@@ -296,10 +308,22 @@
   const baseOnInputCaretMotion = onInput;
   onInput = function (event) {
     baseOnInputCaretMotion(event);
-    completeCaretGlyphMotion(event);
+    try {
+      completeCaretGlyphMotion(event);
+    } catch (error) {
+      settleCaretGlyphMotion();
+      reportCaretGlyphFailure(error);
+    }
   };
 
-  dom.input.addEventListener('beforeinput', beginCaretGlyphMotion, { capture: true });
+  dom.input.addEventListener('beforeinput', event => {
+    try {
+      beginCaretGlyphMotion(event);
+    } catch (error) {
+      settleCaretGlyphMotion();
+      reportCaretGlyphFailure(error);
+    }
+  }, { capture: true });
   document.addEventListener('keydown', event => {
     if (event.target !== dom.input) return;
     settleCaretGlyphMotion();
