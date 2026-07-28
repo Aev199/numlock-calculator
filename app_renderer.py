@@ -17,6 +17,7 @@ STYLE_PARTS = (
     "app-shell-motion.css",
     "app-shell-ux.css",
     "app-shell-product.css",
+    "app-shell-about.css",
 )
 SCRIPT_PARTS = (
     *(f"app-shell-v2.part{index:02d}.js" for index in range(8)),
@@ -27,6 +28,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.multiply.js",
     "app-shell-v2.copy.js",
     "app-shell-v2.variables.js",
+    "app-shell-v2.about.js",
     "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
@@ -66,6 +68,8 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Consolidated renderer clipboard behavior is incomplete")
     if "app-shell-v2.variables.js" not in SCRIPT_PARTS:
         raise RuntimeError("Consolidated renderer variable layer is incomplete")
+    if "app-shell-v2.about.js" not in SCRIPT_PARTS or "about-overlay" not in css:
+        raise RuntimeError("Consolidated renderer About dialog is incomplete")
 
     return (
         template.replace(CSS_PLACEHOLDER, css, 1)
