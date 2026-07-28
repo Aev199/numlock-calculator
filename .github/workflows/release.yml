@@ -38,11 +38,10 @@ jobs:
           git diff --exit-code -- version_info.txt
       - name: Collect runtime license files
         run: python collect_third_party_licenses.py --output release/licenses
-      - name: Download corresponding pystray source
+      - name: Download corresponding pystray package archive
         run: >-
           python -m pip download
           --no-deps
-          --no-binary=:all:
           pystray==0.19.5
           --dest release/licenses/source
       - name: Build NumCalc
@@ -67,7 +66,7 @@ jobs:
             Where-Object { $_.Name -like 'pystray-0.19.5*' } |
             Select-Object -First 1
           if ($null -eq $pystraySource) {
-            throw 'The corresponding pystray 0.19.5 source archive is missing'
+            throw 'The corresponding pystray 0.19.5 package archive is missing'
           }
 
           $packageName = "NumCalc-$version-windows-x64"
@@ -108,7 +107,7 @@ jobs:
             Where-Object { $_.Name -like 'pystray-0.19.5*' } |
             Select-Object -First 1
           if ($null -eq $verifiedSource) {
-            throw 'Release archive does not contain pystray source'
+            throw 'Release archive does not contain the pystray package archive'
           }
 
           "PACKAGE_NAME=$packageName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
