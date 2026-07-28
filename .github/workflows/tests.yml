@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -18,14 +21,29 @@ jobs:
         run: >-
           python -m py_compile
           app.py app_keyboard.py app_window.py app_numlock_compat.py
-          app_tray.py app_units_backend.py app_variables.py app_renderer.py
-          app_diagnostics.py app_product.py app_single_instance.py app_storage.py
-          calculation_limits.py generate_version_info.py input_normalization.py
-          product_info.py unit_conversion.py calc_engine.py calc_engine_runtime.py
+          app_tray.py app_native_dialogs.py app_units_backend.py app_variables.py
+          app_renderer.py app_diagnostics.py app_product.py app_single_instance.py
+          app_storage.py calculation_limits.py collect_third_party_licenses.py
+          generate_version_info.py input_normalization.py product_info.py
+          unit_conversion.py calc_engine.py calc_engine_runtime.py
       - name: Verify generated product metadata
         run: |
           python generate_version_info.py
           git diff --exit-code -- version_info.txt
+      - name: Verify public repository files
+        run: |
+          test -f LICENSE
+          test -f LICENSING.md
+          test -f THIRD_PARTY_NOTICES.md
+          test -f SECURITY.md
+          test -f CONTRIBUTING.md
+          test -f RELEASE_NOTES.md
+          test -f docs/WINDOWS_ACCEPTANCE.md
+          test -f docs/RELEASE_CHECKLIST.md
+          test -f NumCalc.spec
+          test -f NumCalc-folder.spec
+          test ! -e NumLockCalc.spec
+          test ! -e NumLockCalc-folder.spec
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
@@ -48,7 +66,7 @@ jobs:
           cat renderer-test.log
           exit 1
       - name: Test frameless tray shell
-        run: python -m unittest tests.test_tray -v
+        run: python -m unittest tests.test_tray tests.test_native_dialogs -v
       - name: Test separate units mode
         run: python -m unittest tests.test_units_mode -v
       - name: Test full build sequence
@@ -101,10 +119,30 @@ jobs:
         run: python -m pip install -r requirements-build.txt
       - name: Run full Windows test suite
         run: python -m unittest discover -s tests -v
+      - name: Collect runtime licenses
+        run: python collect_third_party_licenses.py --output release/licenses
+      - name: Verify release license bundle
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath 'release\licenses\DEPENDENCIES.md')) {
+            throw 'Dependency license report was not created'
+          }
+          $pystray = Get-ChildItem -LiteralPath 'release\licenses' -Directory |
+            Where-Object { $_.Name -like 'pystray-*' } |
+            Select-Object -First 1
+          if ($null -eq $pystray) {
+            throw 'pystray license directory is missing'
+          }
+          $license = Get-ChildItem -LiteralPath $pystray.FullName -File |
+            Where-Object { $_.Name -match '^(COPYING|LICENSE|LICENCE)' } |
+            Select-Object -First 1
+          if ($null -eq $license) {
+            throw 'pystray LGPL text is missing'
+          }
       - name: Generate Windows version metadata
         run: python generate_version_info.py
       - name: Build NumCalc one-file executable
-        run: python -m PyInstaller --noconfirm --clean NumLockCalc.spec
+        run: python -m PyInstaller --noconfirm --clean NumCalc.spec
       - name: Verify executable metadata and write SHA-256
         shell: pwsh
         run: |
@@ -134,4 +172,8 @@ jobs:
           path: |
             dist/NumCalc.exe
             dist/NumCalc.exe.sha256.txt
+            LICENSE
+            LICENSING.md
+            THIRD_PARTY_NOTICES.md
+            release/licenses
           if-no-files-found: error
