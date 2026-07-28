@@ -7,7 +7,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-fake_webview = types.SimpleNamespace(Window=object)
+fake_webview = types.SimpleNamespace(
+    Window=object,
+    create_window=lambda *args, **kwargs: object(),
+    start=lambda *args, **kwargs: None,
+)
 sys.modules.setdefault('webview', fake_webview)
 
 import calc_engine
