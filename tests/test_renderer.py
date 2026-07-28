@@ -115,6 +115,22 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("state.api.copy_text(displayExpression(expression))", html)
         self.assertIn("Значение скопировано", html)
 
+    def test_bracket_overlay_tracks_live_textarea_metrics(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+        css = (ROOT / "renderer" / "app-shell-ux.css").read_text(encoding="utf-8")
+
+        self.assertIn("BRACKET_OVERLAY_METRICS", html)
+        self.assertIn("function syncBracketOverlayMetrics()", html)
+        self.assertIn("window.getComputedStyle(dom.input)", html)
+        self.assertIn("bracketOverlay.style.width = `${dom.input.offsetWidth}px`", html)
+        self.assertIn("bracketOverlay.style.height = `${dom.input.offsetHeight}px`", html)
+        self.assertIn("new ResizeObserver(renderBracketColors)", html)
+        self.assertIn("font-weight: inherit", css)
+        self.assertIn("text-shadow: none", css)
+        self.assertNotIn("font-weight: 800", css)
+
     def test_function_palette_uses_viewport_for_scrollable_results(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
