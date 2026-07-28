@@ -1,5 +1,5 @@
-/* Visible motion for the consolidated renderer.
-   Only temporary visual copies move; live textarea geometry stays fixed. */
+/* Visible motion for mode switches, history and confirmed results.
+   The expression textarea itself keeps classic native input behavior. */
 
 body[data-motion="full"] .mode-indicator {
   transition-duration: 360ms !important;
@@ -119,9 +119,4 @@ body[data-motion="full"] .field-unit-badge {
   body:not([data-motion="full"]) .commit-roll-layer {
     display: none !important;
   }
-}
-
-/* Runtime integrity marker. */
-.nlcalc-caret-glyph-marker {
-  --nlcalc-caret-glyph: 1;
 }

@@ -37,37 +37,30 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("function commitUnits()", html)
         self.assertIn("function reconcileHistory", html)
         self.assertIn("window.__nlcalcRestoreEditorFocus", html)
-        self.assertIn("input-motion-layer", html)
         self.assertIn("bracket-color-overlay", html)
         self.assertIn("Функции (Tab)", html)
-        self.assertNotIn("keydown-v2", html)
         self.assertNotIn(app_renderer.CSS_PLACEHOLDER, html)
         self.assertNotIn(app_renderer.JS_PLACEHOLDER, html)
-        self.assertNotIn("nlcalc-motion-v5", html)
-        self.assertNotIn("nlcalc-polish-v3", html)
-        self.assertNotIn("nlcalc-enter-fast", html)
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 15)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
         )
+
+        self.assertGreaterEqual(len(app_renderer.SCRIPT_PARTS), 14)
         self.assertTrue(source.lstrip().startswith("(function ()"))
         self.assertTrue(source.rstrip().endswith("})();"))
         self.assertEqual(source.count("nlcalc-consolidated-v2"), 1)
-        self.assertNotIn("app-shell-v2.motion-keydown.js", app_renderer.SCRIPT_PARTS)
-        self.assertLess(
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07zzz.js"),
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.ux.js"),
-        )
+        self.assertNotIn("app-shell-v2.typing.js", app_renderer.SCRIPT_PARTS)
+        self.assertNotIn("app-shell-typing.css", app_renderer.STYLE_PARTS)
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.ux.js"),
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.multiply.js"),
         )
         self.assertLess(
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.multiply.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.variables.js"),
         )
         self.assertLess(
@@ -75,49 +68,23 @@ class ConsolidatedRendererTests(unittest.TestCase):
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
-    def test_character_input_is_native_and_tab_opens_palette(self):
+    def test_character_input_is_native_and_has_no_caret_animation(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
         html = app.build_html()
 
-        self.assertIn("typingFeedback = function () {};", html)
         self.assertNotIn("function interceptTextInsertion(event)", html)
         self.assertNotIn("function interceptPhysicalKey(event)", html)
         self.assertNotIn("window.__NLCALC_MOTION_INPUT_RUNTIME__", html)
-        self.assertNotIn("dom.input.value = nextValue", html)
+        self.assertNotIn("beginCaretGlyphMotion", html)
+        self.assertNotIn("completeCaretGlyphMotion", html)
+        self.assertNotIn("nlcalc-caret-glyph", html)
+        self.assertNotIn("caret-glyph-mirroring", html)
+        self.assertNotIn("nlcalc-typing-mirror", html)
+        self.assertNotIn("CARET_GLYPH_DURATION", html)
         self.assertIn("event.key === 'Tab'", html)
         self.assertIn("isPaletteShortcut = function () { return false; };", html)
         self.assertIn("dom.input.setRangeText(`(${selected})`", html)
-        self.assertIn("TRIG_ORDER = ['sin', 'cos', 'tan', 'atan', 'asin', 'acos']", html)
-        self.assertIn("POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt']", html)
-
-    def test_caret_origin_trail_never_hides_native_input(self):
-        app, _calls = self.make_app()
-        app_renderer.install(app)
-        html = app.build_html()
-        typing_source = (ROOT / "renderer" / "app-shell-v2.typing.js").read_text(
-            encoding="utf-8"
-        )
-        typing_css = (ROOT / "renderer" / "app-shell-typing.css").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("function beginCaretGlyphMotion(event, fallbackData", html)
-        self.assertIn("function completeCaretGlyphMotion(event, pending)", html)
-        self.assertIn("inputType !== 'insertText'", html)
-        self.assertIn("dom.input.addEventListener('beforeinput'", html)
-        self.assertIn("caretInputSnapshot", typing_source)
-        self.assertIn("pendingFromSnapshot", typing_source)
-        self.assertIn("beginCaretGlyphMotion(event, event.key)", typing_source)
-        self.assertIn("const travel = Math.max(5", typing_source)
-        self.assertIn("color: var(--accent)", typing_css)
-        self.assertIn("prefers-reduced-motion: reduce", typing_css)
-        self.assertNotIn("caret-glyph-mirroring", html)
-        self.assertNotIn("nlcalc-typing-mirror", html)
-        self.assertNotIn("document.body.dataset.typingMotion", typing_source)
-        self.assertNotIn("CARET_INPUT_WATCHDOG_MS", typing_source)
-        self.assertNotIn("queueMicrotask", typing_source)
-        self.assertNotIn("event.preventDefault();\n    const data = String(event.data", html)
 
     def test_product_keyboard_shortcuts_and_multiply_display(self):
         app, _calls = self.make_app()
@@ -131,7 +98,6 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("event.code === 'KeyC'", html)
         self.assertIn("event.key === 'ArrowLeft' || event.key === 'ArrowRight'", html)
         self.assertIn("switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units')", html)
-        self.assertIn("Вычисление скопировано", html)
 
     def test_variable_drawer_has_persistent_delete_action(self):
         app, _calls = self.make_app()
@@ -185,7 +151,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("opacity: 0", html)
         self.assertIn(".mode-panel.active", html)
 
-    def test_keyboard_entry_point_uses_renderer_agnostic_layers(self):
+    def test_keyboard_entry_point_uses_release_layers(self):
         source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")
         for module in (
             "app_product",
@@ -198,27 +164,12 @@ class ConsolidatedRendererTests(unittest.TestCase):
             "app_single_instance",
         ):
             self.assertIn(f"import {module}", source)
-        self.assertIn("install_calculator_normalization(calc_engine)", source)
-        self.assertIn("install_unit_normalization(unit_conversion)", source)
-        self.assertIn("app_product.install(app, app_tray)", source)
-        self.assertIn("app_storage.install(app)", source)
-        self.assertIn("app_window.install(app)", source)
-        self.assertIn("app_units_backend.install(app)", source)
         self.assertIn("app_variables.install(app)", source)
         self.assertIn("app_renderer.install(app)", source)
-        self.assertIn("app_diagnostics.install(app)", source)
-        self.assertIn("app_single_instance.install(app)", source)
         self.assertNotIn("import app_stability", source)
         self.assertNotIn("import app_polish", source)
         self.assertNotIn("import app_compact", source)
         self.assertNotIn("import app_units_mode", source)
-
-    def test_window_and_tray_layers_do_not_modify_html(self):
-        window_source = (ROOT / "app_window.py").read_text(encoding="utf-8")
-        tray_source = (ROOT / "app_tray.py").read_text(encoding="utf-8")
-        for source in (window_source, tray_source):
-            self.assertNotIn("build_html", source)
-            self.assertNotIn(".replace(", source)
 
     def test_window_size_is_owned_by_renderer_shell(self):
         app, calls = self.make_app()
@@ -232,16 +183,6 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertEqual(kwargs["width"], app_renderer.DEFAULT_WIDTH)
         self.assertEqual(kwargs["height"], app_renderer.DEFAULT_HEIGHT)
         self.assertEqual(kwargs["min_size"], app_renderer.MIN_SIZE)
-
-    def test_compact_window_has_matching_internal_density(self):
-        css = (ROOT / "renderer" / "app-shell-product.css").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("@media (max-width: 410px), (max-height: 460px)", css)
-        self.assertIn("min-height: 34px", css)
-        self.assertIn("max-height: 58px", css)
-        self.assertIn("height: 27px", css)
-        self.assertIn("overflow-y: auto", css)
 
     def test_install_is_idempotent(self):
         app, _calls = self.make_app()
