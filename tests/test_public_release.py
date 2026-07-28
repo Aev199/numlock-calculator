@@ -1,0 +1,89 @@
+import unittest
+from pathlib import Path
+
+import collect_third_party_licenses
+import product_info
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class PublicReleaseTests(unittest.TestCase):
+    def test_required_public_files_exist(self):
+        for relative in (
+            "LICENSE",
+            "LICENSING.md",
+            "THIRD_PARTY_NOTICES.md",
+            "SECURITY.md",
+            "CONTRIBUTING.md",
+            "RELEASE_NOTES.md",
+            "docs/WINDOWS_ACCEPTANCE.md",
+            "docs/RELEASE_CHECKLIST.md",
+            "NumCalc.spec",
+            "NumCalc-folder.spec",
+            ".github/workflows/release.yml",
+        ):
+            self.assertTrue((ROOT / relative).is_file(), relative)
+
+        self.assertFalse((ROOT / "NumLockCalc.spec").exists())
+        self.assertFalse((ROOT / "NumLockCalc-folder.spec").exists())
+        self.assertFalse((ROOT / "WINDOWS_ACCEPTANCE.md").exists())
+        self.assertFalse((ROOT / "RELEASE_CHECKLIST.md").exists())
+
+    def test_product_links_and_license_are_centralized(self):
+        self.assertEqual(product_info.LICENSE_NAME, "MIT")
+        self.assertEqual(
+            product_info.REPOSITORY_URL,
+            "https://github.com/Aev199/numlock-calculator",
+        )
+        self.assertEqual(product_info.INSPIRATION_URL, "https://nlcalc.narod.ru/")
+
+    def test_readme_contains_attribution_and_public_links(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("идеологическое продолжение", readme)
+        self.assertIn("Владимира Потапова", readme)
+        self.assertIn(product_info.INSPIRATION_URL, readme)
+        self.assertIn(product_info.REPOSITORY_URL, readme)
+        self.assertIn("THIRD_PARTY_NOTICES.md", readme)
+        self.assertIn("docs/WINDOWS_ACCEPTANCE.md", readme)
+
+    def test_runtime_dependencies_are_separate_from_builder(self):
+        runtime = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+        build = (ROOT / "requirements-build.txt").read_text(encoding="utf-8")
+        self.assertIn("pywebview==6.2.1", runtime)
+        self.assertIn("pystray==0.19.5", runtime)
+        self.assertNotIn("pyinstaller", runtime.lower())
+        self.assertIn("-r requirements.txt", build)
+        self.assertIn("pyinstaller==6.21.0", build.lower())
+
+    def test_license_requirement_parser_ignores_extras(self):
+        self.assertEqual(
+            collect_third_party_licenses.requirement_name("six>=1.16"),
+            "six",
+        )
+        self.assertEqual(
+            collect_third_party_licenses.requirement_name(
+                'pythonnet; platform_system == "Windows"'
+            ),
+            "pythonnet",
+        )
+        self.assertIsNone(
+            collect_third_party_licenses.requirement_name(
+                'pytest; extra == "test"'
+            )
+        )
+
+    def test_release_workflow_publishes_only_on_tag(self):
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("workflow_dispatch", workflow)
+        self.assertIn("tags:", workflow)
+        self.assertIn("gh release create", workflow)
+        self.assertIn("if: startsWith(github.ref, 'refs/tags/')", workflow)
+        self.assertIn("pystray==0.19.5", workflow)
+        self.assertIn("THIRD_PARTY_NOTICES.md", workflow)
+
+
+if __name__ == "__main__":
+    unittest.main()
