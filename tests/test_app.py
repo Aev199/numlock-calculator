@@ -17,12 +17,16 @@ calc_engine.CalculatorSession = CalculatorSession
 
 import app
 import app_numlock_compat
-import app_stability
+import app_renderer
+import app_units_backend
 import app_variables
+import app_window
 
-app_stability.install(app)
+app_window.install(app)
 app_numlock_compat.install(app)
+app_units_backend.install(app)
 app_variables.install(app)
+app_renderer.install(app)
 
 
 class StorageAndApiTests(unittest.TestCase):
