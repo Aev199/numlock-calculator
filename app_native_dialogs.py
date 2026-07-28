@@ -14,21 +14,35 @@ from typing import Iterable
 from urllib.parse import urlparse
 
 
-_TDF_ENABLE_HYPERLINKS = 0x0001
 _TDF_ALLOW_DIALOG_CANCELLATION = 0x0008
+_TDF_USE_COMMAND_LINKS = 0x0010
 _TDCBF_OK_BUTTON = 0x0001
-_TDN_HYPERLINK_CLICKED = 3
+_LINK_BUTTON_BASE = 1000
 
 
 def _normalized_allowed_urls(urls: Iterable[str]) -> frozenset[str]:
     return frozenset(str(url).strip() for url in urls if str(url).strip())
 
 
+def _normalized_links(links: Iterable[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
+    result: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for label, url in links:
+        target = str(url).strip()
+        parsed = urlparse(target)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc or target in seen:
+            continue
+        caption = str(label).strip() or target
+        result.append((caption, target))
+        seen.add(target)
+    return tuple(result)
+
+
 def open_external_url(url: str, allowed_urls: Iterable[str] = ()) -> bool:
     """Open a trusted HTTP(S) URL in the default browser.
 
     When ``allowed_urls`` is supplied, the URL must match one of those exact
-    values. This keeps TaskDialog hyperlink callbacks restricted to application
+    values. This keeps native-dialog callbacks restricted to application
     constants rather than arbitrary executable strings.
     """
 
@@ -63,31 +77,28 @@ def show_link_dialog(
     title: str,
     instruction: str,
     content: str,
-    allowed_urls: Iterable[str],
+    links: Iterable[tuple[str, str]],
 ) -> bool:
-    """Show a native TaskDialog whose trusted hyperlinks open in the browser.
+    """Show a TaskDialog with explicit clickable link actions.
 
-    ``content`` may contain TaskDialog links in the form
-    ``<A HREF=\"https://example.test\">text</A>``. Windows reports clicks to the
-    callback; the dialog does not execute links by itself.
+    Command-link buttons are used instead of relying on automatic URL rendering
+    in a message box. The selected trusted URL is opened only after exact
+    allow-list validation.
     """
 
     if os.name != "nt":
         return False
 
-    allowed = _normalized_allowed_urls(allowed_urls)
-    if not allowed:
+    normalized_links = _normalized_links(links)
+    if not normalized_links:
         return False
 
     try:
-        callback_type = ctypes.WINFUNCTYPE(
-            ctypes.c_long,
-            wintypes.HWND,
-            wintypes.UINT,
-            wintypes.WPARAM,
-            wintypes.LPARAM,
-            ctypes.c_ssize_t,
-        )
+        class TaskDialogButton(ctypes.Structure):
+            _fields_ = [
+                ("nButtonID", ctypes.c_int),
+                ("pszButtonText", wintypes.LPCWSTR),
+            ]
 
         class TaskDialogConfig(ctypes.Structure):
             _fields_ = [
@@ -101,7 +112,7 @@ def show_link_dialog(
                 ("pszMainInstruction", wintypes.LPCWSTR),
                 ("pszContent", wintypes.LPCWSTR),
                 ("cButtons", wintypes.UINT),
-                ("pButtons", ctypes.c_void_p),
+                ("pButtons", ctypes.POINTER(TaskDialogButton)),
                 ("nDefaultButton", ctypes.c_int),
                 ("cRadioButtons", wintypes.UINT),
                 ("pRadioButtons", ctypes.c_void_p),
@@ -112,33 +123,36 @@ def show_link_dialog(
                 ("pszCollapsedControlText", wintypes.LPCWSTR),
                 ("footerIcon", ctypes.c_void_p),
                 ("pszFooter", wintypes.LPCWSTR),
-                ("pfCallback", callback_type),
+                ("pfCallback", ctypes.c_void_p),
                 ("lpCallbackData", ctypes.c_ssize_t),
                 ("cxWidth", wintypes.UINT),
             ]
 
-        @callback_type
-        def callback(
-            _hwnd: int,
-            notification: int,
-            _wparam: int,
-            lparam: int,
-            _callback_data: int,
-        ) -> int:
-            if notification == _TDN_HYPERLINK_CLICKED and lparam:
-                open_external_url(ctypes.wstring_at(lparam), allowed)
-            return 0
+        button_array_type = TaskDialogButton * len(normalized_links)
+        buttons = button_array_type(
+            *(
+                TaskDialogButton(_LINK_BUTTON_BASE + index, label)
+                for index, (label, _url) in enumerate(normalized_links)
+            )
+        )
+        button_urls = {
+            _LINK_BUTTON_BASE + index: url
+            for index, (_label, url) in enumerate(normalized_links)
+        }
+        allowed_urls = tuple(url for _label, url in normalized_links)
 
         config = TaskDialogConfig()
         config.cbSize = ctypes.sizeof(TaskDialogConfig)
-        config.dwFlags = _TDF_ENABLE_HYPERLINKS | _TDF_ALLOW_DIALOG_CANCELLATION
+        config.dwFlags = _TDF_ALLOW_DIALOG_CANCELLATION | _TDF_USE_COMMAND_LINKS
         config.dwCommonButtons = _TDCBF_OK_BUTTON
         config.pszWindowTitle = str(title)
         config.pszMainInstruction = str(instruction)
         config.pszContent = str(content)
-        config.pfCallback = callback
-        config.cxWidth = 260
+        config.cButtons = len(normalized_links)
+        config.pButtons = buttons
+        config.cxWidth = 280
 
+        selected_button = ctypes.c_int()
         task_dialog = ctypes.windll.comctl32.TaskDialogIndirect
         task_dialog.argtypes = [
             ctypes.POINTER(TaskDialogConfig),
@@ -147,6 +161,18 @@ def show_link_dialog(
             ctypes.POINTER(wintypes.BOOL),
         ]
         task_dialog.restype = ctypes.c_long
-        return task_dialog(ctypes.byref(config), None, None, None) >= 0
+        result = task_dialog(
+            ctypes.byref(config),
+            ctypes.byref(selected_button),
+            None,
+            None,
+        )
+        if result < 0:
+            return False
+
+        selected_url = button_urls.get(selected_button.value)
+        if selected_url and not open_external_url(selected_url, allowed_urls):
+            show_message("NumCalc", f"Не удалось открыть ссылку.\n\n{selected_url}")
+        return True
     except Exception:
         return False
