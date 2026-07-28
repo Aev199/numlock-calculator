@@ -68,6 +68,8 @@ jobs:
           assert 'keydown-v2' not in source
           assert 'interceptTextInsertion' not in source
           assert 'interceptPhysicalKey' not in source
+          assert 'beginCaretGlyphMotion' not in source
+          assert 'nlcalc-caret-glyph' not in source
           assert "const DISPLAY_MULTIPLY = '⋅';" in source
           assert "event.code === 'KeyC'" in source
           assert 'reportRendererDiagnostic' in source
@@ -104,18 +106,18 @@ jobs:
           if ($info.ProductName -ne 'NumCalc') {
             throw "Unexpected ProductName: $($info.ProductName)"
           }
-          if ($info.FileVersion -ne '1.0.0-rc.1') {
+          if ($info.FileVersion -ne '1.0.0') {
             throw "Unexpected FileVersion: $($info.FileVersion)"
           }
-          if ($info.ProductVersion -ne '1.0.0-rc.1') {
+          if ($info.ProductVersion -ne '1.0.0') {
             throw "Unexpected ProductVersion: $($info.ProductVersion)"
           }
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
           Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
-      - name: Upload Windows release candidate
+      - name: Upload Windows release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NumCalc-windows-rc
+          name: NumCalc-windows-release
           path: |
             dist/NumCalc.exe
             dist/NumCalc.exe.sha256.txt
