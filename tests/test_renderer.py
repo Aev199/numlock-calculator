@@ -95,15 +95,18 @@ class ConsolidatedRendererTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("function beginCaretGlyphMotion(event)", html)
-        self.assertIn("function completeCaretGlyphMotion(event)", html)
-        self.assertIn("event.inputType !== 'insertText'", html)
+        self.assertIn("function beginCaretGlyphMotion(event, fallbackData", html)
+        self.assertIn("function completeCaretGlyphMotion(event, pending)", html)
+        self.assertIn("inputType !== 'insertText'", html)
         self.assertIn("dom.input.addEventListener('beforeinput'", html)
         self.assertIn("clipPath: 'inset(0 0 0 100%)'", html)
         self.assertIn("caret-glyph-mirroring", html)
         self.assertIn("prefers-reduced-motion: reduce", html)
-        self.assertIn("CARET_INPUT_WATCHDOG_MS", typing_source)
-        self.assertIn("window.setTimeout", typing_source)
+        self.assertIn("caretInputSnapshot", typing_source)
+        self.assertIn("pendingFromSnapshot", typing_source)
+        self.assertIn("beginCaretGlyphMotion(event, event.key)", typing_source)
+        self.assertIn("document.body.dataset.typingMotion = 'full'", typing_source)
+        self.assertNotIn("CARET_INPUT_WATCHDOG_MS", typing_source)
         self.assertNotIn("queueMicrotask", typing_source)
         self.assertNotIn("event.preventDefault();\n    const data = String(event.data", html)
 
@@ -207,6 +210,16 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertEqual(kwargs["width"], app_renderer.DEFAULT_WIDTH)
         self.assertEqual(kwargs["height"], app_renderer.DEFAULT_HEIGHT)
         self.assertEqual(kwargs["min_size"], app_renderer.MIN_SIZE)
+
+    def test_compact_window_has_matching_internal_density(self):
+        css = (ROOT / "renderer" / "app-shell-product.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("@media (max-width: 410px), (max-height: 460px)", css)
+        self.assertIn("min-height: 34px", css)
+        self.assertIn("max-height: 58px", css)
+        self.assertIn("height: 27px", css)
+        self.assertIn("overflow-y: auto", css)
 
     def test_install_is_idempotent(self):
         app, _calls = self.make_app()
