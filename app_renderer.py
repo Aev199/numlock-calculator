@@ -25,6 +25,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.part07zzz.js",
     "app-shell-v2.ux.js",
     "app-shell-v2.multiply.js",
+    "app-shell-v2.copy.js",
     "app-shell-v2.variables.js",
     "app-shell-v2.part08.js",
 )
@@ -67,6 +68,8 @@ def install(app: Any) -> None:
             raise RuntimeError("NumCalc product shell is incomplete")
         if "app-shell-v2.multiply.js" not in SCRIPT_PARTS:
             raise RuntimeError("Consolidated renderer multiplication display is incomplete")
+        if "app-shell-v2.copy.js" not in SCRIPT_PARTS:
+            raise RuntimeError("Consolidated renderer clipboard behavior is incomplete")
         if "app-shell-v2.variables.js" not in SCRIPT_PARTS:
             raise RuntimeError("Consolidated renderer variable layer is incomplete")
 
