@@ -49,7 +49,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 13)
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 14)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
@@ -64,6 +64,10 @@ class ConsolidatedRendererTests(unittest.TestCase):
         )
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.ux.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
+        )
+        self.assertLess(
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
@@ -82,6 +86,20 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("dom.input.setRangeText(`(${selected})`", html)
         self.assertIn("TRIG_ORDER = ['sin', 'cos', 'tan', 'atan', 'asin', 'acos']", html)
         self.assertIn("POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt']", html)
+
+    def test_caret_origin_glyph_reveal_keeps_native_input(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("function beginCaretGlyphMotion(event)", html)
+        self.assertIn("function completeCaretGlyphMotion(event)", html)
+        self.assertIn("event.inputType !== 'insertText'", html)
+        self.assertIn("dom.input.addEventListener('beforeinput'", html)
+        self.assertIn("clipPath: 'inset(0 0 0 100%)'", html)
+        self.assertIn("caret-glyph-mirroring", html)
+        self.assertIn("prefers-reduced-motion: reduce", html)
+        self.assertNotIn("event.preventDefault();\n    const data = String(event.data", html)
 
     def test_product_keyboard_shortcuts_and_multiply_display(self):
         app, _calls = self.make_app()
