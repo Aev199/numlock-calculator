@@ -20,7 +20,6 @@
   pointer-events: none;
   color: var(--text);
   contain: layout paint style;
-  transition: opacity 16ms linear;
 }
 
 .nlcalc-typing-mirror-text {
