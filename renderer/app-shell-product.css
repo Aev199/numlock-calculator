@@ -13,3 +13,269 @@
 .topbar-actions button {
   cursor: pointer;
 }
+
+/* The shell is intentionally 384×432. Reduce internal density at this size
+   instead of shrinking only the native window around desktop-sized controls. */
+@media (max-width: 410px), (max-height: 460px) {
+  body {
+    font-size: 13px;
+  }
+
+  .topbar {
+    min-height: 40px;
+    gap: 6px;
+    padding: 4px 6px;
+  }
+
+  .brand-block {
+    gap: 6px;
+  }
+
+  .brand-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+
+  .brand-title {
+    font-size: 12px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .topbar-actions,
+  .editor-tools,
+  .section-actions {
+    gap: 3px;
+  }
+
+  .mode-pill {
+    min-width: 36px;
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+
+  .icon-button,
+  .icon-button.small {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+  }
+
+  .mode-switch {
+    margin: 4px 5px 0;
+    padding: 2px;
+    border-radius: 9px;
+  }
+
+  .mode-indicator {
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    border-radius: 7px;
+  }
+
+  .mode-switch-button {
+    height: 25px;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+
+  .workspace {
+    gap: 5px;
+    padding: 5px;
+  }
+
+  .editor-card,
+  .mode-panel {
+    border-radius: 10px;
+  }
+
+  .editor-card {
+    padding: 6px;
+  }
+
+  .editor-toolbar {
+    min-height: 20px;
+    margin-bottom: 2px;
+  }
+
+  .editor-label {
+    font-size: 9px;
+  }
+
+  .tool-button {
+    min-width: 25px;
+    height: 21px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+
+  .expression-field-shell {
+    border-radius: 7px;
+  }
+
+  .expression-input {
+    min-height: 34px;
+    max-height: 58px;
+    padding: 3px 60px 3px 5px;
+    border-radius: 7px;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+
+  .field-unit-badge {
+    right: 5px;
+    max-width: 76px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 9px;
+  }
+
+  .result-block {
+    min-height: 32px;
+    gap: 5px;
+    padding-top: 3px;
+  }
+
+  .result-prefix {
+    font-size: 15px;
+  }
+
+  .result-value {
+    font-size: 20px;
+  }
+
+  .result-unit-badge {
+    max-width: 82px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    font-size: 9px;
+  }
+
+  .completion-popover {
+    left: 6px;
+    right: 6px;
+    top: 55px;
+    max-height: 145px;
+  }
+
+  .section-header {
+    min-height: 35px;
+    gap: 6px;
+    padding: 4px 6px;
+  }
+
+  .section-heading {
+    gap: 5px;
+  }
+
+  .section-heading h2 {
+    font-size: 11px;
+  }
+
+  .section-counter {
+    min-width: 20px;
+    padding: 1px 5px;
+    font-size: 9px;
+  }
+
+  .search-field {
+    width: min(145px, 41vw);
+    height: 25px;
+    padding: 0 6px;
+    border-radius: 7px;
+  }
+
+  .search-field input {
+    font-size: 10px;
+  }
+
+  .history-list {
+    padding: 2px 3px;
+  }
+
+  .history-entry {
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 7px;
+  }
+
+  .history-entry::after {
+    left: 6px;
+    right: 6px;
+  }
+
+  .history-expression,
+  .history-result {
+    font-size: 11px;
+  }
+
+  .history-meta {
+    margin-top: 1px;
+    font-size: 8px;
+  }
+
+  .history-action {
+    width: 23px;
+    height: 23px;
+    border-radius: 6px;
+  }
+
+  .converter-heading {
+    min-width: 78px;
+  }
+
+  .converter-caption {
+    font-size: 8px;
+  }
+
+  .converter-select {
+    height: 27px;
+    padding: 0 24px 0 7px;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+
+  .category-select {
+    width: min(168px, 48vw);
+  }
+
+  .unit-converter-content {
+    gap: 7px;
+    padding: 8px;
+    overflow-y: auto;
+  }
+
+  .unit-route {
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .unit-picker-card {
+    gap: 3px;
+  }
+
+  .unit-picker-card > span {
+    font-size: 9px;
+  }
+
+  .swap-units-button {
+    width: 28px;
+    height: 27px;
+    border-radius: 7px;
+    font-size: 14px;
+  }
+
+  .converter-help {
+    font-size: 8.5px;
+    line-height: 1.3;
+  }
+}
