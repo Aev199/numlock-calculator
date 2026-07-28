@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 _DECIMAL_AFTER_DIGIT = re.compile(r"(?<=\d)[.,]{1,2}(?=\d)")
 _DECIMAL_AFTER_BOUNDARY = re.compile(r"(?<!\d)[.,]{1,2}(?=\d)")
+_IMPLICIT_MULTIPLY_BEFORE_PAREN = re.compile(r"(?<=[\d)])\s*(?=\()")
 
 
 def repair_numeric_input(expression: Any) -> str:
@@ -24,12 +25,15 @@ def repair_numeric_input(expression: Any) -> str:
         ``3100⋅,1``  -> ``3100*0.1``
         ``,1``        -> ``0.1``
         ``2,5``       -> ``2.5``
+        ``150(5)``    -> ``150*(5)``
+        ``(2)(3)``    -> ``(2)*(3)``
     """
 
     value = str(expression or "")
     value = value.replace("⋅", "*").replace("×", "*").replace("·", "*")
     value = _DECIMAL_AFTER_DIGIT.sub(".", value)
     value = _DECIMAL_AFTER_BOUNDARY.sub("0.", value)
+    value = _IMPLICIT_MULTIPLY_BEFORE_PAREN.sub("*", value)
     return value
 
 
