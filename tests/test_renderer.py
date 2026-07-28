@@ -91,6 +91,9 @@ class ConsolidatedRendererTests(unittest.TestCase):
         app, _calls = self.make_app()
         app_renderer.install(app)
         html = app.build_html()
+        typing_source = (ROOT / "renderer" / "app-shell-v2.typing.js").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("function beginCaretGlyphMotion(event)", html)
         self.assertIn("function completeCaretGlyphMotion(event)", html)
@@ -99,6 +102,9 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("clipPath: 'inset(0 0 0 100%)'", html)
         self.assertIn("caret-glyph-mirroring", html)
         self.assertIn("prefers-reduced-motion: reduce", html)
+        self.assertIn("CARET_INPUT_WATCHDOG_MS", typing_source)
+        self.assertIn("window.setTimeout", typing_source)
+        self.assertNotIn("queueMicrotask", typing_source)
         self.assertNotIn("event.preventDefault();\n    const data = String(event.data", html)
 
     def test_product_keyboard_shortcuts_and_multiply_display(self):
@@ -107,6 +113,8 @@ class ConsolidatedRendererTests(unittest.TestCase):
         html = app.build_html()
 
         self.assertIn("const DISPLAY_MULTIPLY = '⋅';", html)
+        self.assertIn("displayExpressionWithoutImplicitMultiply", html)
+        self.assertIn(r"/([0-9)])\s*(?=\()/g", html)
         self.assertIn("function copyCurrentCalculation()", html)
         self.assertIn("event.code === 'KeyC'", html)
         self.assertIn("event.key === 'ArrowLeft' || event.key === 'ArrowRight'", html)
@@ -193,6 +201,9 @@ class ConsolidatedRendererTests(unittest.TestCase):
         app.webview.create_window("test", width=999, height=999, min_size=(1, 1))
 
         kwargs = calls[0][1]
+        self.assertEqual(app_renderer.DEFAULT_WIDTH, 384)
+        self.assertEqual(app_renderer.DEFAULT_HEIGHT, 432)
+        self.assertEqual(app_renderer.MIN_SIZE, (360, 380))
         self.assertEqual(kwargs["width"], app_renderer.DEFAULT_WIDTH)
         self.assertEqual(kwargs["height"], app_renderer.DEFAULT_HEIGHT)
         self.assertEqual(kwargs["min_size"], app_renderer.MIN_SIZE)
