@@ -49,7 +49,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 14)
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 15)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
