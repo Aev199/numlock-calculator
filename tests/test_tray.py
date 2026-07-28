@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import app_product
 import app_tray
 
 
@@ -78,13 +79,41 @@ class TrayShellTests(unittest.TestCase):
         self.assertTrue(callable(app.show_from_tray))
         self.assertTrue(callable(app.hide_from_tray))
         self.assertTrue(callable(app.quit_from_tray))
+        self.assertTrue(callable(app.open_repository))
         self.assertTrue(callable(app.copy_diagnostics_from_tray))
 
-    def test_help_and_menu_document_product_shortcuts(self):
+    def test_help_and_menu_document_public_product(self):
         source = (ROOT / "app_tray.py").read_text(encoding="utf-8")
         self.assertIn("Ctrl+C", app_tray.HELP_TEXT)
         self.assertIn("Alt+← / Alt+→", app_tray.HELP_TEXT)
+        self.assertIn("не содержит телеметрии", app_tray.HELP_TEXT)
+        self.assertIn('pystray.MenuItem("Репозиторий"', source)
         self.assertIn('pystray.MenuItem("Копировать диагностику"', source)
+
+    def test_product_metadata_adds_attribution_and_trusted_links(self):
+        app, _, _ = self.make_app()
+        tray_module = types.SimpleNamespace()
+        app_product.install(app, tray_module)
+
+        self.assertIn(
+            "Калькулятор — идеологическое продолжение NumLock Calculator "
+            "от Владимира Потапова",
+            tray_module.ABOUT_TEXT,
+        )
+        self.assertIn("https://nlcalc.narod.ru/", tray_module.ABOUT_TEXT)
+        self.assertIn("https://github.com/Aev199/numlock-calculator", tray_module.ABOUT_TEXT)
+        self.assertEqual(
+            tray_module.ABOUT_LINKS,
+            (
+                "https://nlcalc.narod.ru/",
+                "https://github.com/Aev199/numlock-calculator",
+            ),
+        )
+        self.assertIn('<A HREF="https://nlcalc.narod.ru/">', tray_module.ABOUT_DIALOG_CONTENT)
+        self.assertIn(
+            '<A HREF="https://github.com/Aev199/numlock-calculator">',
+            tray_module.ABOUT_DIALOG_CONTENT,
+        )
 
     def test_install_is_idempotent(self):
         app, _, _ = self.make_app()
