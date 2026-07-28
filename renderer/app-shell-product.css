@@ -39,6 +39,26 @@
   opacity: .45;
 }
 
+/* The function palette uses the available viewport instead of reserving space
+   for a permanently visible keyboard legend. The result list is the only
+   scrolling region, so every group remains reachable in the compact window. */
+.palette-overlay {
+  padding: 10px;
+}
+
+.palette-overlay .palette {
+  max-height: calc(100vh - 20px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.palette-overlay .palette-results {
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 /* The shell is intentionally 384×432. Reduce internal density at this size
    instead of shrinking only the native window around desktop-sized controls. */
 @media (max-width: 410px), (max-height: 460px) {
@@ -261,6 +281,59 @@
   .variable-delete {
     min-width: 24px;
     height: 24px;
+  }
+
+  .palette-overlay {
+    padding: 6px;
+  }
+
+  .palette-overlay .palette {
+    max-height: calc(100vh - 12px);
+    border-radius: 11px;
+  }
+
+  .palette-search-wrap {
+    gap: 7px;
+    padding: 8px 9px;
+  }
+
+  .palette-search {
+    font-size: 14px;
+  }
+
+  .palette-groups {
+    gap: 3px;
+    padding: 4px 5px;
+  }
+
+  .palette-group {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: 9px;
+  }
+
+  .palette-results {
+    padding: 3px;
+  }
+
+  .palette-item {
+    gap: 7px;
+    padding: 6px 7px;
+    border-radius: 7px;
+  }
+
+  .palette-item .item-kind {
+    min-width: 31px;
+    font-size: 9px;
+  }
+
+  .palette-item .item-label {
+    font-size: 12px;
+  }
+
+  .palette-item .item-description {
+    font-size: 10px;
   }
 
   .converter-heading {
