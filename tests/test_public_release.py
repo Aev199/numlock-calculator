@@ -23,6 +23,7 @@ class PublicReleaseTests(unittest.TestCase):
             "docs/RELEASE_CHECKLIST.md",
             "NumCalc.spec",
             "NumCalc-folder.spec",
+            "NumCalc.manifest",
             ".github/workflows/release.yml",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
@@ -31,6 +32,14 @@ class PublicReleaseTests(unittest.TestCase):
         self.assertFalse((ROOT / "NumLockCalc-folder.spec").exists())
         self.assertFalse((ROOT / "WINDOWS_ACCEPTANCE.md").exists())
         self.assertFalse((ROOT / "RELEASE_CHECKLIST.md").exists())
+
+    def test_windows_builds_embed_common_controls_manifest(self):
+        manifest = (ROOT / "NumCalc.manifest").read_text(encoding="utf-8")
+        self.assertIn("Microsoft.Windows.Common-Controls", manifest)
+        self.assertIn('version="6.0.0.0"', manifest)
+        for relative in ("NumCalc.spec", "NumCalc-folder.spec"):
+            spec = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("manifest='NumCalc.manifest'", spec)
 
     def test_product_links_and_license_are_centralized(self):
         self.assertEqual(product_info.LICENSE_NAME, "MIT")
