@@ -13,8 +13,10 @@ import app_native_dialogs
 
 TRAY_TITLE = "NumCalc"
 AUTOSTART_VALUE = "NumCalc"
-REPOSITORY_URL = "https://github.com/Aev199/numlock-calculator"
-ABOUT_LINKS: tuple[str, ...] = (REPOSITORY_URL,)
+ABOUT_LINKS: tuple[tuple[str, str], ...] = (
+    ("NumLock Calculator", "https://nlcalc.narod.ru/"),
+    ("Репозиторий NumCalc", "https://github.com/Aev199/numlock-calculator"),
+)
 HELP_TEXT = """NumCalc — компактный клавиатурный калькулятор для Windows.
 
 Быстрый старт:
@@ -55,14 +57,15 @@ HELP_TEXT = """NumCalc — компактный клавиатурный кал�
 ABOUT_TEXT = """NumCalc
 Компактный keyboard-first калькулятор для Windows.
 
-Калькулятор — идеологическое продолжение NumLock Calculator от Владимира Потапова (https://nlcalc.narod.ru/).
+Калькулятор - идеологическое продолжение NumLock Calculator от Владимира Потапова (https://nlcalc.narod.ru/).
 
 Репозиторий: https://github.com/Aev199/numlock-calculator
 Лицензия: MIT
 """
 ABOUT_DIALOG_CONTENT = (
-    "Калькулятор — идеологическое продолжение NumLock Calculator.\n\n"
-    '<A HREF="https://github.com/Aev199/numlock-calculator">Репозиторий проекта</A>'
+    "Калькулятор - идеологическое продолжение NumLock Calculator "
+    "от Владимира Потапова.\n\n"
+    "Лицензия исходного кода NumCalc: MIT"
 )
 
 
@@ -176,19 +179,6 @@ def install(app: Any) -> None:
 
         run_async(show)
 
-    def open_repository(_icon: Any = None, _item: Any = None) -> None:
-        def open_link() -> None:
-            if not app_native_dialogs.open_external_url(
-                REPOSITORY_URL,
-                (REPOSITORY_URL,),
-            ):
-                message_box(
-                    "NumCalc",
-                    f"Не удалось открыть репозиторий.\n\n{REPOSITORY_URL}",
-                )
-
-        run_async(open_link)
-
     def copy_diagnostics_from_tray(_icon: Any = None, _item: Any = None) -> None:
         def copy() -> None:
             callback = getattr(app, "copy_diagnostics", None)
@@ -236,7 +226,6 @@ def install(app: Any) -> None:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Справка", show_help),
                 pystray.MenuItem("О программе", show_about),
-                pystray.MenuItem("Репозиторий", open_repository),
                 pystray.MenuItem("Копировать диагностику", copy_diagnostics_from_tray),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Выйти", quit_from_tray),
@@ -317,6 +306,5 @@ def install(app: Any) -> None:
     app.set_autostart = set_autostart
     app.show_help = show_help
     app.show_about = show_about
-    app.open_repository = open_repository
     app.copy_diagnostics_from_tray = copy_diagnostics_from_tray
     app.main = main

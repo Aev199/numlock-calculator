@@ -34,6 +34,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     version='version_info.txt',
+    manifest='NumCalc.manifest',
 )
 
 coll = COLLECT(

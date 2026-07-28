@@ -21,6 +21,16 @@ class NativeDialogTests(unittest.TestCase):
             self.assertTrue(app_native_dialogs.open_external_url(allowed, (allowed,)))
         opener.assert_called_once_with(allowed, new=2)
 
+    def test_link_normalization_rejects_unsafe_and_duplicate_targets(self):
+        links = app_native_dialogs._normalized_links(
+            (
+                ("Project", "https://example.com"),
+                ("Duplicate", "https://example.com"),
+                ("Local", "file:///tmp/test"),
+            )
+        )
+        self.assertEqual(links, (("Project", "https://example.com"),))
+
     def test_message_box_is_safe_off_windows(self):
         if app_native_dialogs.os.name != "nt":
             self.assertFalse(app_native_dialogs.show_message("Title", "Text"))
@@ -28,8 +38,8 @@ class NativeDialogTests(unittest.TestCase):
                 app_native_dialogs.show_link_dialog(
                     "Title",
                     "Instruction",
-                    '<A HREF="https://example.com">Example</A>',
-                    ("https://example.com",),
+                    "Content",
+                    (("Example", "https://example.com"),),
                 )
             )
 
