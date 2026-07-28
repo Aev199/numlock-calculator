@@ -96,7 +96,7 @@ class TrayShellTests(unittest.TestCase):
         app_product.install(app, tray_module)
 
         self.assertIn(
-            "Калькулятор — идеологическое продолжение NumLock Calculator "
+            "Калькулятор - идеологическое продолжение NumLock Calculator "
             "от Владимира Потапова",
             tray_module.ABOUT_TEXT,
         )
