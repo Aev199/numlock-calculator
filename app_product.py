@@ -23,8 +23,10 @@ def install(app: Any, tray_module: Any) -> None:
     app.REPOSITORY_URL = REPOSITORY_URL
     tray_module.TRAY_TITLE = APP_NAME
     tray_module.AUTOSTART_VALUE = APP_NAME
-    tray_module.REPOSITORY_URL = REPOSITORY_URL
-    tray_module.ABOUT_LINKS = (INSPIRATION_URL, REPOSITORY_URL)
+    tray_module.ABOUT_LINKS = (
+        ("NumLock Calculator — сайт Владимира Потапова", INSPIRATION_URL),
+        ("Репозиторий NumCalc", REPOSITORY_URL),
+    )
     tray_module.ABOUT_TEXT = (
         f"{APP_NAME} {APP_VERSION}\n"
         f"{DESCRIPTION}.\n\n"
@@ -34,9 +36,7 @@ def install(app: Any, tray_module: Any) -> None:
         f"Лицензия: {LICENSE_NAME}"
     )
     tray_module.ABOUT_DIALOG_CONTENT = (
-        "Калькулятор - идеологическое продолжение "
-        f'<A HREF="{INSPIRATION_URL}">NumLock Calculator</A> '
+        "Калькулятор - идеологическое продолжение NumLock Calculator "
         "от Владимира Потапова.\n\n"
-        f'<A HREF="{REPOSITORY_URL}">Репозиторий проекта</A>\n'
         f"Лицензия исходного кода NumCalc: {LICENSE_NAME}"
     )
