@@ -50,7 +50,7 @@ jobs:
       - name: Audit reachable Git history before publication
         id: history_audit
         continue-on-error: true
-        run: python tools/audit_public_history.py 2>&1 | tee history-audit.log
+        run: python tools/audit_public_history.py > history-audit.log 2>&1
       - name: Capture tracked release tree
         if: always()
         run: git ls-files | sort | tee tracked-files.log
