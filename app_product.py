@@ -28,13 +28,13 @@ def install(app: Any, tray_module: Any) -> None:
     tray_module.ABOUT_TEXT = (
         f"{APP_NAME} {APP_VERSION}\n"
         f"{DESCRIPTION}.\n\n"
-        "Калькулятор — идеологическое продолжение NumLock Calculator "
+        "Калькулятор - идеологическое продолжение NumLock Calculator "
         f"от Владимира Потапова ({INSPIRATION_URL}).\n\n"
         f"Репозиторий: {REPOSITORY_URL}\n"
         f"Лицензия: {LICENSE_NAME}"
     )
     tray_module.ABOUT_DIALOG_CONTENT = (
-        "Калькулятор — идеологическое продолжение "
+        "Калькулятор - идеологическое продолжение "
         f'<A HREF="{INSPIRATION_URL}">NumLock Calculator</A> '
         "от Владимира Потапова.\n\n"
         f'<A HREF="{REPOSITORY_URL}">Репозиторий проекта</A>\n'
