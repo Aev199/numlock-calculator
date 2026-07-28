@@ -7,26 +7,30 @@
     return visual.replace(/([0-9)])\s*(?=\()/g, `$1${DISPLAY_MULTIPLY}`);
   };
 
-  // A single calculator glyph reveals leftward from the native caret. Native
-  // beforeinput/input still own the edit; temporary layers are created only
-  // after the input event and before the next paint, so there is no text flash.
-  const CARET_GLYPH_DURATION = 160;
+  // A single calculator glyph reveals leftward from the new native caret. The
+  // browser remains the only owner of editing, selection, undo and composition.
+  // We remember the pre-edit snapshot on keydown/beforeinput and also keep an
+  // input-only fallback for WebView2 builds that omit beforeinput.
+  const CARET_GLYPH_DURATION = 190;
   const CARET_GLYPH_MAX_TEXT = 512;
-  const CARET_INPUT_WATCHDOG_MS = 120;
   const CARET_GLYPH_SOURCE = /^[0-9+\-*/.,%^]$/;
   const CARET_GLYPH_FINAL = /^[0-9+\-⋅/.,%^]$/;
   let caretGlyphPending = null;
   let caretGlyphMotion = null;
   let skipNextCaretGlyphInput = false;
+  let caretInputSnapshot = {
+    value: dom.input.value,
+    start: dom.input.selectionStart ?? 0,
+    end: dom.input.selectionEnd ?? 0,
+  };
+
+  // The user explicitly requested this local typing effect. Keep it enabled even
+  // when Windows globally reduces decorative motion; other application motion
+  // continues to respect prefers-reduced-motion.
+  document.body.dataset.typingMotion = 'full';
 
   function removeCaretGlyphNode(node) {
     try { node?.remove(); } catch (_) {}
-  }
-
-  function clearCaretGlyphWatchdog(pending) {
-    if (!pending || pending.watchdog === undefined) return;
-    window.clearTimeout(pending.watchdog);
-    pending.watchdog = undefined;
   }
 
   function reportCaretGlyphFailure(error) {
@@ -40,16 +44,19 @@
     } catch (_) {}
   }
 
+  function syncCaretInputSnapshot() {
+    caretInputSnapshot = {
+      value: dom.input.value,
+      start: dom.input.selectionStart ?? dom.input.value.length,
+      end: dom.input.selectionEnd ?? dom.input.selectionStart ?? dom.input.value.length,
+    };
+  }
+
   function settleCaretGlyphMotion() {
-    const pending = caretGlyphPending;
     const active = caretGlyphMotion;
     caretGlyphPending = null;
     caretGlyphMotion = null;
 
-    if (pending) {
-      pending.cancelled = true;
-      clearCaretGlyphWatchdog(pending);
-    }
     if (active) {
       active.cancelled = true;
       try { active.animation?.cancel(); } catch (_) {}
@@ -128,6 +135,7 @@
       lineHeight: box.style.lineHeight,
       letterSpacing: box.style.letterSpacing,
       textAlign: box.style.textAlign,
+      direction: box.style.direction,
       tabSize: box.style.tabSize,
       transform: `translate3d(${-dom.input.scrollLeft}px, ${-dom.input.scrollTop}px, 0)`,
     });
@@ -167,6 +175,27 @@
     return { start, end: afterEnd, text: inserted };
   }
 
+  function measureCaretGlyphWidth(text, style) {
+    const probe = document.createElement('span');
+    probe.textContent = text;
+    Object.assign(probe.style, {
+      position: 'fixed',
+      left: '-10000px',
+      top: '-10000px',
+      visibility: 'hidden',
+      whiteSpace: 'pre',
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      fontStyle: style.fontStyle,
+      letterSpacing: style.letterSpacing,
+    });
+    document.body.appendChild(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  }
+
   function handOffCaretGlyph(active) {
     if (active.cancelled || caretGlyphMotion !== active) return;
     if (active.hiddenSpan) active.hiddenSpan.style.opacity = '1';
@@ -181,52 +210,60 @@
     });
   }
 
-  function beginCaretGlyphMotion(event) {
+  function beginCaretGlyphMotion(event, fallbackData = '') {
     settleCaretGlyphMotion();
     const skip = skipNextCaretGlyphInput;
     skipNextCaretGlyphInput = false;
 
-    const data = String(event.data ?? '');
+    const data = String(event?.data ?? fallbackData ?? '');
     const start = dom.input.selectionStart;
     const end = dom.input.selectionEnd;
+    const inputType = String(event?.inputType || 'insertText');
     if (
       skip
-      || !event.isTrusted
-      || event.isComposing
-      || event.inputType !== 'insertText'
+      || event?.isTrusted === false
+      || event?.isComposing
+      || inputType !== 'insertText'
       || !CARET_GLYPH_SOURCE.test(data)
-      || reducedMotion()
       || dom.input.value.length > CARET_GLYPH_MAX_TEXT
       || start === null
       || end === null
       || start !== end
     ) return;
 
-    const pending = {
-      cancelled: false,
+    caretGlyphPending = {
       before: dom.input.value,
       start,
+      end,
       data,
-      watchdog: undefined,
     };
-    caretGlyphPending = pending;
-    pending.watchdog = window.setTimeout(() => {
-      if (caretGlyphPending === pending) settleCaretGlyphMotion();
-    }, CARET_INPUT_WATCHDOG_MS);
   }
 
-  function completeCaretGlyphMotion(event) {
-    const pending = caretGlyphPending;
-    if (!pending) return;
+  function pendingFromSnapshot(event) {
+    const data = String(event?.data ?? '');
+    if (
+      event?.isTrusted === false
+      || event?.isComposing
+      || String(event?.inputType || '') !== 'insertText'
+      || !CARET_GLYPH_SOURCE.test(data)
+      || caretInputSnapshot.start !== caretInputSnapshot.end
+    ) return null;
+    return {
+      before: caretInputSnapshot.value,
+      start: caretInputSnapshot.start,
+      end: caretInputSnapshot.end,
+      data,
+    };
+  }
+
+  function completeCaretGlyphMotion(event, pending) {
     caretGlyphPending = null;
-    clearCaretGlyphWatchdog(pending);
+    if (!pending || event?.isComposing || event?.isTrusted === false) return;
 
     const finalText = dom.input.value;
     const insertion = singleCaretInsertion(pending.before, finalText);
     if (
-      pending.cancelled
-      || event.isComposing
-      || !insertion
+      !insertion
       || insertion.start !== pending.start
       || (dom.input.selectionStart ?? insertion.end) !== insertion.end
     ) return;
@@ -235,7 +272,10 @@
     const endPoint = caretPoint(insertion.end);
     const lineHeight = Number.parseFloat(startPoint.style.lineHeight || '0')
       || Number.parseFloat(startPoint.style.fontSize || '18') * 1.45;
-    const width = endPoint.left - startPoint.left;
+    let width = endPoint.left - startPoint.left;
+    if (!Number.isFinite(width) || width <= 0) {
+      width = measureCaretGlyphWidth(insertion.text, startPoint.style);
+    }
     if (
       !Number.isFinite(width)
       || width <= 0
@@ -253,8 +293,8 @@
     glyph.className = 'nlcalc-caret-glyph';
     glyph.textContent = insertion.text;
     Object.assign(glyph.style, {
-      left: `${startPoint.left}px`,
-      top: `${startPoint.top}px`,
+      left: `${endPoint.left - width}px`,
+      top: `${endPoint.top}px`,
       width: `${width}px`,
       fontFamily: startPoint.style.fontFamily,
       fontSize: startPoint.style.fontSize,
@@ -285,15 +325,15 @@
     active.animation = glyph.animate(
       [
         {
-          opacity: .12,
+          opacity: .08,
           clipPath: 'inset(0 0 0 100%)',
-          transform: 'translate3d(2.6px,0,0) scaleX(.7)',
+          transform: 'translate3d(3.4px,0,0) scaleX(.62)',
         },
         {
           opacity: 1,
-          offset: .68,
-          clipPath: 'inset(0 0 0 12%)',
-          transform: 'translate3d(.25px,0,0) scaleX(.985)',
+          offset: .7,
+          clipPath: 'inset(0 0 0 9%)',
+          transform: 'translate3d(.18px,0,0) scaleX(.99)',
         },
         {
           opacity: 1,
@@ -303,7 +343,7 @@
       ],
       {
         duration: CARET_GLYPH_DURATION,
-        easing: 'cubic-bezier(.2,.82,.2,1)',
+        easing: 'cubic-bezier(.16,.86,.22,1)',
         fill: 'both',
       },
     );
@@ -313,14 +353,24 @@
     );
   }
 
+  const baseSetInputValueCaretMotion = setInputValue;
+  setInputValue = function (value, selection = null) {
+    settleCaretGlyphMotion();
+    baseSetInputValueCaretMotion(value, selection);
+    syncCaretInputSnapshot();
+  };
+
   const baseOnInputCaretMotion = onInput;
   onInput = function (event) {
+    const pending = caretGlyphPending || pendingFromSnapshot(event);
     baseOnInputCaretMotion(event);
     try {
-      completeCaretGlyphMotion(event);
+      completeCaretGlyphMotion(event, pending);
     } catch (error) {
       settleCaretGlyphMotion();
       reportCaretGlyphFailure(error);
+    } finally {
+      syncCaretInputSnapshot();
     }
   };
 
@@ -332,17 +382,41 @@
       reportCaretGlyphFailure(error);
     }
   }, { capture: true });
+
   document.addEventListener('keydown', event => {
     if (event.target !== dom.input) return;
     settleCaretGlyphMotion();
     skipNextCaretGlyphInput = Boolean(
       event.repeat && CARET_GLYPH_SOURCE.test(String(event.key || '')),
     );
+    if (
+      event.defaultPrevented
+      || event.ctrlKey
+      || event.metaKey
+      || event.altKey
+      || event.isComposing
+      || event.repeat
+      || !CARET_GLYPH_SOURCE.test(String(event.key || ''))
+    ) return;
+    try {
+      beginCaretGlyphMotion(event, event.key);
+    } catch (error) {
+      settleCaretGlyphMotion();
+      reportCaretGlyphFailure(error);
+    }
   }, { capture: true });
+
   dom.input.addEventListener('compositionstart', settleCaretGlyphMotion, { capture: true });
+  dom.input.addEventListener('compositionend', syncCaretInputSnapshot, { capture: true });
   dom.input.addEventListener('pointerdown', settleCaretGlyphMotion, { capture: true });
+  dom.input.addEventListener('pointerup', syncCaretInputSnapshot, { capture: true });
+  dom.input.addEventListener('keyup', syncCaretInputSnapshot, { capture: true });
+  dom.input.addEventListener('select', syncCaretInputSnapshot, { capture: true });
   dom.input.addEventListener('scroll', settleCaretGlyphMotion, { passive: true });
-  dom.input.addEventListener('blur', settleCaretGlyphMotion);
+  dom.input.addEventListener('blur', () => {
+    settleCaretGlyphMotion();
+    syncCaretInputSnapshot();
+  });
   window.addEventListener('resize', settleCaretGlyphMotion, { passive: true });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) settleCaretGlyphMotion();
