@@ -18,9 +18,13 @@ SECRET_PATTERNS = {
     "private key": re.compile(
         rb"-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----"
     ),
-    "GitHub token": re.compile(rb"\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b"),
+    "GitHub token": re.compile(
+        rb"\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b"
+    ),
     "AWS access key": re.compile(rb"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-    "OpenAI-style secret": re.compile(rb"\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b"),
+    "OpenAI-style secret": re.compile(
+        rb"\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b"
+    ),
     "Slack token": re.compile(rb"\bxox[baprs]-[A-Za-z0-9-]{20,}\b"),
 }
 SENSITIVE_NAMES = {
@@ -55,7 +59,10 @@ def reachable_objects() -> list[tuple[str, str]]:
 
 
 def blob_metadata(objects: list[tuple[str, str]]) -> list[tuple[str, int, str]]:
-    query = "".join(f"{sha} {path}\n" for sha, path in objects)
+    query = "".join(
+        f"{sha}{' ' + path if path else ''}\n"
+        for sha, path in objects
+    )
     output = git(
         "cat-file",
         "--batch-check=%(objectname) %(objecttype) %(objectsize) %(rest)",
@@ -63,7 +70,11 @@ def blob_metadata(objects: list[tuple[str, str]]) -> list[tuple[str, int, str]]:
     )
     blobs: list[tuple[str, int, str]] = []
     for line in output.splitlines():
-        sha, object_type, size_text, _, path = line.split(" ", 4)
+        parts = line.split(" ", 3)
+        if len(parts) < 3:
+            raise RuntimeError(f"Unexpected git cat-file output: {line!r}")
+        sha, object_type, size_text = parts[:3]
+        path = parts[3] if len(parts) == 4 else ""
         if object_type == "blob":
             blobs.append((sha, int(size_text), path))
     return blobs
