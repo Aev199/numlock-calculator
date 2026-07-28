@@ -49,7 +49,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
             for name in app_renderer.SCRIPT_PARTS
         )
 
-        self.assertGreaterEqual(len(app_renderer.SCRIPT_PARTS), 14)
+        self.assertGreaterEqual(len(app_renderer.SCRIPT_PARTS), 15)
         self.assertTrue(source.lstrip().startswith("(function ()"))
         self.assertTrue(source.rstrip().endswith("})();"))
         self.assertEqual(source.count("nlcalc-consolidated-v2"), 1)
@@ -61,6 +61,10 @@ class ConsolidatedRendererTests(unittest.TestCase):
         )
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.multiply.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.copy.js"),
+        )
+        self.assertLess(
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.copy.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.variables.js"),
         )
         self.assertLess(
@@ -98,6 +102,18 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("event.code === 'KeyC'", html)
         self.assertIn("event.key === 'ArrowLeft' || event.key === 'ArrowRight'", html)
         self.assertIn("switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units')", html)
+
+    def test_standalone_number_copies_without_redundant_result(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("STANDALONE_CLIPBOARD_NUMBER", html)
+        self.assertIn("function isStandaloneClipboardNumber", html)
+        self.assertIn("state.mode !== 'calculator'", html)
+        self.assertIn("return copyCalculationWithResult();", html)
+        self.assertIn("state.api.copy_text(displayExpression(expression))", html)
+        self.assertIn("Значение скопировано", html)
 
     def test_function_palette_uses_viewport_for_scrollable_results(self):
         app, _calls = self.make_app()
