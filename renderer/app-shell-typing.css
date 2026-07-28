@@ -1,53 +1,5 @@
-/* Caret-origin typing reveal. The textarea keeps native input/caret behavior;
-   temporary fixed layers provide the visual motion without changing layout. */
-
-.expression-input.caret-glyph-mirroring {
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-  caret-color: var(--accent) !important;
-  text-shadow: none !important;
-}
-
-.expression-input.caret-glyph-mirroring::placeholder {
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-}
-
-.nlcalc-typing-mirror {
-  position: fixed;
-  z-index: 1320;
-  overflow: hidden;
-  pointer-events: none;
-  color: var(--text);
-  contain: layout paint style;
-}
-
-.nlcalc-typing-mirror-text {
-  position: relative;
-  display: block;
-  min-height: 100%;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  transform-origin: left top;
-  backface-visibility: hidden;
-}
-
-.nlcalc-typing-mirror .bracket {
-  font-weight: 800;
-  text-shadow: 0 0 5px color-mix(in srgb, currentColor 22%, transparent);
-}
-
-.nlcalc-typing-mirror .depth-0 { color: #63a8ff; }
-.nlcalc-typing-mirror .depth-1 { color: #b68cff; }
-.nlcalc-typing-mirror .depth-2 { color: #ff9f68; }
-.nlcalc-typing-mirror .depth-3 { color: #55cfa5; }
-.nlcalc-typing-mirror .depth-4 { color: #f27fa5; }
-.nlcalc-typing-mirror .depth-5 { color: #d0b55a; }
-
-.nlcalc-typing-static-hidden {
-  opacity: 0;
-}
+/* Caret-origin typing trail. The native textarea remains fully visible; only a
+   temporary copy of the inserted glyph is animated, so the field never flashes. */
 
 .nlcalc-caret-glyph {
   position: fixed;
@@ -55,22 +7,18 @@
   display: block;
   pointer-events: none;
   white-space: pre;
-  color: var(--text);
+  color: var(--accent);
+  text-shadow:
+    0 0 4px color-mix(in srgb, var(--accent) 42%, transparent),
+    0 0 10px color-mix(in srgb, var(--accent) 18%, transparent);
   transform-origin: right center;
   backface-visibility: hidden;
   contain: layout paint style;
-  will-change: clip-path, transform, opacity;
+  will-change: filter, transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body:not([data-typing-motion="full"]) .nlcalc-typing-mirror,
-  body:not([data-typing-motion="full"]) .nlcalc-caret-glyph {
+  .nlcalc-caret-glyph {
     display: none !important;
-  }
-
-  body:not([data-typing-motion="full"]) .expression-input.caret-glyph-mirroring {
-    color: inherit !important;
-    -webkit-text-fill-color: currentColor !important;
-    caret-color: auto !important;
   }
 }

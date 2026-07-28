@@ -7,11 +7,11 @@
     return visual.replace(/([0-9)])\s*(?=\()/g, `$1${DISPLAY_MULTIPLY}`);
   };
 
-  // A single calculator glyph reveals leftward from the new native caret. The
-  // browser remains the only owner of editing, selection, undo and composition.
-  // We remember the pre-edit snapshot on keydown/beforeinput and also keep an
-  // input-only fallback for WebView2 builds that omit beforeinput.
-  const CARET_GLYPH_DURATION = 190;
+  // Keep the textarea fully native and permanently visible. A short-lived copy
+  // of only the newly inserted glyph travels left from the new caret position.
+  // Because the live text is never hidden or replaced, rapid typing cannot flash
+  // the entire expression field.
+  const CARET_GLYPH_DURATION = 270;
   const CARET_GLYPH_MAX_TEXT = 512;
   const CARET_GLYPH_SOURCE = /^[0-9+\-*/.,%^]$/;
   const CARET_GLYPH_FINAL = /^[0-9+\-⋅/.,%^]$/;
@@ -23,15 +23,6 @@
     start: dom.input.selectionStart ?? 0,
     end: dom.input.selectionEnd ?? 0,
   };
-
-  // The user explicitly requested this local typing effect. Keep it enabled even
-  // when Windows globally reduces decorative motion; other application motion
-  // continues to respect prefers-reduced-motion.
-  document.body.dataset.typingMotion = 'full';
-
-  function removeCaretGlyphNode(node) {
-    try { node?.remove(); } catch (_) {}
-  }
 
   function reportCaretGlyphFailure(error) {
     try {
@@ -56,98 +47,10 @@
     const active = caretGlyphMotion;
     caretGlyphPending = null;
     caretGlyphMotion = null;
-
-    if (active) {
-      active.cancelled = true;
-      try { active.animation?.cancel(); } catch (_) {}
-      removeCaretGlyphNode(active.viewport);
-      removeCaretGlyphNode(active.glyph);
-    }
-    dom.input.classList.remove('caret-glyph-mirroring');
-  }
-
-  function appendCaretMirrorExpression(container, text, hiddenStart = -1, hiddenEnd = -1) {
-    let plainStart = 0;
-    let depth = 0;
-    const stack = [];
-    let hiddenSpan = null;
-
-    const appendPlain = end => {
-      if (end > plainStart) {
-        container.appendChild(document.createTextNode(text.slice(plainStart, end)));
-      }
-    };
-
-    for (let index = 0; index < text.length; index += 1) {
-      const char = text[index];
-      const hidden = index >= hiddenStart && index < hiddenEnd;
-      const bracket = char === '(' || char === ')';
-      if (!hidden && !bracket) continue;
-
-      appendPlain(index);
-      const span = document.createElement('span');
-      span.textContent = char;
-      const classes = [];
-
-      if (bracket) {
-        let bracketDepth;
-        if (char === '(') {
-          bracketDepth = depth;
-          stack.push(depth);
-          depth += 1;
-        } else {
-          depth = Math.max(0, depth - 1);
-          bracketDepth = stack.length ? stack.pop() : depth;
-        }
-        classes.push('bracket', `depth-${Math.abs(bracketDepth) % 6}`);
-      }
-      if (hidden) {
-        classes.push('nlcalc-typing-static-hidden');
-        hiddenSpan = span;
-      }
-      span.className = classes.join(' ');
-      container.appendChild(span);
-      plainStart = index + 1;
-    }
-    appendPlain(text.length);
-    return hiddenSpan;
-  }
-
-  function createCaretTypingMirror(text, hiddenStart = -1, hiddenEnd = -1) {
-    const box = inputContentRect();
-    const viewport = document.createElement('div');
-    viewport.className = 'nlcalc-typing-mirror';
-    Object.assign(viewport.style, {
-      left: `${box.left}px`,
-      top: `${box.top}px`,
-      width: `${box.width}px`,
-      height: `${box.height}px`,
-    });
-
-    const content = document.createElement('div');
-    content.className = 'nlcalc-typing-mirror-text';
-    Object.assign(content.style, {
-      width: `${box.width}px`,
-      fontFamily: box.style.fontFamily,
-      fontSize: box.style.fontSize,
-      fontWeight: box.style.fontWeight,
-      fontStyle: box.style.fontStyle,
-      lineHeight: box.style.lineHeight,
-      letterSpacing: box.style.letterSpacing,
-      textAlign: box.style.textAlign,
-      direction: box.style.direction,
-      tabSize: box.style.tabSize,
-      transform: `translate3d(${-dom.input.scrollLeft}px, ${-dom.input.scrollTop}px, 0)`,
-    });
-    const hiddenSpan = appendCaretMirrorExpression(
-      content,
-      String(text ?? ''),
-      hiddenStart,
-      hiddenEnd,
-    );
-    viewport.appendChild(content);
-    document.body.appendChild(viewport);
-    return { viewport, hiddenSpan };
+    if (!active) return;
+    active.cancelled = true;
+    try { active.animation?.cancel(); } catch (_) {}
+    try { active.glyph?.remove(); } catch (_) {}
   }
 
   function singleCaretInsertion(before, after) {
@@ -196,20 +99,6 @@
     return width;
   }
 
-  function handOffCaretGlyph(active) {
-    if (active.cancelled || caretGlyphMotion !== active) return;
-    if (active.hiddenSpan) active.hiddenSpan.style.opacity = '1';
-    active.glyph.style.opacity = '0';
-
-    requestAnimationFrame(() => {
-      if (active.cancelled || caretGlyphMotion !== active) return;
-      dom.input.classList.remove('caret-glyph-mirroring');
-      removeCaretGlyphNode(active.viewport);
-      removeCaretGlyphNode(active.glyph);
-      caretGlyphMotion = null;
-    });
-  }
-
   function beginCaretGlyphMotion(event, fallbackData = '') {
     settleCaretGlyphMotion();
     const skip = skipNextCaretGlyphInput;
@@ -225,6 +114,7 @@
       || event?.isComposing
       || inputType !== 'insertText'
       || !CARET_GLYPH_SOURCE.test(data)
+      || reducedMotion()
       || dom.input.value.length > CARET_GLYPH_MAX_TEXT
       || start === null
       || end === null
@@ -246,6 +136,7 @@
       || event?.isComposing
       || String(event?.inputType || '') !== 'insertText'
       || !CARET_GLYPH_SOURCE.test(data)
+      || reducedMotion()
       || caretInputSnapshot.start !== caretInputSnapshot.end
     ) return null;
     return {
@@ -282,13 +173,6 @@
       || Math.abs(endPoint.top - startPoint.top) > lineHeight * .35
     ) return;
 
-    const mirror = createCaretTypingMirror(
-      finalText,
-      insertion.start,
-      insertion.end,
-    );
-    dom.input.classList.add('caret-glyph-mirroring');
-
     const glyph = document.createElement('span');
     glyph.className = 'nlcalc-caret-glyph';
     glyph.textContent = insertion.text;
@@ -303,42 +187,36 @@
       lineHeight: startPoint.style.lineHeight,
       letterSpacing: startPoint.style.letterSpacing,
       textAlign: 'left',
-      clipPath: 'inset(0 0 0 100%)',
-      opacity: '0',
     });
     document.body.appendChild(glyph);
 
-    const active = {
-      cancelled: false,
-      viewport: mirror.viewport,
-      hiddenSpan: mirror.hiddenSpan,
-      glyph,
-      animation: null,
-    };
+    const active = { cancelled: false, glyph, animation: null };
     caretGlyphMotion = active;
 
     if (typeof glyph.animate !== 'function') {
-      handOffCaretGlyph(active);
+      glyph.remove();
+      caretGlyphMotion = null;
       return;
     }
 
+    const travel = Math.max(5, Math.min(9, width * .9));
     active.animation = glyph.animate(
       [
         {
-          opacity: .08,
-          clipPath: 'inset(0 0 0 100%)',
-          transform: 'translate3d(3.4px,0,0) scaleX(.62)',
+          opacity: .82,
+          transform: `translate3d(${travel}px,0,0) scaleX(.5)`,
+          filter: 'blur(.2px)',
         },
         {
-          opacity: 1,
-          offset: .7,
-          clipPath: 'inset(0 0 0 9%)',
-          transform: 'translate3d(.18px,0,0) scaleX(.99)',
+          opacity: .68,
+          offset: .58,
+          transform: 'translate3d(1px,0,0) scaleX(.96)',
+          filter: 'blur(0)',
         },
         {
-          opacity: 1,
-          clipPath: 'inset(0 0 0 0)',
+          opacity: 0,
           transform: 'translate3d(0,0,0) scaleX(1)',
+          filter: 'blur(0)',
         },
       ],
       {
@@ -347,10 +225,10 @@
         fill: 'both',
       },
     );
-    active.animation.finished.then(
-      () => handOffCaretGlyph(active),
-      () => {},
-    );
+    active.animation.finished.catch(() => {}).finally(() => {
+      if (caretGlyphMotion === active) caretGlyphMotion = null;
+      glyph.remove();
+    });
   }
 
   const baseSetInputValueCaretMotion = setInputValue;

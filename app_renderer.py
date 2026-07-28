@@ -26,6 +26,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.part07zzz.js",
     "app-shell-v2.ux.js",
     "app-shell-v2.typing.js",
+    "app-shell-v2.variables.js",
     "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
@@ -67,6 +68,8 @@ def install(app: Any) -> None:
             raise RuntimeError("NumCalc product shell is incomplete")
         if "nlcalc-caret-glyph" not in css or "beginCaretGlyphMotion" not in javascript:
             raise RuntimeError("Consolidated renderer motion layer is incomplete")
+        if "app-shell-v2.variables.js" not in SCRIPT_PARTS:
+            raise RuntimeError("Consolidated renderer variable layer is incomplete")
 
         return (
             template.replace(CSS_PLACEHOLDER, css, 1)

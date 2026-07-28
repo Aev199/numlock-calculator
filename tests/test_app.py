@@ -18,9 +18,11 @@ calc_engine.CalculatorSession = CalculatorSession
 import app
 import app_numlock_compat
 import app_stability
+import app_variables
 
 app_stability.install(app)
 app_numlock_compat.install(app)
+app_variables.install(app)
 
 
 class StorageAndApiTests(unittest.TestCase):
@@ -47,6 +49,24 @@ class StorageAndApiTests(unittest.TestCase):
             restored = app.AppApi(storage).bootstrap()
             self.assertEqual(restored['variables']['span'], '6 m')
             self.assertEqual(len(restored['history']), 1)
+
+    def test_delete_variable_persists_and_refreshes_suggestions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = app.Storage(Path(directory) / 'state.json')
+            api = app.AppApi(storage)
+            self.assertTrue(api.commit('span := 6 m')['ok'])
+            self.assertIn('span', api.bootstrap()['variables'])
+
+            response = api.delete_variable('SPAN')
+            self.assertTrue(response['ok'])
+            self.assertEqual(response['deleted'], 'span')
+            self.assertNotIn('span', response['variables'])
+            self.assertFalse(any(item.get('label') == 'span' for item in response['suggestions']))
+            self.assertNotIn('span', app.AppApi(storage).bootstrap()['variables'])
+
+            missing = api.delete_variable('span')
+            self.assertFalse(missing['ok'])
+            self.assertEqual(missing['error'], 'Переменная не найдена')
 
     def test_legacy_history_migration(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -18,7 +18,7 @@ jobs:
         run: >-
           python -m py_compile
           app.py app_keyboard.py app_window.py app_numlock_compat.py
-          app_tray.py app_units_backend.py app_renderer.py
+          app_tray.py app_units_backend.py app_variables.py app_renderer.py
           app_diagnostics.py app_product.py app_single_instance.py app_storage.py
           calculation_limits.py generate_version_info.py input_normalization.py
           product_info.py unit_conversion.py calc_engine.py calc_engine_runtime.py
@@ -71,6 +71,7 @@ jobs:
           assert "const DISPLAY_MULTIPLY = '⋅';" in source
           assert "event.code === 'KeyC'" in source
           assert 'reportRendererDiagnostic' in source
+          assert 'delete_variable' in source
           PY
           node --check renderer-check.js
 

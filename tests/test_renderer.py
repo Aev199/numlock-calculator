@@ -49,7 +49,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 14)
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 15)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
@@ -68,6 +68,10 @@ class ConsolidatedRendererTests(unittest.TestCase):
         )
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.variables.js"),
+        )
+        self.assertLess(
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.variables.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
@@ -87,11 +91,14 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("TRIG_ORDER = ['sin', 'cos', 'tan', 'atan', 'asin', 'acos']", html)
         self.assertIn("POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt']", html)
 
-    def test_caret_origin_glyph_reveal_keeps_native_input(self):
+    def test_caret_origin_trail_never_hides_native_input(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
         html = app.build_html()
         typing_source = (ROOT / "renderer" / "app-shell-v2.typing.js").read_text(
+            encoding="utf-8"
+        )
+        typing_css = (ROOT / "renderer" / "app-shell-typing.css").read_text(
             encoding="utf-8"
         )
 
@@ -99,13 +106,15 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("function completeCaretGlyphMotion(event, pending)", html)
         self.assertIn("inputType !== 'insertText'", html)
         self.assertIn("dom.input.addEventListener('beforeinput'", html)
-        self.assertIn("clipPath: 'inset(0 0 0 100%)'", html)
-        self.assertIn("caret-glyph-mirroring", html)
-        self.assertIn("prefers-reduced-motion: reduce", html)
         self.assertIn("caretInputSnapshot", typing_source)
         self.assertIn("pendingFromSnapshot", typing_source)
         self.assertIn("beginCaretGlyphMotion(event, event.key)", typing_source)
-        self.assertIn("document.body.dataset.typingMotion = 'full'", typing_source)
+        self.assertIn("const travel = Math.max(5", typing_source)
+        self.assertIn("color: var(--accent)", typing_css)
+        self.assertIn("prefers-reduced-motion: reduce", typing_css)
+        self.assertNotIn("caret-glyph-mirroring", html)
+        self.assertNotIn("nlcalc-typing-mirror", html)
+        self.assertNotIn("document.body.dataset.typingMotion", typing_source)
         self.assertNotIn("CARET_INPUT_WATCHDOG_MS", typing_source)
         self.assertNotIn("queueMicrotask", typing_source)
         self.assertNotIn("event.preventDefault();\n    const data = String(event.data", html)
@@ -123,6 +132,17 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("event.key === 'ArrowLeft' || event.key === 'ArrowRight'", html)
         self.assertIn("switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units')", html)
         self.assertIn("Вычисление скопировано", html)
+
+    def test_variable_drawer_has_persistent_delete_action(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("state.api.delete_variable(name)", html)
+        self.assertIn("variable-delete", html)
+        self.assertIn("Удалить переменную", html)
+        self.assertIn("state.variables = response.variables", html)
+        self.assertIn("setCatalog(response.suggestions)", html)
 
     def test_renderer_reports_errors_and_storage_fallbacks(self):
         app, _calls = self.make_app()
@@ -173,6 +193,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
             "app_window",
             "app_renderer",
             "app_units_backend",
+            "app_variables",
             "app_diagnostics",
             "app_single_instance",
         ):
@@ -183,6 +204,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("app_storage.install(app)", source)
         self.assertIn("app_window.install(app)", source)
         self.assertIn("app_units_backend.install(app)", source)
+        self.assertIn("app_variables.install(app)", source)
         self.assertIn("app_renderer.install(app)", source)
         self.assertIn("app_diagnostics.install(app)", source)
         self.assertIn("app_single_instance.install(app)", source)

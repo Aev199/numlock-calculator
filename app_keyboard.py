@@ -29,6 +29,7 @@ import app_single_instance
 import app_storage
 import app_tray
 import app_units_backend
+import app_variables
 import app_window
 
 # Product identity and storage are selected before backend layers inspect AppApi.
@@ -41,6 +42,7 @@ app_window.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
 app_units_backend.install(app)
+app_variables.install(app)
 app_renderer.install(app)
 app_diagnostics.install(app)
 app_single_instance.install(app)
