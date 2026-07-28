@@ -46,6 +46,8 @@ jobs:
           --dest release/licenses/source
       - name: Build NumCalc
         run: python -m PyInstaller --noconfirm --clean NumCalc.spec
+      - name: Verify embedded common-controls manifest
+        run: python tools/verify_windows_manifest.py dist/NumCalc.exe
       - name: Verify EXE and assemble release archive
         shell: pwsh
         run: |
