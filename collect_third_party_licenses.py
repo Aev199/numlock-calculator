@@ -72,6 +72,75 @@ def is_license_file(path: Path) -> bool:
     return any(name.startswith(prefix) for prefix in LICENSE_PREFIXES)
 
 
+def concise_license_label(distribution: metadata.Distribution) -> str:
+    """Return a short label without embedding an entire license in the table."""
+
+    expression = distribution.metadata.get("License-Expression")
+    if expression and expression.strip():
+        return " ".join(expression.split())
+
+    declared = distribution.metadata.get("License")
+    if declared:
+        normalized = " ".join(declared.split())
+        if len(normalized) <= 120:
+            return normalized
+
+    classifiers = distribution.metadata.get_all("Classifier") or ()
+    labels: list[str] = []
+    for classifier in classifiers:
+        if not classifier.startswith("License ::"):
+            continue
+        label = classifier.rsplit("::", 1)[-1].strip()
+        if label and label not in labels:
+            labels.append(label)
+    return ", ".join(labels) or "см. вложенные файлы"
+
+
+def project_urls(distribution: metadata.Distribution) -> list[str]:
+    urls: list[str] = []
+    homepage = (distribution.metadata.get("Home-page") or "").strip()
+    if homepage:
+        urls.append(homepage)
+    for item in distribution.metadata.get_all("Project-URL") or ():
+        _, separator, value = item.partition(",")
+        url = (value if separator else item).strip()
+        if url and url not in urls:
+            urls.append(url)
+    return urls
+
+
+def write_package_metadata(
+    target: Path,
+    distribution: metadata.Distribution,
+    license_name: str,
+    copied: int,
+) -> None:
+    name = distribution.metadata.get("Name", "unknown")
+    lines = [
+        f"Package: {name}",
+        f"Version: {distribution.version}",
+        f"License metadata: {license_name}",
+        f"Copied license/notice files: {copied}",
+    ]
+    urls = project_urls(distribution)
+    if urls:
+        lines.append("Project URLs:")
+        lines.extend(f"- {url}" for url in urls)
+    if copied == 0:
+        lines.extend(
+            [
+                "",
+                "The installed distribution did not expose a separate LICENSE,",
+                "COPYING or NOTICE file through package metadata. Consult the",
+                "declared license and the upstream project for complete terms.",
+            ]
+        )
+    (target / "PACKAGE_METADATA.txt").write_text(
+        "\n".join(lines) + "\n",
+        encoding="utf-8",
+    )
+
+
 def collect(output_dir: Path) -> list[tuple[str, str, str, int]]:
     output_dir.mkdir(parents=True, exist_ok=True)
     rows: list[tuple[str, str, str, int]] = []
@@ -79,11 +148,7 @@ def collect(output_dir: Path) -> list[tuple[str, str, str, int]]:
     for distribution in runtime_distributions():
         name = distribution.metadata.get("Name", "unknown")
         version = distribution.version
-        license_name = (
-            distribution.metadata.get("License-Expression")
-            or distribution.metadata.get("License")
-            or "см. вложенные файлы"
-        ).strip()
+        license_name = concise_license_label(distribution)
         target = output_dir / f"{normalize_name(name)}-{version}"
         target.mkdir(parents=True, exist_ok=True)
 
@@ -108,6 +173,7 @@ def collect(output_dir: Path) -> list[tuple[str, str, str, int]]:
             shutil.copy2(source, destination)
             copied += 1
 
+        write_package_metadata(target, distribution, license_name, copied)
         rows.append((name, version, license_name, copied))
 
     report = [
@@ -115,7 +181,7 @@ def collect(output_dir: Path) -> list[tuple[str, str, str, int]]:
         "",
         "Файл сформирован автоматически на Windows при сборке релиза.",
         "",
-        "| Пакет | Версия | Метаданные лицензии | Скопировано файлов |",
+        "| Пакет | Версия | Метаданные лицензии | Файлов лицензий/уведомлений |",
         "|---|---:|---|---:|",
     ]
     for name, version, license_name, copied in rows:
@@ -124,8 +190,8 @@ def collect(output_dir: Path) -> list[tuple[str, str, str, int]]:
     report.extend(
         [
             "",
-            "Если метаданные пакета неполны, условия определяются текстами лицензий ",
-            "в соответствующем подкаталоге и исходным дистрибутивом проекта.",
+            "Если метаданные пакета неполны, условия определяются текстами лицензий",
+            "в соответствующем подкаталоге и материалами upstream-проекта.",
         ]
     )
     (output_dir / "DEPENDENCIES.md").write_text(
