@@ -63,12 +63,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nlcalc-typing-mirror,
-  .nlcalc-caret-glyph {
+  body:not([data-typing-motion="full"]) .nlcalc-typing-mirror,
+  body:not([data-typing-motion="full"]) .nlcalc-caret-glyph {
     display: none !important;
   }
 
-  .expression-input.caret-glyph-mirroring {
+  body:not([data-typing-motion="full"]) .expression-input.caret-glyph-mirroring {
     color: inherit !important;
     -webkit-text-fill-color: currentColor !important;
     caret-color: auto !important;
