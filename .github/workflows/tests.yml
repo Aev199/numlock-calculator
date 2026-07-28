@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -26,6 +28,7 @@ jobs:
           app_storage.py calculation_limits.py collect_third_party_licenses.py
           generate_version_info.py input_normalization.py product_info.py
           unit_conversion.py calc_engine.py calc_engine_runtime.py
+          tools/audit_public_history.py
       - name: Verify generated product metadata
         run: |
           python generate_version_info.py
@@ -44,6 +47,10 @@ jobs:
           test -f NumCalc-folder.spec
           test ! -e NumLockCalc.spec
           test ! -e NumLockCalc-folder.spec
+      - name: Audit reachable Git history before publication
+        run: python tools/audit_public_history.py
+      - name: Show tracked release tree
+        run: git ls-files | sort
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
