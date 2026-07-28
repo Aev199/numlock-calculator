@@ -28,7 +28,7 @@ jobs:
           app_storage.py calculation_limits.py collect_third_party_licenses.py
           generate_version_info.py input_normalization.py product_info.py
           unit_conversion.py calc_engine.py calc_engine_runtime.py
-          tools/audit_public_history.py
+          tools/audit_public_history.py tools/verify_windows_manifest.py
       - name: Verify generated product metadata
         run: |
           python generate_version_info.py
@@ -45,6 +45,7 @@ jobs:
           test -f docs/RELEASE_CHECKLIST.md
           test -f NumCalc.spec
           test -f NumCalc-folder.spec
+          test -f NumCalc.manifest
           test ! -e NumLockCalc.spec
           test ! -e NumLockCalc-folder.spec
       - name: Audit reachable Git history before publication
@@ -166,6 +167,8 @@ jobs:
         run: python generate_version_info.py
       - name: Build NumCalc one-file executable
         run: python -m PyInstaller --noconfirm --clean NumCalc.spec
+      - name: Verify embedded common-controls manifest
+        run: python tools/verify_windows_manifest.py dist/NumCalc.exe
       - name: Verify executable metadata and write SHA-256
         shell: pwsh
         run: |
