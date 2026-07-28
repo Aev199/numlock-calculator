@@ -8,18 +8,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class InputFixesTests(unittest.TestCase):
-    def test_input_fix_script_is_loaded_after_typing_runtime(self):
+    def test_input_fixes_follow_the_typing_runtime(self):
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 14)
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.input-fixes.js"),
-        )
-        self.assertLess(
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.input-fixes.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
     def test_animation_uses_timer_watchdog_instead_of_microtask_cancellation(self):
-        source = (ROOT / "renderer" / "app-shell-v2.input-fixes.js").read_text(
+        source = (ROOT / "renderer" / "app-shell-v2.part08.js").read_text(
             encoding="utf-8"
         )
         self.assertIn("beginCaretGlyphMotion = function (event)", source)
@@ -28,7 +25,7 @@ class InputFixesTests(unittest.TestCase):
         self.assertNotIn("queueMicrotask", source)
 
     def test_implicit_multiplication_is_rendered_explicitly(self):
-        source = (ROOT / "renderer" / "app-shell-v2.input-fixes.js").read_text(
+        source = (ROOT / "renderer" / "app-shell-v2.part08.js").read_text(
             encoding="utf-8"
         )
         self.assertIn("displayExpression = function (value)", source)
