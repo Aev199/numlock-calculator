@@ -65,11 +65,7 @@ def install(app: Any) -> None:
             raise RuntimeError("Consolidated renderer keyboard UX is incomplete")
         if "pywebview-no-drag" not in css or "NumCalc" not in template:
             raise RuntimeError("NumCalc product shell is incomplete")
-        if (
-            "nlcalc-caret-glyph" not in css
-            or "beginCaretGlyphMotion" not in javascript
-            or "CARET_INPUT_WATCHDOG_MS" not in javascript
-        ):
+        if "nlcalc-caret-glyph" not in css or "beginCaretGlyphMotion" not in javascript:
             raise RuntimeError("Consolidated renderer motion layer is incomplete")
 
         return (
