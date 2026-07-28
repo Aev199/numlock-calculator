@@ -29,7 +29,9 @@
   function closeAbout() {
     aboutOverlay.classList.add('hidden');
     aboutOverlay.setAttribute('aria-hidden', 'true');
-    restoreEditorFocusSoon();
+    requestAnimationFrame(() => {
+      try { dom.input.focus({ preventScroll: true }); } catch (_) {}
+    });
   }
 
   function showAbout() {
