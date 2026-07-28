@@ -49,7 +49,9 @@ def install(app: Any, tray_module: Any) -> None:
     def open_product_link(self: Any, url: str) -> bool:
         return app_native_dialogs.open_external_url(url, _TRUSTED_PRODUCT_LINKS)
 
-    app.AppApi.open_product_link = open_product_link
+    api_class = getattr(app, "AppApi", None)
+    if api_class is not None:
+        api_class.open_product_link = open_product_link
 
     # Keep the tray implementation unchanged, but replace its unreliable native
     # TaskDialog path with the renderer-owned modal. The function is invoked only
@@ -80,4 +82,6 @@ def install(app: Any, tray_module: Any) -> None:
                 continue
         return False
 
-    tray_module.app_native_dialogs.show_link_dialog = show_about_in_renderer
+    dialogs = getattr(tray_module, "app_native_dialogs", None)
+    if dialogs is not None:
+        dialogs.show_link_dialog = show_about_in_renderer
