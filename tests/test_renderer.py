@@ -49,7 +49,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
     def test_controller_parts_are_complete_and_ordered(self):
         renderer = ROOT / "renderer"
-        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 15)
+        self.assertEqual(len(app_renderer.SCRIPT_PARTS), 14)
         source = "\n".join(
             (renderer / name).read_text(encoding="utf-8")
             for name in app_renderer.SCRIPT_PARTS
@@ -58,16 +58,17 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertTrue(source.rstrip().endswith("})();"))
         self.assertEqual(source.count("nlcalc-consolidated-v2"), 1)
         self.assertNotIn("app-shell-v2.motion-keydown.js", app_renderer.SCRIPT_PARTS)
+        self.assertNotIn("app-shell-v2.typing.js", app_renderer.SCRIPT_PARTS)
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part07zzz.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.ux.js"),
         )
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.ux.js"),
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.multiply.js"),
         )
         self.assertLess(
-            app_renderer.SCRIPT_PARTS.index("app-shell-v2.typing.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.multiply.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.variables.js"),
         )
         self.assertLess(
@@ -91,33 +92,19 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("TRIG_ORDER = ['sin', 'cos', 'tan', 'atan', 'asin', 'acos']", html)
         self.assertIn("POWER_ORDER = ['sqrt', 'exp', 'log', 'ln', 'log10', 'fact', 'cbrt']", html)
 
-    def test_caret_origin_trail_never_hides_native_input(self):
+    def test_classic_input_has_no_caret_animation_layer(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
         html = app.build_html()
-        typing_source = (ROOT / "renderer" / "app-shell-v2.typing.js").read_text(
-            encoding="utf-8"
-        )
-        typing_css = (ROOT / "renderer" / "app-shell-typing.css").read_text(
-            encoding="utf-8"
-        )
 
-        self.assertIn("function beginCaretGlyphMotion(event, fallbackData", html)
-        self.assertIn("function completeCaretGlyphMotion(event, pending)", html)
-        self.assertIn("inputType !== 'insertText'", html)
-        self.assertIn("dom.input.addEventListener('beforeinput'", html)
-        self.assertIn("caretInputSnapshot", typing_source)
-        self.assertIn("pendingFromSnapshot", typing_source)
-        self.assertIn("beginCaretGlyphMotion(event, event.key)", typing_source)
-        self.assertIn("const travel = Math.max(5", typing_source)
-        self.assertIn("color: var(--accent)", typing_css)
-        self.assertIn("prefers-reduced-motion: reduce", typing_css)
+        self.assertNotIn("beginCaretGlyphMotion", html)
+        self.assertNotIn("completeCaretGlyphMotion", html)
+        self.assertNotIn("nlcalc-caret-glyph", html)
         self.assertNotIn("caret-glyph-mirroring", html)
         self.assertNotIn("nlcalc-typing-mirror", html)
-        self.assertNotIn("document.body.dataset.typingMotion", typing_source)
-        self.assertNotIn("CARET_INPUT_WATCHDOG_MS", typing_source)
-        self.assertNotIn("queueMicrotask", typing_source)
-        self.assertNotIn("event.preventDefault();\n    const data = String(event.data", html)
+        self.assertNotIn("CARET_GLYPH_DURATION", html)
+        self.assertFalse((ROOT / "renderer" / "app-shell-v2.typing.js").exists())
+        self.assertFalse((ROOT / "renderer" / "app-shell-typing.css").exists())
 
     def test_product_keyboard_shortcuts_and_multiply_display(self):
         app, _calls = self.make_app()
