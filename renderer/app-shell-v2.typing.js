@@ -300,9 +300,12 @@
   };
 
   dom.input.addEventListener('beforeinput', beginCaretGlyphMotion, { capture: true });
-  dom.input.addEventListener('keydown', event => {
+  document.addEventListener('keydown', event => {
+    if (event.target !== dom.input) return;
     settleCaretGlyphMotion();
-    skipNextCaretGlyphInput = Boolean(event.repeat);
+    skipNextCaretGlyphInput = Boolean(
+      event.repeat && CARET_GLYPH_SOURCE.test(String(event.key || '')),
+    );
   }, { capture: true });
   dom.input.addEventListener('pointerdown', settleCaretGlyphMotion, { capture: true });
   dom.input.addEventListener('scroll', settleCaretGlyphMotion, { passive: true });
