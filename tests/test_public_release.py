@@ -1,5 +1,7 @@
 import unittest
+from email.message import Message
 from pathlib import Path
+from types import SimpleNamespace
 
 import collect_third_party_licenses
 import product_info
@@ -73,15 +75,27 @@ class PublicReleaseTests(unittest.TestCase):
             )
         )
 
+    def test_long_license_text_falls_back_to_classifier(self):
+        package_metadata = Message()
+        package_metadata["License"] = "Long license text " * 20
+        package_metadata["Classifier"] = "License :: OSI Approved :: BSD License"
+        distribution = SimpleNamespace(metadata=package_metadata)
+        self.assertEqual(
+            collect_third_party_licenses.concise_license_label(distribution),
+            "BSD License",
+        )
+
     def test_release_workflow_publishes_only_on_tag(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
         self.assertIn("workflow_dispatch", workflow)
+        self.assertIn("pull_request", workflow)
         self.assertIn("tags:", workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("if: startsWith(github.ref, 'refs/tags/')", workflow)
         self.assertIn("pystray==0.19.5", workflow)
+        self.assertNotIn("--no-binary=:all:", workflow)
         self.assertIn("THIRD_PARTY_NOTICES.md", workflow)
 
 
