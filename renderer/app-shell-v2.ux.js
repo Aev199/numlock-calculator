@@ -102,7 +102,44 @@
     bracketOverlay.appendChild(document.createTextNode(text));
   }
 
+  // The compact product stylesheet changes the textarea padding, font size and
+  // line height. Copy the actual computed metrics instead of duplicating those
+  // values in CSS; otherwise the colored glyph and the native bracket diverge.
+  const BRACKET_OVERLAY_METRICS = [
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'fontFamily',
+    'fontSize',
+    'fontWeight',
+    'fontStyle',
+    'fontStretch',
+    'lineHeight',
+    'letterSpacing',
+    'wordSpacing',
+    'textAlign',
+    'textIndent',
+    'textTransform',
+    'direction',
+    'tabSize',
+    'whiteSpace',
+    'overflowWrap',
+    'wordBreak',
+    'borderRadius',
+  ];
+
+  function syncBracketOverlayMetrics() {
+    const style = window.getComputedStyle(dom.input);
+    for (const property of BRACKET_OVERLAY_METRICS) {
+      bracketOverlay.style[property] = style[property];
+    }
+    bracketOverlay.style.width = `${dom.input.offsetWidth}px`;
+    bracketOverlay.style.height = `${dom.input.offsetHeight}px`;
+  }
+
   function renderBracketColors() {
+    syncBracketOverlayMetrics();
     bracketOverlay.replaceChildren();
     const text = dom.input.value;
     let plainStart = 0;
@@ -240,6 +277,11 @@
   dom.input.addEventListener('input', renderBracketColors);
   dom.input.addEventListener('scroll', renderBracketColors, { passive: true });
   window.addEventListener('resize', renderBracketColors, { passive: true });
+
+  if (typeof ResizeObserver === 'function') {
+    const bracketOverlayObserver = new ResizeObserver(renderBracketColors);
+    bracketOverlayObserver.observe(dom.input);
+  }
 
   dom.input.addEventListener('keydown', event => {
     if (event.target !== dom.input || event.defaultPrevented) return;
