@@ -1,11 +1,34 @@
-build/
-dist/
-.venv/
-wheelhouse/
-node_modules/
+# Python
 __pycache__/
 *.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build and release output
+build/
+dist/
+release/
+wheelhouse/
 *.exe
-*.tmp
+*.zip
+*.sha256.txt
+renderer-check.js
+
+# Application-local state
 .env
+portable.mode
 numlock-calc-data.json
+*.log
+*.tmp
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Legacy JavaScript tooling is not part of NumCalc
+node_modules/

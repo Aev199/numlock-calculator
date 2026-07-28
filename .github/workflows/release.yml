@@ -1,0 +1,133 @@
+name: release
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'release/')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Verify tag and product version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $version = python -c "from product_info import APP_VERSION; print(APP_VERSION)"
+          $expected = "v$version"
+          if ($env:GITHUB_REF_NAME -ne $expected) {
+            throw "Tag $env:GITHUB_REF_NAME does not match product version $expected"
+          }
+      - name: Run full test suite
+        run: python -m unittest discover -s tests -v
+      - name: Generate Windows version metadata
+        run: |
+          python generate_version_info.py
+          git diff --exit-code -- version_info.txt
+      - name: Collect runtime license files
+        run: python collect_third_party_licenses.py --output release/licenses
+      - name: Download corresponding pystray package archive
+        run: >-
+          python -m pip download
+          --no-deps
+          pystray==0.19.5
+          --dest release/licenses/source
+      - name: Build NumCalc
+        run: python -m PyInstaller --noconfirm --clean NumCalc.spec
+      - name: Verify EXE and assemble release archive
+        shell: pwsh
+        run: |
+          $version = python -c "from product_info import APP_VERSION; print(APP_VERSION)"
+          $exe = Get-Item -LiteralPath 'dist\NumCalc.exe'
+          if ($exe.Length -le 0) {
+            throw 'NumCalc.exe is empty'
+          }
+          $info = $exe.VersionInfo
+          if ($info.ProductName -ne 'NumCalc') {
+            throw "Unexpected ProductName: $($info.ProductName)"
+          }
+          if ($info.FileVersion -ne $version -or $info.ProductVersion -ne $version) {
+            throw "EXE version does not match $version"
+          }
+
+          $pystraySource = Get-ChildItem -LiteralPath 'release\licenses\source' -File |
+            Where-Object { $_.Name -like 'pystray-0.19.5*' } |
+            Select-Object -First 1
+          if ($null -eq $pystraySource) {
+            throw 'The corresponding pystray 0.19.5 package archive is missing'
+          }
+
+          $packageName = "NumCalc-$version-windows-x64"
+          $packageDir = Join-Path 'release' $packageName
+          New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+          Copy-Item -LiteralPath $exe.FullName -Destination $packageDir
+          Copy-Item -LiteralPath 'LICENSE' -Destination $packageDir
+          Copy-Item -LiteralPath 'LICENSING.md' -Destination $packageDir
+          Copy-Item -LiteralPath 'THIRD_PARTY_NOTICES.md' -Destination $packageDir
+          Copy-Item -LiteralPath 'RELEASE_NOTES.md' -Destination $packageDir
+          Copy-Item -LiteralPath 'release\licenses' -Destination $packageDir -Recurse
+
+          $exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packageDir 'NumCalc.exe')).Hash.ToLower()
+          Set-Content -Encoding ascii -LiteralPath (Join-Path $packageDir 'NumCalc.exe.sha256.txt') -Value ($exeHash + '  NumCalc.exe')
+
+          $zip = Join-Path 'release' ($packageName + '.zip')
+          Compress-Archive -Path $packageDir -DestinationPath $zip -CompressionLevel Optimal -Force
+          $zipHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
+          Set-Content -Encoding ascii -LiteralPath ($zip + '.sha256.txt') -Value ($zipHash + '  ' + (Split-Path $zip -Leaf))
+
+          $verificationDir = Join-Path 'release' 'archive-verification'
+          Expand-Archive -LiteralPath $zip -DestinationPath $verificationDir -Force
+          $verifiedRoot = Join-Path $verificationDir $packageName
+          foreach ($required in @(
+            'NumCalc.exe',
+            'NumCalc.exe.sha256.txt',
+            'LICENSE',
+            'LICENSING.md',
+            'THIRD_PARTY_NOTICES.md',
+            'RELEASE_NOTES.md',
+            'licenses\DEPENDENCIES.md'
+          )) {
+            if (-not (Test-Path -LiteralPath (Join-Path $verifiedRoot $required))) {
+              throw "Release archive is missing $required"
+            }
+          }
+          $verifiedSource = Get-ChildItem -LiteralPath (Join-Path $verifiedRoot 'licenses\source') -File |
+            Where-Object { $_.Name -like 'pystray-0.19.5*' } |
+            Select-Object -First 1
+          if ($null -eq $verifiedSource) {
+            throw 'Release archive does not contain the pystray package archive'
+          }
+
+          "PACKAGE_NAME=$packageName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Upload release candidate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: |
+            release/${{ env.PACKAGE_NAME }}.zip
+            release/${{ env.PACKAGE_NAME }}.zip.sha256.txt
+          if-no-files-found: error
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            "release/$env:PACKAGE_NAME.zip" `
+            "release/$env:PACKAGE_NAME.zip.sha256.txt" `
+            --verify-tag `
+            --title "NumCalc $env:GITHUB_REF_NAME" `
+            --notes-file RELEASE_NOTES.md
