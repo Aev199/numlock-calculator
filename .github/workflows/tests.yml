@@ -48,9 +48,25 @@ jobs:
           test ! -e NumLockCalc.spec
           test ! -e NumLockCalc-folder.spec
       - name: Audit reachable Git history before publication
-        run: python tools/audit_public_history.py
-      - name: Show tracked release tree
-        run: git ls-files | sort
+        id: history_audit
+        continue-on-error: true
+        run: python tools/audit_public_history.py 2>&1 | tee history-audit.log
+      - name: Capture tracked release tree
+        if: always()
+        run: git ls-files | sort | tee tracked-files.log
+      - name: Upload public audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-repository-audit
+          path: |
+            history-audit.log
+            tracked-files.log
+      - name: Report history audit failure
+        if: steps.history_audit.outcome == 'failure'
+        run: |
+          cat history-audit.log
+          exit 1
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
