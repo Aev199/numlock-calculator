@@ -11,9 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ProductInfoTests(unittest.TestCase):
-    def test_release_candidate_identity_is_consistent(self):
+    def test_release_identity_is_consistent(self):
         self.assertEqual(product_info.APP_NAME, "NumCalc")
-        self.assertEqual(product_info.APP_VERSION, "1.0.0-rc.1")
+        self.assertEqual(product_info.APP_VERSION, "1.0.0")
         self.assertEqual(product_info.APP_ID, "Aev199.NumCalc")
         self.assertEqual(product_info.EXECUTABLE_NAME, "NumCalc")
         self.assertEqual(product_info.version_tuple(), (1, 0, 0, 0))
