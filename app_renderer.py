@@ -26,6 +26,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.part07zzz.js",
     "app-shell-v2.ux.js",
     "app-shell-v2.typing.js",
+    "app-shell-v2.input-fixes.js",
     "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
@@ -65,7 +66,11 @@ def install(app: Any) -> None:
             raise RuntimeError("Consolidated renderer keyboard UX is incomplete")
         if "pywebview-no-drag" not in css or "NumCalc" not in template:
             raise RuntimeError("NumCalc product shell is incomplete")
-        if "nlcalc-caret-glyph" not in css or "beginCaretGlyphMotion" not in javascript:
+        if (
+            "nlcalc-caret-glyph" not in css
+            or "beginCaretGlyphMotion" not in javascript
+            or "CARET_INPUT_WATCHDOG_MS" not in javascript
+        ):
             raise RuntimeError("Consolidated renderer motion layer is incomplete")
 
         return (
