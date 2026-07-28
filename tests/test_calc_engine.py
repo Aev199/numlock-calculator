@@ -81,6 +81,8 @@ class CalculatorEngineTests(unittest.TestCase):
         self.assertEqual(prepare_for_ast('250 kPa'), '250*kPa')
         self.assertEqual(prepare_for_ast('2 × (3 + 4)').replace(' ', ''), '2*(3+4)')
         self.assertEqual(prepare_for_ast('5!'), 'factorial(5)')
+        self.assertEqual(prepare_for_ast('150(5)'), '150*(5)')
+        self.assertEqual(prepare_for_ast('(2)(3)'), '(2)*(3)')
 
     def test_forgiving_decimal_and_visual_multiply_input(self):
         cases = {
@@ -92,6 +94,8 @@ class CalculatorEngineTests(unittest.TestCase):
             ',1': '0.1',
             '2*-0,5': '-1',
             '1e-3': '0.001',
+            '150(5)': '750',
+            '(2)(3)': '6',
         }
         for expression, expected in cases.items():
             with self.subTest(expression=expression):

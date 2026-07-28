@@ -1,9 +1,18 @@
 
-  // A single calculator glyph reveals leftward from the native caret. The live
-  // textarea still owns input, selection and caret movement; fixed mirror layers
-  // exist only for the brief visual hand-off, preventing first-frame flashes.
-  const CARET_GLYPH_DURATION = 128;
+  // Present implicit multiplication explicitly without changing the backend
+  // expression grammar. This function is also used for history and clipboard.
+  const displayExpressionWithoutImplicitMultiply = displayExpression;
+  displayExpression = function (value) {
+    const visual = displayExpressionWithoutImplicitMultiply(value);
+    return visual.replace(/([0-9)])\s*(?=\()/g, `$1${DISPLAY_MULTIPLY}`);
+  };
+
+  // A single calculator glyph reveals leftward from the native caret. Native
+  // beforeinput/input still own the edit; temporary layers are created only
+  // after the input event and before the next paint, so there is no text flash.
+  const CARET_GLYPH_DURATION = 160;
   const CARET_GLYPH_MAX_TEXT = 512;
+  const CARET_INPUT_WATCHDOG_MS = 120;
   const CARET_GLYPH_SOURCE = /^[0-9+\-*/.,%^]$/;
   const CARET_GLYPH_FINAL = /^[0-9+\-⋅/.,%^]$/;
   let caretGlyphPending = null;
@@ -14,15 +23,20 @@
     try { node?.remove(); } catch (_) {}
   }
 
+  function clearCaretGlyphWatchdog(pending) {
+    if (!pending || pending.watchdog === undefined) return;
+    window.clearTimeout(pending.watchdog);
+    pending.watchdog = undefined;
+  }
+
   function reportCaretGlyphFailure(error) {
     try {
-      if (typeof reportRendererDiagnostic === 'function') {
-        void reportRendererDiagnostic(
-          'caret-glyph',
-          String(error?.message || error || 'Typing motion failed'),
-          String(error?.stack || ''),
-        );
-      }
+      const pending = state.api?.report_diagnostic(
+        'caret-glyph',
+        String(error?.message || error || 'Typing motion failed'),
+        String(error?.stack || ''),
+      );
+      pending?.catch?.(() => {});
     } catch (_) {}
   }
 
@@ -34,7 +48,7 @@
 
     if (pending) {
       pending.cancelled = true;
-      removeCaretGlyphNode(pending.viewport);
+      clearCaretGlyphWatchdog(pending);
     }
     if (active) {
       active.cancelled = true;
@@ -125,7 +139,7 @@
     );
     viewport.appendChild(content);
     document.body.appendChild(viewport);
-    return { viewport, hiddenSpan, box };
+    return { viewport, hiddenSpan };
   }
 
   function singleCaretInsertion(before, after) {
@@ -161,12 +175,9 @@
     requestAnimationFrame(() => {
       if (active.cancelled || caretGlyphMotion !== active) return;
       dom.input.classList.remove('caret-glyph-mirroring');
-      active.viewport.style.opacity = '0';
-      requestAnimationFrame(() => {
-        if (caretGlyphMotion === active) caretGlyphMotion = null;
-        removeCaretGlyphNode(active.viewport);
-        removeCaretGlyphNode(active.glyph);
-      });
+      removeCaretGlyphNode(active.viewport);
+      removeCaretGlyphNode(active.glyph);
+      caretGlyphMotion = null;
     });
   }
 
@@ -191,27 +202,24 @@
       || start !== end
     ) return;
 
-    const mirror = createCaretTypingMirror(dom.input.value);
     const pending = {
       cancelled: false,
       before: dom.input.value,
       start,
       data,
-      viewport: mirror.viewport,
+      watchdog: undefined,
     };
     caretGlyphPending = pending;
-    dom.input.classList.add('caret-glyph-mirroring');
-
-    // A cancelled beforeinput has no matching input event. Restore native text in
-    // the same task, before the browser has a chance to paint a stale mirror.
-    queueMicrotask(() => {
+    pending.watchdog = window.setTimeout(() => {
       if (caretGlyphPending === pending) settleCaretGlyphMotion();
-    });
+    }, CARET_INPUT_WATCHDOG_MS);
   }
 
   function completeCaretGlyphMotion(event) {
     const pending = caretGlyphPending;
     if (!pending) return;
+    caretGlyphPending = null;
+    clearCaretGlyphWatchdog(pending);
 
     const finalText = dom.input.value;
     const insertion = singleCaretInsertion(pending.before, finalText);
@@ -219,11 +227,9 @@
       pending.cancelled
       || event.isComposing
       || !insertion
+      || insertion.start !== pending.start
       || (dom.input.selectionStart ?? insertion.end) !== insertion.end
-    ) {
-      settleCaretGlyphMotion();
-      return;
-    }
+    ) return;
 
     const startPoint = caretPoint(insertion.start);
     const endPoint = caretPoint(insertion.end);
@@ -234,18 +240,14 @@
       !Number.isFinite(width)
       || width <= 0
       || Math.abs(endPoint.top - startPoint.top) > lineHeight * .35
-    ) {
-      settleCaretGlyphMotion();
-      return;
-    }
+    ) return;
 
     const mirror = createCaretTypingMirror(
       finalText,
       insertion.start,
       insertion.end,
     );
-    removeCaretGlyphNode(pending.viewport);
-    caretGlyphPending = null;
+    dom.input.classList.add('caret-glyph-mirroring');
 
     const glyph = document.createElement('span');
     glyph.className = 'nlcalc-caret-glyph';
@@ -274,18 +276,24 @@
       animation: null,
     };
     caretGlyphMotion = active;
+
+    if (typeof glyph.animate !== 'function') {
+      handOffCaretGlyph(active);
+      return;
+    }
+
     active.animation = glyph.animate(
       [
         {
-          opacity: .18,
+          opacity: .12,
           clipPath: 'inset(0 0 0 100%)',
-          transform: 'translate3d(1.1px,0,0) scaleX(.84)',
+          transform: 'translate3d(2.6px,0,0) scaleX(.7)',
         },
         {
           opacity: 1,
-          offset: .72,
-          clipPath: 'inset(0 0 0 10%)',
-          transform: 'translate3d(.12px,0,0) scaleX(.99)',
+          offset: .68,
+          clipPath: 'inset(0 0 0 12%)',
+          transform: 'translate3d(.25px,0,0) scaleX(.985)',
         },
         {
           opacity: 1,
@@ -331,6 +339,7 @@
       event.repeat && CARET_GLYPH_SOURCE.test(String(event.key || '')),
     );
   }, { capture: true });
+  dom.input.addEventListener('compositionstart', settleCaretGlyphMotion, { capture: true });
   dom.input.addEventListener('pointerdown', settleCaretGlyphMotion, { capture: true });
   dom.input.addEventListener('scroll', settleCaretGlyphMotion, { passive: true });
   dom.input.addEventListener('blur', settleCaretGlyphMotion);
