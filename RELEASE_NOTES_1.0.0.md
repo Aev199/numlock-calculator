@@ -21,4 +21,4 @@
 - `NumCalc.exe`;
 - `NumCalc.exe.sha256.txt`.
 
-Перед публикацией GitHub Release финальная сборка проверяется по `WINDOWS_ACCEPTANCE.md`.
+Финальный artifact содержит версию `1.0.0` в свойствах EXE и проверяется по `WINDOWS_ACCEPTANCE.md` перед публикацией GitHub Release.
