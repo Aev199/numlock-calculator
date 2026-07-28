@@ -99,6 +99,19 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("event.key === 'ArrowLeft' || event.key === 'ArrowRight'", html)
         self.assertIn("switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units')", html)
 
+    def test_function_palette_uses_viewport_for_scrollable_results(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn('class="overlay palette-overlay hidden"', html)
+        self.assertNotIn('class="palette-footer"', html)
+        self.assertNotIn("Tab</kbd> открыть", html)
+        self.assertIn("grid-template-rows: auto auto minmax(0, 1fr)", html)
+        self.assertIn("max-height: calc(100vh - 12px)", html)
+        self.assertIn(".palette-overlay .palette-results", html)
+        self.assertIn("overscroll-behavior: contain", html)
+
     def test_variable_drawer_has_persistent_delete_action(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
