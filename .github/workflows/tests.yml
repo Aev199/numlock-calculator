@@ -33,7 +33,20 @@ jobs:
       - name: Test focus and NumLock stability
         run: python -m unittest tests.test_stability -v
       - name: Test consolidated renderer
-        run: python -m unittest tests.test_renderer -v
+        id: renderer_tests
+        continue-on-error: true
+        run: python -m unittest tests.test_renderer -v > renderer-test.log 2>&1
+      - name: Upload renderer test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renderer-test-log
+          path: renderer-test.log
+      - name: Report renderer test failure
+        if: steps.renderer_tests.outcome == 'failure'
+        run: |
+          cat renderer-test.log
+          exit 1
       - name: Test frameless tray shell
         run: python -m unittest tests.test_tray -v
       - name: Test separate units mode
