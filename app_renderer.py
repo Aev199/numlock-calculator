@@ -26,7 +26,6 @@ SCRIPT_PARTS = (
     "app-shell-v2.part07zzz.js",
     "app-shell-v2.ux.js",
     "app-shell-v2.typing.js",
-    "app-shell-v2.input-fixes.js",
     "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
