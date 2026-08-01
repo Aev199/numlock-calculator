@@ -151,10 +151,12 @@
   }
 
   function openDrawer(kind) {
-    if (state.mode !== 'calculator') return;
+    if (state.mode !== 'calculator' && kind !== 'settings' && kind !== 'formulas') return;
     dom.drawerOverlay.classList.remove('hidden');
     dom.drawerOverlay.setAttribute('aria-hidden', 'false');
     if (kind === 'memory') renderMemoryDrawer();
+    else if (kind === 'settings') renderSettingsDrawer();
+    else if (kind === 'formulas') renderFormulasDrawer();
     else renderVariablesDrawer();
   }
 

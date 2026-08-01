@@ -3,19 +3,71 @@ name: tests
 on:
   push:
     branches:
-      - redesign/keyboard-first
+      - main
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - name: Compile Python sources
-        run: python -m py_compile app.py app_keyboard.py app_window.py app_numlock_compat.py app_tray.py app_units_backend.py app_renderer.py unit_conversion.py calc_engine.py calc_engine_runtime.py
+        run: >-
+          python -m py_compile
+          app.py app_keyboard.py app_window.py app_numlock_compat.py
+          app_tray.py app_native_dialogs.py app_units_backend.py app_variables.py
+          app_renderer.py app_diagnostics.py app_product.py app_single_instance.py
+          app_storage.py calculation_limits.py collect_third_party_licenses.py
+          generate_version_info.py input_normalization.py product_info.py
+          unit_conversion.py calc_engine.py calc_engine_runtime.py
+          tools/audit_public_history.py tools/verify_windows_manifest.py
+      - name: Verify generated product metadata
+        run: |
+          python generate_version_info.py
+          git diff --exit-code -- version_info.txt
+      - name: Verify public repository files
+        run: |
+          test -f LICENSE
+          test -f LICENSING.md
+          test -f THIRD_PARTY_NOTICES.md
+          test -f SECURITY.md
+          test -f CONTRIBUTING.md
+          test -f RELEASE_NOTES.md
+          test -f docs/WINDOWS_ACCEPTANCE.md
+          test -f docs/RELEASE_CHECKLIST.md
+          test -f NumCalc.spec
+          test -f NumCalc-folder.spec
+          test -f NumCalc.manifest
+          test ! -e NumLockCalc.spec
+          test ! -e NumLockCalc-folder.spec
+      - name: Audit reachable Git history before publication
+        id: history_audit
+        continue-on-error: true
+        run: python tools/audit_public_history.py > history-audit.log 2>&1
+      - name: Capture tracked release tree
+        if: always()
+        run: git ls-files | sort | tee tracked-files.log
+      - name: Upload public audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-repository-audit
+          path: |
+            history-audit.log
+            tracked-files.log
+      - name: Report history audit failure
+        if: steps.history_audit.outcome == 'failure'
+        run: |
+          cat history-audit.log
+          exit 1
       - name: Test calculation engine
         run: python -m unittest tests.test_calc_engine -v
       - name: Test application API
@@ -23,9 +75,22 @@ jobs:
       - name: Test focus and NumLock stability
         run: python -m unittest tests.test_stability -v
       - name: Test consolidated renderer
-        run: python -m unittest tests.test_renderer -v
+        id: renderer_tests
+        continue-on-error: true
+        run: python -m unittest tests.test_renderer -v > renderer-test.log 2>&1
+      - name: Upload renderer test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renderer-test-log
+          path: renderer-test.log
+      - name: Report renderer test failure
+        if: steps.renderer_tests.outcome == 'failure'
+        run: |
+          cat renderer-test.log
+          exit 1
       - name: Test frameless tray shell
-        run: python -m unittest tests.test_tray -v
+        run: python -m unittest tests.test_tray tests.test_native_dialogs -v
       - name: Test separate units mode
         run: python -m unittest tests.test_units_mode -v
       - name: Test full build sequence
@@ -36,7 +101,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: discover-log
+          name: discover-log-linux
           path: discover.log
       - name: Report full build test failure
         if: steps.discover.outcome == 'failure'
@@ -58,5 +123,84 @@ jobs:
           assert 'keydown-v2' not in source
           assert 'interceptTextInsertion' not in source
           assert 'interceptPhysicalKey' not in source
+          assert 'beginCaretGlyphMotion' not in source
+          assert 'nlcalc-caret-glyph' not in source
+          assert "const DISPLAY_MULTIPLY = '⋅';" in source
+          assert "event.code === 'KeyC'" in source
+          assert 'reportRendererDiagnostic' in source
+          assert 'delete_variable' in source
           PY
           node --check renderer-check.js
+
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Run full Windows test suite
+        run: python -m unittest discover -s tests -v
+      - name: Collect runtime licenses
+        run: python collect_third_party_licenses.py --output release/licenses
+      - name: Verify release license bundle
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath 'release\licenses\DEPENDENCIES.md')) {
+            throw 'Dependency license report was not created'
+          }
+          $pystray = Get-ChildItem -LiteralPath 'release\licenses' -Directory |
+            Where-Object { $_.Name -like 'pystray-*' } |
+            Select-Object -First 1
+          if ($null -eq $pystray) {
+            throw 'pystray license directory is missing'
+          }
+          $license = Get-ChildItem -LiteralPath $pystray.FullName -File |
+            Where-Object { $_.Name -match '^(COPYING|LICENSE|LICENCE)' } |
+            Select-Object -First 1
+          if ($null -eq $license) {
+            throw 'pystray LGPL text is missing'
+          }
+      - name: Generate Windows version metadata
+        run: python generate_version_info.py
+      - name: Build NumCalc one-file executable
+        run: python -m PyInstaller --noconfirm --clean NumCalc.spec
+      - name: Verify embedded common-controls manifest
+        run: python tools/verify_windows_manifest.py dist/NumCalc.exe
+      - name: Verify executable metadata and write SHA-256
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath 'dist\NumCalc.exe')) {
+            throw 'dist\NumCalc.exe was not created'
+          }
+          $file = Get-Item -LiteralPath 'dist\NumCalc.exe'
+          if ($file.Length -le 0) {
+            throw 'dist\NumCalc.exe is empty'
+          }
+          $info = $file.VersionInfo
+          if ($info.ProductName -ne 'NumCalc') {
+            throw "Unexpected ProductName: $($info.ProductName)"
+          }
+          if ($info.FileVersion -ne '1.0.0') {
+            throw "Unexpected FileVersion: $($info.FileVersion)"
+          }
+          if ($info.ProductVersion -ne '1.0.0') {
+            throw "Unexpected ProductVersion: $($info.ProductVersion)"
+          }
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
+          Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
+      - name: Upload Windows release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NumCalc-windows-release
+          path: |
+            dist/NumCalc.exe
+            dist/NumCalc.exe.sha256.txt
+            LICENSE
+            LICENSING.md
+            THIRD_PARTY_NOTICES.md
+            release/licenses
+          if-no-files-found: error
+

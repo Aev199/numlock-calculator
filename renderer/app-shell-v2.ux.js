@@ -7,6 +7,23 @@
   const FUNCTION_RANK = new Map(
     [...TRIG_ORDER, ...POWER_ORDER].map((name, index) => [name, index]),
   );
+  const DISPLAY_MULTIPLY = '⋅';
+
+  function displayExpression(value) {
+    let visual = String(value ?? '');
+    // Repair the same keypad separator sequences as the Python backend, so the
+    // field, history and clipboard show the expression that is actually used.
+    visual = visual.replace(
+      /(^|[^\d])[.,]{1,2}(?=\d)/g,
+      (_match, prefix) => `${prefix}0.`,
+    );
+    visual = visual.replace(/(\d)[.,]{1,2}(?=\d)/g, '$1.');
+    visual = visual.replace(/\*/g, DISPLAY_MULTIPLY);
+    if (state.settings.decimal_separator === ',') {
+      visual = visual.replace(/(\d)\.(?=\d)/g, '$1,');
+    }
+    return visual;
+  }
 
   // Ctrl+K is intentionally retired. Tab from the expression field is the only
   // keyboard entry point; the toolbar button remains available for mouse users.
@@ -71,6 +88,14 @@
     select.replaceChildren(fragment);
   };
 
+  // Expressions are stored exactly as typed, but multiplication and repaired
+  // decimal separators are presented consistently in the editor and history.
+  const baseUpdateHistoryNodeUx = updateHistoryNode;
+  updateHistoryNode = function (slot, entry) {
+    baseUpdateHistoryNodeUx(slot, entry);
+    slot.querySelector('.history-expression').textContent = displayExpression(entry.expression);
+  };
+
   const bracketOverlay = document.createElement('div');
   bracketOverlay.className = 'bracket-color-overlay';
   bracketOverlay.setAttribute('aria-hidden', 'true');
@@ -81,7 +106,44 @@
     bracketOverlay.appendChild(document.createTextNode(text));
   }
 
+  // The compact product stylesheet changes the textarea padding, font size and
+  // line height. Copy the actual computed metrics instead of duplicating those
+  // values in CSS; otherwise the colored glyph and the native bracket diverge.
+  const BRACKET_OVERLAY_METRICS = [
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'fontFamily',
+    'fontSize',
+    'fontWeight',
+    'fontStyle',
+    'fontStretch',
+    'lineHeight',
+    'letterSpacing',
+    'wordSpacing',
+    'textAlign',
+    'textIndent',
+    'textTransform',
+    'direction',
+    'tabSize',
+    'whiteSpace',
+    'overflowWrap',
+    'wordBreak',
+    'borderRadius',
+  ];
+
+  function syncBracketOverlayMetrics() {
+    const style = window.getComputedStyle(dom.input);
+    for (const property of BRACKET_OVERLAY_METRICS) {
+      bracketOverlay.style[property] = style[property];
+    }
+    bracketOverlay.style.width = `${dom.input.offsetWidth}px`;
+    bracketOverlay.style.height = `${dom.input.offsetHeight}px`;
+  }
+
   function renderBracketColors() {
+    syncBracketOverlayMetrics();
     bracketOverlay.replaceChildren();
     const text = dom.input.value;
     let plainStart = 0;
@@ -116,13 +178,118 @@
 
   const baseSetInputValueUx = setInputValue;
   setInputValue = function (value, selection = null) {
-    baseSetInputValueUx(value, selection);
+    baseSetInputValueUx(displayExpression(value), selection);
     renderBracketColors();
   };
+
+  const baseOnInputUx = onInput;
+  onInput = function (event) {
+    const raw = dom.input.value;
+    const start = dom.input.selectionStart ?? raw.length;
+    const end = dom.input.selectionEnd ?? start;
+    const visual = displayExpression(raw);
+    if (visual !== raw) {
+      const visualStart = start === raw.length
+        ? visual.length
+        : displayExpression(raw.slice(0, start)).length;
+      const visualEnd = end === raw.length
+        ? visual.length
+        : displayExpression(raw.slice(0, end)).length;
+      dom.input.value = visual;
+      setSelection(visualStart, visualEnd);
+    }
+    baseOnInputUx(event);
+    renderBracketColors();
+  };
+
+  async function copyCurrentCalculation() {
+    const expression = normalize(dom.input.value);
+    if (!expression) {
+      showToast('Нет выражения для копирования');
+      return;
+    }
+
+    let response;
+    let text;
+    try {
+      if (state.mode === 'calculator') {
+        response = (
+          state.calculator.previewExpression === state.calculator.expression
+          && state.calculator.preview?.ok
+        ) ? state.calculator.preview : await state.api.preview(expression);
+        if (!response?.ok) {
+          showToast(response?.error || 'Нет результата для копирования');
+          return;
+        }
+        text = `${copyExpression(expression)} = ${response.result}`;
+      } else {
+        response = (
+          state.units.previewExpression === state.units.expression
+          && state.units.previewContext === unitContext()
+          && state.units.preview?.ok
+        ) ? state.units.preview : await state.api.convert_units(
+          expression,
+          state.units.category,
+          state.units.from_unit,
+          state.units.to_unit,
+          false,
+          state.units.imported_revision,
+        );
+        if (!response?.ok) {
+          showToast(response?.error || 'Нет результата для копирования');
+          return;
+        }
+        text = `${copyExpression(expression)} ${state.units.from_unit} = ${response.result} ${state.units.to_unit}`;
+      }
+
+      const copied = await state.api.copy_text(text);
+      showToast(copied ? 'Вычисление скопировано' : 'Не удалось открыть буфер обмена');
+    } catch (_) {
+      showToast('Не удалось скопировать вычисление');
+    }
+  }
+
+  function copyExpression(value) {
+    return displayExpression(value).replace(/\s*⋅\s*/g, ' ⋅ ');
+  }
+
+  // Global shortcuts work from the editor, selects, history and popovers.
+  // Capture prevents WebView navigation on Alt+Left/Right.
+  document.addEventListener('keydown', event => {
+    if (
+      event.altKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && !event.shiftKey
+      && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeTransientUi();
+      switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units');
+      return;
+    }
+
+    if (
+      (event.ctrlKey || event.metaKey)
+      && !event.altKey
+      && !event.shiftKey
+      && event.code === 'KeyC'
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      void copyCurrentCalculation();
+    }
+  }, { capture: true });
 
   dom.input.addEventListener('input', renderBracketColors);
   dom.input.addEventListener('scroll', renderBracketColors, { passive: true });
   window.addEventListener('resize', renderBracketColors, { passive: true });
+
+  if (typeof ResizeObserver === 'function') {
+    const bracketOverlayObserver = new ResizeObserver(renderBracketColors);
+    bracketOverlayObserver.observe(dom.input);
+  }
 
   dom.input.addEventListener('keydown', event => {
     if (event.target !== dom.input || event.defaultPrevented) return;

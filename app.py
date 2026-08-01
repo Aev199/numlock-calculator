@@ -14,11 +14,22 @@ from typing import Any
 
 import webview
 
-from calc_engine import CalculatorSession, EngineSettings, make_history_entry
+from calc_engine import (
+    CalculatorSession,
+    DIMENSIONLESS,
+    EngineSettings,
+    make_history_entry,
+    normalize_expression,
+    serialize_dimensions,
+)
+from hotkey_config import DEFAULT_HOTKEY, validate_hotkey
 
 
 APP_NAME = "NumLock Calc"
-DATA_FILENAME = "numlock-calc-data.json"
+# Kept only as the migration source for installations predating the durable
+# %LOCALAPPDATA%\NumCalc\data.json store.
+LEGACY_DATA_FILENAME = "numlock-calc-data.json"
+DATA_FILENAME = LEGACY_DATA_FILENAME
 MAX_HISTORY = 500
 VK_NUMLOCK = 0x90
 NUMLOCK_SCAN_CODE = 0x45
@@ -42,20 +53,22 @@ def application_dir() -> Path:
 
 BASE_DIR = resource_dir()
 RENDERER_DIR = BASE_DIR / "renderer"
-DATA_FILE = application_dir() / DATA_FILENAME
+DATA_FILE: Path | None = None
 
 
 class Storage:
-    """Thread-safe JSON store located next to the executable."""
+    """Thread-safe JSON store used by the selected production data path."""
 
-    def __init__(self, filepath: Path):
-        self._filepath = filepath
+    def __init__(self, filepath: Path | None):
+        self._filepath = Path(filepath) if filepath is not None else None
         self._data: dict[str, Any] = {}
         self._lock = threading.RLock()
         self._load()
 
     def _load(self) -> None:
         with self._lock:
+            if self._filepath is None:
+                return
             if not self._filepath.exists():
                 return
             try:
@@ -66,6 +79,8 @@ class Storage:
 
     def _save(self) -> None:
         with self._lock:
+            if self._filepath is None:
+                return
             self._filepath.parent.mkdir(parents=True, exist_ok=True)
             payload = json.dumps(self._data, ensure_ascii=False, indent=2)
             fd, temp_name = tempfile.mkstemp(
@@ -128,9 +143,13 @@ class AppApi:
                     {
                         "id": f"legacy-{index}",
                         "expression": str(item.get("expr", "")),
+                        "normalized_expression": normalize_expression(
+                            str(item.get("expr", ""))
+                        ),
                         "result": str(item.get("res", "")),
                         "raw_value": None,
                         "unit": None,
+                        "dimensions": serialize_dimensions(DIMENSIONLESS),
                         "angle_mode": "DEG",
                         "number_base": "DEC",
                         "created_at": "",
@@ -138,13 +157,65 @@ class AppApi:
                     for index, item in enumerate(legacy_history)
                     if isinstance(item, dict) and item.get("expr") is not None
                 ]
-        self._history = [item for item in self._history if isinstance(item, dict)][:MAX_HISTORY]
+        self._history = [
+            self._normalize_history_item(item, index)
+            for index, item in enumerate(self._history)
+            if isinstance(item, dict)
+        ][:MAX_HISTORY]
         saved_ui = storage.get("ui_settings", {})
         self._ui_settings = saved_ui if isinstance(saved_ui, dict) else {}
         if "theme" not in self._ui_settings:
             self._ui_settings["theme"] = "light" if storage.get("nlcalc_theme") == "light" else "dark"
+        saved_hotkey = validate_hotkey(self._ui_settings.get("global_hotkey", DEFAULT_HOTKEY))
+        self._ui_settings["global_hotkey"] = (
+            saved_hotkey.hotkey if saved_hotkey.ok else DEFAULT_HOTKEY
+        )
         self._sequence = len(self._history)
         self._lock = threading.RLock()
+
+    @staticmethod
+    def _normalize_history_item(
+        item: dict[str, Any],
+        index: int,
+    ) -> dict[str, Any]:
+        """Fill the stage-2 history fields while keeping old data readable."""
+
+        normalized_item = dict(item)
+        expression = str(
+            normalized_item.get(
+                "expression",
+                normalized_item.get("source_expression", ""),
+            )
+            or ""
+        ).strip()
+        normalized = str(
+            normalized_item.get(
+                "normalized_expression",
+                normalized_item.get("normalized", ""),
+            )
+            or ""
+        ).strip()
+        if not normalized:
+            normalized = normalize_expression(expression).strip()
+
+        normalized_item["id"] = str(normalized_item.get("id") or f"history-{index}")
+        normalized_item["expression"] = expression
+        normalized_item["source_expression"] = expression
+        normalized_item["normalized_expression"] = normalized
+        normalized_item["normalized"] = normalized
+        normalized_item["result"] = str(normalized_item.get("result", "") or "")
+        normalized_item.setdefault("raw_value", None)
+        normalized_item.setdefault("unit", None)
+        dimensions = normalized_item.get("dimensions")
+        if not isinstance(dimensions, list) or len(dimensions) != 4:
+            normalized_item["dimensions"] = serialize_dimensions(DIMENSIONLESS)
+        normalized_item.setdefault("angle_mode", "DEG")
+        normalized_item.setdefault("number_base", "DEC")
+        normalized_item.setdefault("precision", 12)
+        normalized_item.setdefault("number_format", "auto")
+        normalized_item.setdefault("decimal_separator", ".")
+        normalized_item.setdefault("created_at", "")
+        return normalized_item
 
     def _persist(self) -> None:
         self._storage.update({
@@ -212,6 +283,31 @@ class AppApi:
             self._storage.set("ui_settings", self._ui_settings)
             return dict(self._ui_settings)
 
+    def get_global_hotkey(self) -> dict[str, Any]:
+        with self._lock:
+            validation = validate_hotkey(
+                self._ui_settings.get("global_hotkey", DEFAULT_HOTKEY)
+            )
+            if not validation.ok:
+                validation = validate_hotkey(DEFAULT_HOTKEY)
+            return validation.as_dict()
+
+    def set_global_hotkey(self, hotkey: str) -> dict[str, Any]:
+        validation = validate_hotkey(hotkey)
+        if not validation.ok:
+            return validation.as_dict()
+
+        configure = globals().get("configure_global_hotkey")
+        if callable(configure):
+            result = configure(validation.hotkey)
+            if not result.get("ok"):
+                return result
+
+        with self._lock:
+            self._ui_settings["global_hotkey"] = validation.hotkey
+            self._storage.set("ui_settings", self._ui_settings)
+        return validation.as_dict() | {"ok": True}
+
     def delete_history(self, entry_id: str) -> list[dict[str, Any]]:
         with self._lock:
             self._history = [item for item in self._history if item.get("id") != entry_id]
@@ -249,20 +345,6 @@ class AppApi:
         return True
 
 
-def build_html() -> str:
-    html = (RENDERER_DIR / "index.html").read_text(encoding="utf-8")
-    css = (RENDERER_DIR / "style.css").read_text(encoding="utf-8")
-    app_js = (RENDERER_DIR / "script.js").read_text(encoding="utf-8")
-    html = html.replace('<link rel="stylesheet" href="style.css">', f"<style>\n{css}\n</style>")
-    html = html.replace('<script src="script.js"></script>', f"<script>\n{app_js}\n</script>")
-    html = html.replace(
-        "<head>",
-        "<head>\n<script>window.__NUMLOCK_PYWEBVIEW__ = true;</script>",
-        1,
-    )
-    return html
-
-
 _window: webview.Window | None = None
 _visible = True
 _quitting = False
@@ -270,7 +352,10 @@ _numlock_down = False
 _keyboard_module: Any = None
 _state_lock = threading.RLock()
 _previous_foreground_hwnd: int | None = None
-_api = AppApi(Storage(DATA_FILE))
+# The entry point replaces this in app_storage.install() after selecting the
+# normal or explicit portable location.  The import-time API is memory-only so
+# production never reads or writes the obsolete adjacent-file location.
+_api = AppApi(Storage(None))
 
 
 def _user32() -> Any:
@@ -495,29 +580,3 @@ def register_hotkeys() -> None:
     except Exception:
         _keyboard_module = None
 
-
-def main() -> None:
-    global _window
-    _window = webview.create_window(
-        title=APP_NAME,
-        html=build_html(),
-        width=540,
-        height=650,
-        min_size=(420, 430),
-        js_api=_api,
-        resizable=True,
-        easy_drag=False,
-        confirm_close=False,
-        on_top=True,
-    )
-    _window.events.closing += on_closing
-    _window.events.shown += on_shown
-    register_hotkeys()
-    try:
-        webview.start(private_mode=True)
-    finally:
-        unregister_hotkeys()
-
-
-if __name__ == "__main__":
-    main()

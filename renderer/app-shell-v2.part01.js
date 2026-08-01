@@ -85,8 +85,20 @@
     ].join('|');
   }
 
-  function normalizeUnitSelection() {
+  function applyPreferredUnitSelection() {
+    const preferred = state.activeProfile?.preferred_units || [];
+    if (!preferred.length) return;
     const symbols = (currentUnitCategory()?.units || []).map(item => item.symbol);
+    const matches = preferred.filter(symbol => symbols.includes(symbol));
+    if (!matches.length) return;
+    state.units.from_unit = matches[0];
+    const target = matches.slice(1).find(symbol => symbol !== matches[0]);
+    if (target) state.units.to_unit = target;
+  }
+
+  function normalizeUnitSelection(preferProfile = false) {
+    const symbols = (currentUnitCategory()?.units || []).map(item => item.symbol);
+    if (preferProfile) applyPreferredUnitSelection();
     if (!symbols.includes(state.units.from_unit)) {
       state.units.from_unit = symbols[0] || '';
     }
@@ -114,8 +126,8 @@
     select.replaceChildren(fragment);
   }
 
-  function renderUnitControls() {
-    normalizeUnitSelection();
+  function renderUnitControls(preferProfile = false) {
+    normalizeUnitSelection(preferProfile);
     fillSelect(dom.category, state.units.categories, state.units.category, true);
     const units = currentUnitCategory()?.units || [];
     fillSelect(dom.sourceUnit, units, state.units.from_unit);

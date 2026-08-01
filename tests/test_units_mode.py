@@ -3,11 +3,23 @@ import types
 import unittest
 from pathlib import Path
 
+import calc_engine
+import unit_conversion
+from calculation_limits import install_calculator_limits, install_unit_limits
+from input_normalization import (
+    install_calculator_normalization,
+    install_unit_normalization,
+)
+
+install_calculator_normalization(calc_engine)
+install_unit_normalization(unit_conversion)
+install_calculator_limits(calc_engine)
+install_unit_limits(unit_conversion)
+
 from calc_engine_runtime import CalculatorSession, make_history_entry
 
 import app_renderer
 import app_units_backend
-import unit_conversion
 
 
 class Storage:
@@ -70,6 +82,27 @@ class UnitsModeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             unit_conversion.evaluate_simple("10 kN")
 
+    def test_forgiving_decimal_input_matches_calculator(self):
+        cases = {
+            "3100*.,1": 310.0,
+            "3100*,1": 310.0,
+            "3100⋅,1": 310.0,
+            "3100⋅.1": 310.0,
+            ",1": 0.1,
+            "2*-0,5": -1.0,
+        }
+        for expression, expected in cases.items():
+            with self.subTest(expression=expression):
+                self.assertEqual(unit_conversion.evaluate_simple(expression), expected)
+
+    def test_simple_arithmetic_resource_limits(self):
+        with self.assertRaisesRegex(ValueError, "длин"):
+            unit_conversion.evaluate_simple("1+" * 140 + "1")
+        with self.assertRaisesRegex(ValueError, "глубин"):
+            unit_conversion.evaluate_simple("-" * 80 + "1")
+        with self.assertRaisesRegex(ValueError, "показатель"):
+            unit_conversion.evaluate_simple("2^101")
+
     def test_conversion_catalog_and_temperature(self):
         app, api, _storage = self.make_app()
         app_units_backend.install(app)
@@ -85,6 +118,17 @@ class UnitsModeTests(unittest.TestCase):
 
         invalid = api.convert_units("sin(30)", "length", "m", "mm")
         self.assertFalse(invalid["ok"])
+
+    def test_converter_returns_the_shared_quantity_shape(self):
+        app, api, _storage = self.make_app()
+        app_units_backend.install(app)
+
+        response = api.convert_units("1", "pressure", "tf/m2", "kPa")
+        self.assertTrue(response["ok"], response.get("error"))
+        self.assertEqual(response["unit"], "kPa")
+        self.assertEqual(response["quantity"]["value"], response["raw_value"])
+        self.assertEqual(response["quantity"]["dimensions"], ["-1/1", "1/1", "-2/1", "0/1"])
+        self.assertEqual(response["quantity"]["dimension"], "L^-1 · M · T^-2")
 
     def test_engineering_force_and_derived_units(self):
         app, api, _storage = self.make_app()
@@ -115,6 +159,21 @@ class UnitsModeTests(unittest.TestCase):
             {"symbol": "tf", "label": "Тонна-сила — тс"},
             force["units"],
         )
+
+    def test_converter_uses_calculator_format_settings(self):
+        app, api, _storage = self.make_app()
+        app_units_backend.install(app)
+        api._session.set_settings(
+            {
+                "number_format": "engineering",
+                "precision": 4,
+                "decimal_separator": ",",
+            }
+        )
+        response = api.convert_units("1234", "length", "m", "mm")
+        self.assertTrue(response["ok"], response.get("error"))
+        self.assertEqual(response["source_value"], "1,234e+3")
+        self.assertEqual(response["result"], "1,234e+6")
 
     def test_calculator_handoff_revision_and_converter_state(self):
         app, api, storage = self.make_app()

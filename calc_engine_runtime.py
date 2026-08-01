@@ -20,6 +20,7 @@ class Evaluation:
     result: str = ""
     raw_value: float | None = None
     unit: str | None = None
+    dimensions: core.Dim = core.DIMENSIONLESS
     ok: bool = True
     error: str | None = None
     position: int | None = None
@@ -33,6 +34,13 @@ class Evaluation:
             "result": self.result,
             "raw_value": self.raw_value,
             "unit": self.unit,
+            "dimensions": core.serialize_dimensions(self.dimensions),
+            "dimension": core.format_dimension(self.dimensions),
+            "quantity": core.quantity_payload(
+                self.raw_value,
+                self.unit,
+                self.dimensions,
+            ),
             "ok": self.ok,
             "error": self.error,
             "position": self.position,
@@ -136,9 +144,11 @@ class CalculatorSession(core.CalculatorSession):
             quantity = self._evaluate_source(source)
             unit_symbol = None
             output_quantity = quantity
+            output_dimensions = quantity.dimensions
             if target:
-                output_quantity, unit_symbol = self._convert(
-                    quantity, target
+                output_quantity, unit_symbol, output_dimensions = self._convert(
+                    quantity,
+                    target,
                 )
             if variable:
                 lowered = variable.lower()
@@ -153,14 +163,24 @@ class CalculatorSession(core.CalculatorSession):
                     self.variables[lowered] = quantity
             if commit:
                 self.ans = quantity
+            result_unit = unit_symbol or core.display_unit_for(quantity)
+            if result_unit is None and not quantity.dimensionless:
+                result_unit = _format_dimensions(quantity.dimensions)
+            raw_value = (
+                output_quantity.value
+                if unit_symbol
+                else core.base_value_in_unit(quantity.value, result_unit)
+            )
             return Evaluation(
                 expression=original,
                 normalized=normalized,
                 result=self.format_quantity(
-                    output_quantity, unit_symbol
+                    output_quantity,
+                    unit_symbol or result_unit,
                 ),
-                raw_value=output_quantity.value,
-                unit=unit_symbol,
+                raw_value=raw_value,
+                unit=result_unit,
+                dimensions=output_dimensions,
                 assigned_variable=variable,
             )
         except core.CalculationError as exc:
@@ -193,7 +213,7 @@ class CalculatorSession(core.CalculatorSession):
             )
         if explicit_unit is None and not quantity.dimensionless:
             explicit_unit = (
-                core.CANONICAL_UNITS.get(quantity.dimensions)
+                core.display_unit_for(quantity)
                 or _format_dimensions(quantity.dimensions)
             )
         return super().format_quantity(quantity, explicit_unit)

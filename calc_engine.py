@@ -16,6 +16,12 @@ from datetime import datetime, timezone
 from fractions import Fraction
 from typing import Any, Callable, Iterable
 
+from number_formatting import (
+    format_number,
+    normalize_decimal_separator,
+    normalize_number_format,
+)
+
 
 class CalculationError(ValueError):
     """User-facing expression error."""
@@ -34,6 +40,12 @@ TIME: Dim = (Fraction(0), Fraction(0), Fraction(1), Fraction(0))
 TEMPERATURE: Dim = (Fraction(0), Fraction(0), Fraction(0), Fraction(1))
 FORCE: Dim = (Fraction(1), Fraction(1), Fraction(-2), Fraction(0))
 PRESSURE: Dim = (Fraction(-1), Fraction(1), Fraction(-2), Fraction(0))
+SPEED: Dim = (Fraction(1), Fraction(0), Fraction(-1), Fraction(0))
+ACCELERATION: Dim = (Fraction(1), Fraction(0), Fraction(-2), Fraction(0))
+DISTRIBUTED_FORCE: Dim = (Fraction(0), Fraction(1), Fraction(-2), Fraction(0))
+MOMENT: Dim = (Fraction(2), Fraction(1), Fraction(-2), Fraction(0))
+SPECIFIC_WEIGHT: Dim = (Fraction(-2), Fraction(1), Fraction(-2), Fraction(0))
+STANDARD_GRAVITY = 9.80665
 
 
 def _dim_add(a: Dim, b: Dim) -> Dim:
@@ -105,7 +117,25 @@ class Quantity:
 
     def __mul__(self, other: Any) -> "Quantity":
         rhs = self._coerce(other)
-        return Quantity(self.value * rhs.value, _dim_add(self.dimensions, rhs.dimensions))
+        display_unit = None
+        if self.dimensionless and rhs.dimensionless:
+            display_unit = self.display_unit or rhs.display_unit
+        elif rhs.dimensionless:
+            display_unit = self.display_unit
+        elif self.dimensionless:
+            display_unit = rhs.display_unit
+        else:
+            display_unit = _compound_display_unit(
+                self.display_unit,
+                rhs.display_unit,
+                "*",
+                _dim_add(self.dimensions, rhs.dimensions),
+            )
+        return Quantity(
+            self.value * rhs.value,
+            _dim_add(self.dimensions, rhs.dimensions),
+            display_unit,
+        )
 
     __rmul__ = __mul__
 
@@ -113,7 +143,16 @@ class Quantity:
         rhs = self._coerce(other)
         if rhs.value == 0:
             raise CalculationError("Деление на ноль")
-        return Quantity(self.value / rhs.value, _dim_sub(self.dimensions, rhs.dimensions))
+        result_dimensions = _dim_sub(self.dimensions, rhs.dimensions)
+        display_unit = self.display_unit if rhs.dimensionless else None
+        if not rhs.dimensionless and not self.dimensionless:
+            display_unit = _compound_display_unit(
+                self.display_unit,
+                rhs.display_unit,
+                "/",
+                result_dimensions,
+            )
+        return Quantity(self.value / rhs.value, result_dimensions, display_unit)
 
     def __rtruediv__(self, other: Any) -> "Quantity":
         return self._coerce(other).__truediv__(self)
@@ -129,7 +168,8 @@ class Quantity:
         result = self.value**value
         if isinstance(result, complex) or not math.isfinite(float(result)):
             raise CalculationError("Результат степени не является действительным числом")
-        return Quantity(float(result), _dim_mul(self.dimensions, fraction))
+        display_unit = self.display_unit if fraction == 1 else None
+        return Quantity(float(result), _dim_mul(self.dimensions, fraction), display_unit)
 
     def __neg__(self) -> "Quantity":
         return Quantity(-self.value, self.dimensions, self.display_unit)
@@ -152,17 +192,26 @@ class EngineSettings:
     angle_mode: str = "DEG"
     number_base: str = "DEC"
     precision: int = 12
+    number_format: str = "auto"
+    decimal_separator: str = "."
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any] | None) -> "EngineSettings":
         data = data or {}
         angle = str(data.get("angle_mode", "DEG")).upper()
         base = str(data.get("number_base", "DEC")).upper()
-        precision = int(data.get("precision", 12))
+        try:
+            precision = int(data.get("precision", 12))
+        except (TypeError, ValueError):
+            precision = 12
+        number_format = data.get("number_format", data.get("notation", "auto"))
+        decimal_separator = data.get("decimal_separator", ".")
         return cls(
             angle_mode=angle if angle in {"DEG", "RAD", "GRAD"} else "DEG",
             number_base=base if base in {"DEC", "HEX", "OCT", "BIN"} else "DEC",
             precision=max(3, min(17, precision)),
+            number_format=normalize_number_format(number_format),
+            decimal_separator=normalize_decimal_separator(decimal_separator),
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -170,6 +219,8 @@ class EngineSettings:
             "angle_mode": self.angle_mode,
             "number_base": self.number_base,
             "precision": self.precision,
+            "number_format": self.number_format,
+            "decimal_separator": self.decimal_separator,
         }
 
 
@@ -180,6 +231,7 @@ class Evaluation:
     result: str = ""
     raw_value: float | None = None
     unit: str | None = None
+    dimensions: Dim = DIMENSIONLESS
     ok: bool = True
     error: str | None = None
     position: int | None = None
@@ -192,6 +244,13 @@ class Evaluation:
             "result": self.result,
             "raw_value": self.raw_value,
             "unit": self.unit,
+            "dimensions": serialize_dimensions(self.dimensions),
+            "dimension": format_dimension(self.dimensions),
+            "quantity": quantity_payload(
+                self.raw_value,
+                self.unit,
+                self.dimensions,
+            ),
             "ok": self.ok,
             "error": self.error,
             "position": self.position,
@@ -203,23 +262,36 @@ class Evaluation:
 class HistoryEntry:
     id: str
     expression: str
+    normalized_expression: str
     result: str
     raw_value: float | None
     unit: str | None
     angle_mode: str
     number_base: str
+    precision: int
+    number_format: str
+    decimal_separator: str
     created_at: str
+    dimensions: Dim = DIMENSIONLESS
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "expression": self.expression,
+            "source_expression": self.expression,
+            "normalized_expression": self.normalized_expression,
+            "normalized": self.normalized_expression,
             "result": self.result,
             "raw_value": self.raw_value,
             "unit": self.unit,
             "angle_mode": self.angle_mode,
             "number_base": self.number_base,
+            "precision": self.precision,
+            "number_format": self.number_format,
+            "decimal_separator": self.decimal_separator,
             "created_at": self.created_at,
+            "dimensions": serialize_dimensions(self.dimensions),
+            "dimension": format_dimension(self.dimensions),
         }
 
 
@@ -285,6 +357,41 @@ _register_unit("rad", 1.0, DIMENSIONLESS, "radian", "рад")
 _register_unit("deg", math.pi / 180.0, DIMENSIONLESS, "degree", "град")
 _register_unit("grad", math.pi / 200.0, DIMENSIONLESS, "gon", "градус")
 
+# Engineering units use the same SI base values as the calculator.  The
+# unit-conversion tab consumes this registry as well; keeping these factors in
+# one place prevents, for example, ``tf/m2`` from drifting away from the
+# calculator's interpretation of the same expression.
+_register_unit("s2", 1.0, _dim_mul(TIME, Fraction(2)), "с2")
+_register_unit("tf", 1000 * STANDARD_GRAVITY, FORCE, "тс", "tonne-force")
+_register_unit("MN", 1e6, FORCE, "мн")
+_register_unit("daN", 10.0, FORCE, "дан")
+_register_unit("kip", 4448.2216152605, FORCE)
+_register_unit("m/s", 1.0, SPEED, "м/с")
+_register_unit("km/h", 1 / 3.6, SPEED, "км/ч")
+_register_unit("ft/s", 0.3048, SPEED, "фут/с")
+_register_unit("m/s2", 1.0, ACCELERATION, "м/с2", "m/s^2")
+_register_unit("g0", STANDARD_GRAVITY, ACCELERATION)
+_register_unit("ft/s2", 0.3048, ACCELERATION, "фут/с2", "ft/s^2")
+_register_unit("N/m", 1.0, DISTRIBUTED_FORCE, "н/м")
+_register_unit("kgf/m", STANDARD_GRAVITY, DISTRIBUTED_FORCE, "кгс/м")
+_register_unit("tf/m", 1000 * STANDARD_GRAVITY, DISTRIBUTED_FORCE, "тс/м")
+_register_unit("kN/m", 1e3, DISTRIBUTED_FORCE, "кн/м")
+_register_unit("MN/m", 1e6, DISTRIBUTED_FORCE, "мн/м")
+_register_unit("N*m", 1.0, MOMENT, "н*м", "N·m", "Н·м")
+_register_unit("kgf*m", STANDARD_GRAVITY, MOMENT, "кгс*м", "кгс·м")
+_register_unit("tf*m", 1000 * STANDARD_GRAVITY, MOMENT, "тс*м", "тс·м")
+_register_unit("kN*m", 1e3, MOMENT, "кн*м", "кн·м")
+_register_unit("MN*m", 1e6, MOMENT, "мн*м", "мн·м")
+_register_unit("N/m2", 1.0, PRESSURE, "н/м2", "N/m^2")
+_register_unit("kgf/m2", STANDARD_GRAVITY, PRESSURE, "кгс/м2", "kgf/m^2")
+_register_unit("tf/m2", 1000 * STANDARD_GRAVITY, PRESSURE, "тс/м2", "tf/m^2")
+_register_unit("kN/m2", 1e3, PRESSURE, "кн/м2", "kN/m^2")
+_register_unit("MN/m2", 1e6, PRESSURE, "мн/м2", "MN/m^2")
+_register_unit("N/m3", 1.0, SPECIFIC_WEIGHT, "н/м3", "N/m^3")
+_register_unit("kgf/m3", STANDARD_GRAVITY, SPECIFIC_WEIGHT, "кгс/м3", "kgf/m^3")
+_register_unit("tf/m3", 1000 * STANDARD_GRAVITY, SPECIFIC_WEIGHT, "тс/м3", "tf/m^3")
+_register_unit("kN/m3", 1e3, SPECIFIC_WEIGHT, "кн/м3", "kN/m^3")
+
 CANONICAL_UNITS: dict[Dim, str] = {
     LENGTH: "m",
     _dim_mul(LENGTH, Fraction(2)): "m2",
@@ -294,7 +401,54 @@ CANONICAL_UNITS: dict[Dim, str] = {
     FORCE: "N",
     PRESSURE: "Pa",
     TEMPERATURE: "K",
+    SPEED: "m/s",
+    ACCELERATION: "m/s2",
+    DISTRIBUTED_FORCE: "N/m",
+    MOMENT: "N*m",
+    SPECIFIC_WEIGHT: "N/m3",
 }
+
+_DIMENSION_NAMES = ("L", "M", "T", "Θ")
+
+
+def serialize_dimensions(dimensions: Dim) -> list[str]:
+    """Return a JSON-safe exact representation of a dimension vector."""
+
+    return [
+        f"{item.numerator}/{item.denominator}"
+        for item in dimensions
+    ]
+
+
+def format_dimension(dimensions: Dim) -> str:
+    """Format a compact, stable label for API consumers and diagnostics."""
+
+    parts: list[str] = []
+    for name, exponent in zip(_DIMENSION_NAMES, dimensions, strict=True):
+        if exponent == 0:
+            continue
+        if exponent == 1:
+            parts.append(name)
+        elif exponent.denominator == 1:
+            parts.append(f"{name}^{exponent.numerator}")
+        else:
+            parts.append(f"{name}^{exponent.numerator}/{exponent.denominator}")
+    return "1" if not parts else " · ".join(parts)
+
+
+def quantity_payload(
+    value: float | None,
+    unit: str | None,
+    dimensions: Dim,
+) -> dict[str, Any]:
+    """Serialize the common result shape shared by both workspaces."""
+
+    return {
+        "value": value,
+        "unit": unit,
+        "dimensions": serialize_dimensions(dimensions),
+        "dimension": format_dimension(dimensions),
+    }
 
 FUNCTION_NAMES = (
     "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "cbrt", "ln",
@@ -306,13 +460,63 @@ FUNCTION_NAMES = (
 def normalize_expression(expression: str) -> str:
     value = str(expression or "")
     value = value.replace("\u00a0", " ")
-    value = value.replace("×", "*").replace("·", "*").replace("÷", "/")
+    value = (
+        value.replace("×", "*")
+        .replace("·", "*")
+        .replace("⋅", "*")
+        .replace("÷", "/")
+    )
     value = value.replace("−", "-").replace("–", "-").replace("—", "-")
     value = value.replace("²", "2").replace("³", "3")
     value = re.sub(r"(?<=\d),(?=\d)", ".", value)
     value = value.replace("^", "**")
     value = re.sub(r"\bм\s*рт\.?\s*ст\.?\b", "mmHg", value, flags=re.IGNORECASE)
     return value.strip()
+
+
+def get_unit(symbol: str) -> UnitDef | None:
+    """Resolve a user-facing unit symbol through the shared registry."""
+
+    normalized = normalize_expression(symbol).strip()
+    return UNIT_DEFS.get(normalized.lower())
+
+
+def _compound_display_unit(
+    left: str | None,
+    right: str | None,
+    operator_symbol: str,
+    dimensions: Dim,
+) -> str | None:
+    """Keep a registered engineering unit when arithmetic forms one."""
+
+    if not left or not right:
+        return None
+    candidate = get_unit(f"{left}{operator_symbol}{right}")
+    if candidate and candidate.dimensions == dimensions and not candidate.offset:
+        return candidate.symbol
+    return None
+
+
+def base_value_in_unit(value: float, symbol: str | None) -> float:
+    """Convert an internal SI-base value to a non-affine display unit."""
+
+    if not symbol:
+        return value
+    unit = get_unit(symbol)
+    if unit is None or unit.offset:
+        return value
+    return unit.from_base(value)
+
+
+def display_unit_for(quantity: Quantity) -> str | None:
+    """Choose a safe presentation unit for an internal base-value quantity."""
+
+    if quantity.dimensionless:
+        return None
+    preferred = get_unit(quantity.display_unit) if quantity.display_unit else None
+    if preferred and preferred.dimensions == quantity.dimensions and not preferred.offset:
+        return preferred.symbol
+    return CANONICAL_UNITS.get(quantity.dimensions)
 
 
 def _split_conversion(expression: str) -> tuple[str, str | None]:
@@ -564,6 +768,10 @@ class CalculatorSession:
     def _angle_to_radians(self, quantity: Quantity) -> float:
         if not quantity.dimensionless:
             raise CalculationError("Тригонометрическая функция ожидает угол")
+        explicit_angle = get_unit(quantity.display_unit) if quantity.display_unit else None
+        if explicit_angle and explicit_angle.symbol in {"rad", "deg", "grad"}:
+            # UnitDef values are stored in the base angle unit (radians).
+            return quantity.value
         if self.settings.angle_mode == "DEG":
             return math.radians(quantity.value)
         if self.settings.angle_mode == "GRAD":
@@ -687,19 +895,27 @@ class CalculatorSession:
             return Quantity(unit.to_base(float(temperature.group(1))), TEMPERATURE)
         return self._evaluate_quantity(stripped)
 
-    def _convert(self, quantity: Quantity, target: str) -> tuple[Quantity, str]:
+    def _convert(self, quantity: Quantity, target: str) -> tuple[Quantity, str, Dim]:
         target_text = normalize_expression(target).strip()
-        unit = UNIT_DEFS.get(target_text.lower())
+        unit = get_unit(target_text)
         if unit:
             if quantity.dimensions != unit.dimensions:
                 raise CalculationError(f"Нельзя преобразовать в {unit.symbol}: другая размерность")
-            return Quantity(unit.from_base(quantity.value), DIMENSIONLESS, unit.symbol), unit.symbol
+            return (
+                Quantity(unit.from_base(quantity.value), DIMENSIONLESS, unit.symbol),
+                unit.symbol,
+                unit.dimensions,
+            )
         target_quantity = self._evaluate_quantity(target_text)
         if target_quantity.value == 0:
             raise CalculationError("Некорректная целевая единица")
         if quantity.dimensions != target_quantity.dimensions:
             raise CalculationError("Целевая единица имеет другую размерность")
-        return Quantity(quantity.value / target_quantity.value), target_text
+        return (
+            Quantity(quantity.value / target_quantity.value),
+            target_text,
+            target_quantity.dimensions,
+        )
 
     def evaluate(self, expression: str, *, commit: bool = False) -> Evaluation:
         original = str(expression or "")
@@ -710,21 +926,34 @@ class CalculatorSession:
             quantity = self._evaluate_source(source)
             unit_symbol = None
             output_quantity = quantity
+            output_dimensions = quantity.dimensions
             if target:
-                output_quantity, unit_symbol = self._convert(quantity, target)
+                output_quantity, unit_symbol, output_dimensions = self._convert(
+                    quantity,
+                    target,
+                )
             if variable:
                 lowered = variable.lower()
                 if lowered in {"pi", "e", "tau", "ans"} or lowered in UNIT_DEFS:
                     raise CalculationError(f"Имя {variable} зарезервировано")
-                self.variables[lowered] = quantity
+                if commit:
+                    self.variables[lowered] = quantity
             if commit:
                 self.ans = quantity
+            result_unit = unit_symbol or display_unit_for(quantity)
+            formatted = self.format_quantity(output_quantity, unit_symbol or result_unit)
+            raw_value = (
+                output_quantity.value
+                if unit_symbol
+                else base_value_in_unit(quantity.value, result_unit)
+            )
             return Evaluation(
                 expression=original,
                 normalized=normalized,
-                result=self.format_quantity(output_quantity, unit_symbol),
-                raw_value=output_quantity.value,
-                unit=unit_symbol,
+                result=formatted,
+                raw_value=raw_value,
+                unit=result_unit,
+                dimensions=output_dimensions,
                 assigned_variable=variable,
             )
         except CalculationError as exc:
@@ -737,7 +966,11 @@ class CalculatorSession:
         if not math.isfinite(value):
             raise CalculationError("Результат не является конечным числом")
         if explicit_unit is None and not quantity.dimensionless:
-            explicit_unit = CANONICAL_UNITS.get(quantity.dimensions)
+            explicit_unit = display_unit_for(quantity)
+        if explicit_unit and not quantity.dimensionless:
+            unit = get_unit(explicit_unit)
+            if unit and unit.dimensions == quantity.dimensions and not unit.offset:
+                value = unit.from_base(value)
         if quantity.dimensionless and explicit_unit is None and self.settings.number_base != "DEC":
             rounded = round(value)
             if not math.isclose(value, rounded, rel_tol=0, abs_tol=1e-12):
@@ -748,21 +981,18 @@ class CalculatorSession:
             if self.settings.number_base == "OCT":
                 return f"-0o{abs(integer):o}" if integer < 0 else f"0o{integer:o}"
             return f"-0b{abs(integer):b}" if integer < 0 else f"0b{integer:b}"
-        precision = self.settings.precision
-        if value == 0:
-            text = "0"
-        elif abs(value) >= 10 ** max(precision, 6) or abs(value) < 10 ** (-max(precision - 2, 6)):
-            text = f"{value:.{precision - 1}e}"
-            mantissa, exponent = text.split("e")
-            text = f"{mantissa.rstrip('0').rstrip('.')}e{int(exponent):+d}"
-        else:
-            text = f"{value:.{precision}g}"
+        text = format_number(
+            value,
+            self.settings.precision,
+            self.settings.number_format,
+            self.settings.decimal_separator,
+        )
         return f"{text} {explicit_unit}" if explicit_unit else text
 
     def serialize_quantity(self, value: Quantity) -> dict[str, Any]:
         return {
             "value": value.value,
-            "dimensions": [f"{item.numerator}/{item.denominator}" for item in value.dimensions],
+            "dimensions": serialize_dimensions(value.dimensions),
             "display_unit": value.display_unit,
         }
 
@@ -838,10 +1068,15 @@ def make_history_entry(evaluation: Evaluation, settings: EngineSettings, sequenc
     return HistoryEntry(
         id=f"{int(timestamp.timestamp() * 1000)}-{sequence}",
         expression=evaluation.expression.strip(),
+        normalized_expression=evaluation.normalized.strip(),
         result=evaluation.result,
         raw_value=evaluation.raw_value,
         unit=evaluation.unit,
         angle_mode=settings.angle_mode,
         number_base=settings.number_base,
+        precision=settings.precision,
+        number_format=settings.number_format,
+        decimal_separator=settings.decimal_separator,
         created_at=timestamp.isoformat(),
+        dimensions=evaluation.dimensions,
     )

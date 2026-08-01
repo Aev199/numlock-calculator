@@ -6,7 +6,11 @@ import ast
 import math
 import re
 from copy import deepcopy
+from fractions import Fraction
 from typing import Any
+
+import calc_engine as quantity_engine
+from number_formatting import format_number as format_display_number
 
 
 UNIT_CATEGORIES: tuple[dict[str, Any], ...] = (
@@ -183,21 +187,43 @@ ALLOWED_UNARY = {
     ast.USub: lambda value: -value,
 }
 
-G0 = 9.80665
-UNIT_SCALES: dict[str, dict[str, float]] = {
-    "length": {"mm": 1e-3, "cm": 1e-2, "m": 1.0, "km": 1e3, "in": 0.0254, "ft": 0.3048, "mi": 1609.344},
-    "area": {"mm2": 1e-6, "cm2": 1e-4, "m2": 1.0, "ha": 1e4, "km2": 1e6, "in2": 0.00064516, "ft2": 0.09290304},
-    "volume": {"mL": 1e-6, "cm3": 1e-6, "L": 1e-3, "m3": 1.0, "gal": 0.003785411784, "ft3": 0.028316846592},
-    "mass": {"g": 1e-3, "kg": 1.0, "t": 1e3, "oz": 0.028349523125, "lb": 0.45359237},
-    "force": {"N": 1.0, "kgf": G0, "tf": 1000 * G0, "kN": 1e3, "MN": 1e6, "daN": 10.0, "lbf": 4.4482216152605, "kip": 4448.2216152605},
-    "distributed_force": {"N/m": 1.0, "kgf/m": G0, "tf/m": 1000 * G0, "kN/m": 1e3, "MN/m": 1e6},
-    "moment": {"N*m": 1.0, "kgf*m": G0, "tf*m": 1000 * G0, "kN*m": 1e3, "MN*m": 1e6},
-    "speed": {"m/s": 1.0, "km/h": 1 / 3.6, "ft/s": 0.3048},
-    "acceleration": {"m/s2": 1.0, "g0": G0, "ft/s2": 0.3048},
-    "pressure": {"kgf/m2": G0, "tf/m2": 1000 * G0, "Pa": 1.0, "kPa": 1e3, "MPa": 1e6, "GPa": 1e9, "bar": 1e5, "atm": 101325.0, "mmHg": 133.3223684211, "psi": 6894.757293168},
-    "specific_weight": {"N/m3": 1.0, "kgf/m3": G0, "tf/m3": 1000 * G0, "kN/m3": 1e3},
-    "time": {"s": 1.0, "min": 60.0, "h": 3600.0},
+CATEGORY_DIMENSIONS = {
+    "length": quantity_engine.LENGTH,
+    "area": quantity_engine._dim_mul(quantity_engine.LENGTH, Fraction(2)),
+    "volume": quantity_engine._dim_mul(quantity_engine.LENGTH, Fraction(3)),
+    "mass": quantity_engine.MASS,
+    "force": quantity_engine.FORCE,
+    "distributed_force": quantity_engine.DISTRIBUTED_FORCE,
+    "moment": quantity_engine.MOMENT,
+    "speed": quantity_engine.SPEED,
+    "acceleration": quantity_engine.ACCELERATION,
+    "pressure": quantity_engine.PRESSURE,
+    "specific_weight": quantity_engine.SPECIFIC_WEIGHT,
+    "time": quantity_engine.TIME,
+    "temperature": quantity_engine.TEMPERATURE,
 }
+
+
+def _catalog_unit(category: str, symbol: str) -> quantity_engine.UnitDef:
+    unit = quantity_engine.get_unit(symbol)
+    if (
+        unit is None
+        or unit.dimensions != CATEGORY_DIMENSIONS.get(category)
+    ):
+        raise ValueError("Неизвестная единица измерения")
+    return unit
+
+
+# Kept as a compatibility view for callers that used the old public mapping.
+# Conversion itself goes through calc_engine.UnitDef below.
+UNIT_SCALES: dict[str, dict[str, float]] = {
+    category_data["id"]: {
+        symbol: _catalog_unit(category_data["id"], symbol).scale
+        for symbol, _label in category_data["units"]
+    }
+    for category_data in UNIT_CATEGORIES
+}
+G0 = quantity_engine.STANDARD_GRAVITY
 
 
 def unit_payload() -> list[dict[str, Any]]:
@@ -275,7 +301,12 @@ def ensure_state(api: Any) -> None:
 
 def normalize_simple_expression(expression: str) -> str:
     value = str(expression or "").replace("\u00a0", " ")
-    value = value.replace("×", "*").replace("·", "*").replace("÷", "/")
+    value = (
+        value.replace("×", "*")
+        .replace("·", "*")
+        .replace("⋅", "*")
+        .replace("÷", "/")
+    )
     value = value.replace("−", "-").replace("–", "-").replace("—", "-")
     value = re.sub(r"(?<=\d),(?=\d)", ".", value)
     value = value.replace("^", "**").strip()
@@ -322,45 +353,54 @@ def evaluate_simple(expression: str) -> float:
 
 
 def convert_value(value: float, category: str, from_unit: str, to_unit: str) -> float:
-    if category == "temperature":
-        if from_unit == "degC":
-            kelvin = value + 273.15
-        elif from_unit == "degF":
-            kelvin = (value + 459.67) * 5 / 9
-        elif from_unit == "K":
-            kelvin = value
-        else:
-            raise ValueError("Неизвестная единица температуры")
-        if to_unit == "degC":
-            return kelvin - 273.15
-        if to_unit == "degF":
-            return kelvin * 9 / 5 - 459.67
-        if to_unit == "K":
-            return kelvin
-        raise ValueError("Неизвестная единица температуры")
-
-    scales = UNIT_SCALES.get(category)
-    if not scales or from_unit not in scales or to_unit not in scales:
-        raise ValueError("Неизвестная единица измерения")
-    return value * scales[from_unit] / scales[to_unit]
-
-
-def format_number(value: float, precision: int = 12) -> str:
-    if not math.isfinite(value):
+    source = _catalog_unit(category, from_unit)
+    target = _catalog_unit(category, to_unit)
+    base_value = source.to_base(float(value))
+    converted = target.from_base(base_value)
+    if not math.isfinite(converted):
         raise ValueError("Результат не является конечным числом")
-    precision = max(3, min(17, int(precision)))
-    if value == 0:
-        return "0"
-    if abs(value) >= 10 ** max(precision, 6) or abs(value) < 10 ** (-max(precision - 2, 6)):
-        text = f"{value:.{precision - 1}e}"
-        mantissa, exponent = text.split("e")
-        return f"{mantissa.rstrip('0').rstrip('.')}e{int(exponent):+d}"
-    return f"{value:.{precision}g}"
+    return converted
+
+
+def conversion_quantity(
+    value: float,
+    category: str,
+    from_unit: str,
+    to_unit: str,
+) -> dict[str, Any]:
+    """Return the shared quantity shape for a converter result."""
+
+    source = _catalog_unit(category, from_unit)
+    target = _catalog_unit(category, to_unit)
+    base_value = source.to_base(float(value))
+    converted = target.from_base(base_value)
+    return quantity_engine.quantity_payload(
+        converted,
+        target.symbol,
+        target.dimensions,
+    )
+
+
+def format_number(
+    value: float,
+    precision: int = 12,
+    number_format: str = "auto",
+    decimal_separator: str = ".",
+) -> str:
+    """Keep the converter on the same numeric presentation as the calculator."""
+
+    return format_display_number(
+        value,
+        precision,
+        number_format,
+        decimal_separator,
+    )
 
 
 def plain_result(response: dict[str, Any]) -> str:
     result = str(response.get("result", "")).strip()
-    return result if PLAIN_NUMBER.fullmatch(result) else ""
+    portable = result.replace(",", ".")
+    return portable if PLAIN_NUMBER.fullmatch(portable) else ""
 
 
 def filter_suggestions(items: Any) -> list[dict[str, Any]]:

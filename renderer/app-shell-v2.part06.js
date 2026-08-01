@@ -62,10 +62,10 @@
     restoreEditorFocus();
   }
 
-  async function copyText(text) {
+  async function copyText(text, successMessage = 'Результат скопирован') {
     const copied = await state.api.copy_text(text);
     showToast(
-      copied ? 'Результат скопирован' : 'Не удалось открыть буфер обмена',
+      copied ? successMessage : 'Не удалось открыть буфер обмена',
     );
   }
 
@@ -208,3 +208,13 @@
       if (action === 'copy') {
         event.stopPropagation();
         await copyText(entry.result);
+        return;
+      }
+      if (action === 'copy-calculation') {
+        event.stopPropagation();
+        await copyText(
+          `${copyExpression(entry.expression)} = ${entry.result}`,
+          'Вычисление скопировано',
+        );
+        return;
+      }

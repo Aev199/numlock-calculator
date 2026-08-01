@@ -158,3 +158,4 @@ def install(app: Any) -> None:
     app.toggle_window = toggle_window
     app.on_shown = on_shown
     app.on_loaded = on_loaded
+

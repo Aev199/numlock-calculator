@@ -10,6 +10,7 @@ from unit_conversion import (
     CATEGORY_BY_ID,
     category_symbols,
     convert_value,
+    conversion_quantity,
     ensure_state,
     evaluate_simple,
     filter_suggestions,
@@ -130,9 +131,19 @@ def install(app: Any) -> None:
                     source_symbol,
                     target_symbol,
                 )
-                precision = self._session.settings.precision
-                source_text = format_number(source_value, precision)
-                result_text = format_number(converted, precision)
+                settings = self._session.settings
+                source_text = format_number(
+                    source_value,
+                    settings.precision,
+                    settings.number_format,
+                    settings.decimal_separator,
+                )
+                result_text = format_number(
+                    converted,
+                    settings.precision,
+                    settings.number_format,
+                    settings.decimal_separator,
+                )
             except (KeyError, TypeError, ValueError, ArithmeticError) as exc:
                 return {"ok": False, "error": str(exc) or "Ошибка преобразования"}
 
@@ -145,6 +156,21 @@ def install(app: Any) -> None:
                 "to_unit": target_symbol,
                 "category": category_id,
             }
+            quantity = conversion_quantity(
+                source_value,
+                category_id,
+                source_symbol,
+                target_symbol,
+            )
+            response.update(
+                {
+                    "raw_value": quantity["value"],
+                    "unit": quantity["unit"],
+                    "dimensions": quantity["dimensions"],
+                    "dimension": quantity["dimension"],
+                    "quantity": quantity,
+                }
+            )
             if commit:
                 merged = {
                     "category": category_id,

@@ -1,5 +1,3 @@
-        return;
-      }
       if (action === 'delete') {
         event.stopPropagation();
         if (entry.pending) return;
@@ -60,8 +58,7 @@
 
     dom.category.addEventListener('change', () => {
       state.units.category = dom.category.value;
-      normalizeUnitSelection();
-      renderUnitControls();
+      renderUnitControls(true);
       ++state.units.previewSequence;
       state.units.preview = null;
       scheduleUnitsPreview(0);
@@ -101,6 +98,7 @@
     dom.paletteButton.addEventListener('click', openPalette);
     dom.memoryButton.addEventListener('click', () => openDrawer('memory'));
     dom.variablesButton.addEventListener('click', () => openDrawer('variables'));
+    dom.formulasButton.addEventListener('click', () => openDrawer('formulas'));
     dom.drawerClose.addEventListener('click', () => closeDrawer());
     dom.paletteOverlay.addEventListener('mousedown', event => {
       if (event.target === dom.paletteOverlay) closePalette();
@@ -194,6 +192,11 @@
     state.ui = { ...state.ui, ...(data.ui_settings || {}) };
     state.variables = data.variables || {};
     state.memories = data.memories || Array(10).fill('0');
+    state.formulas = data.formulas || [];
+    state.profiles = data.profiles || [];
+    state.activeProfileId = data.active_profile_id || null;
+    state.activeProfile = data.active_profile || null;
+    state.profileConstants = data.profile_constants || {};
     state.calculator.history = data.history || [];
     setCatalog(data.suggestions || []);
 
@@ -207,4 +210,4 @@
 
     applySettings(state.settings);
     setTheme(state.ui.theme, false);
-    renderUnitControls();
+    renderUnitControls(true);

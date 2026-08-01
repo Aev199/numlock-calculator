@@ -16,6 +16,8 @@ import threading
 import time
 from typing import Any
 
+from hotkey_config import DEFAULT_HOTKEY, validate_hotkey
+
 WH_KEYBOARD_LL = 13
 HC_ACTION = 0
 WM_KEYDOWN = 0x0100
@@ -63,6 +65,20 @@ def install(app: Any) -> None:
     app._restoring_numlock = False
     app._numlock_cycle_active = False
     app._numlock_hook_mode = "none"
+    saved_hotkey = validate_hotkey(
+        getattr(getattr(app, "_api", None), "_ui_settings", {}).get(
+            "global_hotkey",
+            DEFAULT_HOTKEY,
+        )
+    )
+    app._global_hotkey = saved_hotkey.hotkey if saved_hotkey.ok else DEFAULT_HOTKEY
+    app._global_hotkey_display = (
+        saved_hotkey.display if saved_hotkey.ok else validate_hotkey(DEFAULT_HOTKEY).display
+    )
+    app._global_hotkey_handle = None
+    app._hotkeys_started = False
+    app._hotkey_registration_ok = False
+    app._hotkey_registration_error = ""
 
     def send_numlock_toggle() -> bool:
         """Send one complete injected NumLock key cycle."""
@@ -154,6 +170,18 @@ def install(app: Any) -> None:
             target=run_blink_cycle,
             args=(bool(started_on),),
             name="NumLockBlink",
+            daemon=True,
+        ).start()
+
+    def on_global_hotkey() -> None:
+        """Toggle asynchronously so the keyboard hook is never blocked by UI work."""
+
+        with app._state_lock:
+            if app._quitting:
+                return
+        threading.Thread(
+            target=app.toggle_window,
+            name="NumCalcGlobalHotkey",
             daemon=True,
         ).start()
 
@@ -345,41 +373,76 @@ def install(app: Any) -> None:
         _hook_callback = None
 
     def register_hotkeys() -> None:
-        try:
-            app.ensure_numlock_on()
-        except Exception:
-            pass
-
-        native_ok = register_native_hook()
-        app._numlock_hook_mode = "native" if native_ok else "none"
+        app._hotkeys_started = True
+        app._hotkey_registration_ok = False
+        app._hotkey_registration_error = ""
+        app._global_hotkey_handle = None
+        validation = validate_hotkey(getattr(app, "_global_hotkey", DEFAULT_HOTKEY))
+        if not validation.ok:
+            validation = validate_hotkey(DEFAULT_HOTKEY)
+            app._global_hotkey = validation.hotkey
+        app._global_hotkey_display = validation.display
 
         try:
             import keyboard
-        except Exception:
+        except Exception as error:
             app._keyboard_module = None
+            app._hotkey_registration_error = f"Не удалось подключить глобальную клавишу: {error}"
             return
 
         app._keyboard_module = keyboard
-        if not native_ok:
-            # Safe fallback: keep NumLock ON and use the key only as a trigger.
-            # The LED blink is omitted because keyboard suppresses injected events
-            # too, but the numeric keypad cannot become arrows.
-            keyboard.hook_key(
-                "num lock",
-                on_numlock_event,
-                suppress=True,
-            )
-            app._numlock_hook_mode = "fallback-suppressed"
+        registered = False
+        if validation.hotkey == DEFAULT_HOTKEY:
+            try:
+                app.ensure_numlock_on()
+            except Exception:
+                pass
 
-        try:
-            keyboard.add_hotkey(
-                "ctrl+shift+q",
-                app.request_quit,
-                suppress=False,
-                trigger_on_release=True,
-            )
-        except Exception:
-            pass
+            native_ok = register_native_hook()
+            app._numlock_hook_mode = "native" if native_ok else "none"
+            if native_ok:
+                registered = True
+            else:
+                # Safe fallback: keep NumLock ON and use the key only as a trigger.
+                # The LED blink is omitted because keyboard suppresses injected events
+                # too, but the numeric keypad cannot become arrows.
+                try:
+                    keyboard.hook_key(
+                        "num lock",
+                        on_numlock_event,
+                        suppress=True,
+                    )
+                    app._numlock_hook_mode = "fallback-suppressed"
+                    registered = True
+                except Exception as error:
+                    app._hotkey_registration_error = (
+                        f"Не удалось зарегистрировать NumLock: {error}"
+                    )
+        else:
+            try:
+                app._global_hotkey_handle = keyboard.add_hotkey(
+                    validation.hotkey,
+                    on_global_hotkey,
+                    suppress=True,
+                    trigger_on_release=True,
+                )
+                registered = True
+            except Exception as error:
+                app._hotkey_registration_error = (
+                    f"Не удалось зарегистрировать {validation.display}: {error}"
+                )
+
+        if not getattr(app, "_suppress_emergency_hotkey", False):
+            try:
+                keyboard.add_hotkey(
+                    "ctrl+shift+q",
+                    app.request_quit,
+                    suppress=False,
+                    trigger_on_release=True,
+                )
+            except Exception:
+                pass
+        app._hotkey_registration_ok = registered
 
     def unregister_hotkeys() -> None:
         stop_native_hook()
@@ -396,6 +459,42 @@ def install(app: Any) -> None:
             app._restoring_numlock = False
             app._numlock_cycle_active = False
             app._numlock_hook_mode = "none"
+        app._global_hotkey_handle = None
+        app._hotkeys_started = False
+        app._hotkey_registration_ok = False
+
+    def configure_global_hotkey(requested: str) -> dict[str, Any]:
+        validation = validate_hotkey(requested)
+        if not validation.ok:
+            return validation.as_dict()
+
+        previous = getattr(app, "_global_hotkey", DEFAULT_HOTKEY)
+        if previous == validation.hotkey:
+            return validation.as_dict()
+
+        was_running = bool(getattr(app, "_hotkeys_started", False))
+        if was_running:
+            unregister_hotkeys()
+        app._global_hotkey = validation.hotkey
+        app._global_hotkey_display = validation.display
+
+        if was_running:
+            register_hotkeys()
+            if os.name == "nt" and not app._hotkey_registration_ok:
+                error = app._hotkey_registration_error or "Не удалось зарегистрировать клавишу"
+                unregister_hotkeys()
+                app._global_hotkey = previous
+                previous_info = validate_hotkey(previous)
+                app._global_hotkey_display = previous_info.display
+                register_hotkeys()
+                return {
+                    "ok": False,
+                    "hotkey": previous,
+                    "display": previous_info.display,
+                    "error": error,
+                    "warning": "Предыдущая комбинация восстановлена",
+                }
+        return validation.as_dict()
 
     def main() -> None:
         app._window = app.webview.create_window(
@@ -429,4 +528,8 @@ def install(app: Any) -> None:
     app.stop_numlock_hook = stop_native_hook
     app.register_hotkeys = register_hotkeys
     app.unregister_hotkeys = unregister_hotkeys
+    app.configure_global_hotkey = configure_global_hotkey
+    app.get_global_hotkey = lambda: validate_hotkey(
+        getattr(app, "_global_hotkey", DEFAULT_HOTKEY)
+    ).as_dict()
     app.main = main

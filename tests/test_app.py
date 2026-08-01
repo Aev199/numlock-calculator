@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import tempfile
 import time
@@ -7,7 +8,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-fake_webview = types.SimpleNamespace(Window=object)
+fake_webview = types.SimpleNamespace(
+    Window=object,
+    create_window=lambda *args, **kwargs: object(),
+    start=lambda *args, **kwargs: None,
+)
 sys.modules.setdefault('webview', fake_webview)
 
 import calc_engine
@@ -16,14 +21,50 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
+import app_storage
 import app_numlock_compat
-import app_stability
+import app_renderer
+import app_units_backend
+import app_variables
+import app_window
 
-app_stability.install(app)
+app_window.install(app)
 app_numlock_compat.install(app)
+app_units_backend.install(app)
+app_variables.install(app)
+app_renderer.install(app)
 
 
 class StorageAndApiTests(unittest.TestCase):
+    def test_import_time_api_is_memory_only(self):
+        self.assertIsNone(app.DATA_FILE)
+        self.assertIsNone(app._api._storage._filepath)
+
+    def test_portable_storage_uses_the_same_filename_and_migrates_legacy_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app_dir = Path(directory) / "app"
+            app_dir.mkdir()
+            legacy = app_dir / "numlock-calc-data.json"
+            legacy.write_text("{}", encoding="utf-8")
+            fake_app = types.SimpleNamespace(
+                application_dir=lambda: app_dir,
+                DATA_FILENAME="numlock-calc-data.json",
+            )
+            with patch.dict(
+                os.environ,
+                {"LOCALAPPDATA": str(Path(directory) / "local")},
+                clear=False,
+            ):
+                target, mode, warning = app_storage.resolve_storage(
+                    fake_app,
+                    ["app_keyboard.py", "--portable"],
+                )
+            self.assertEqual(target, app_dir / "data.json")
+            self.assertEqual(mode, "portable")
+            self.assertIsNone(warning)
+            self.assertTrue(app_storage.migrate_legacy_data(legacy, target))
+            self.assertTrue(target.exists())
+
     def test_storage_atomic_round_trip(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'state.json'
@@ -48,6 +89,24 @@ class StorageAndApiTests(unittest.TestCase):
             self.assertEqual(restored['variables']['span'], '6 m')
             self.assertEqual(len(restored['history']), 1)
 
+    def test_delete_variable_persists_and_refreshes_suggestions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = app.Storage(Path(directory) / 'state.json')
+            api = app.AppApi(storage)
+            self.assertTrue(api.commit('span := 6 m')['ok'])
+            self.assertIn('span', api.bootstrap()['variables'])
+
+            response = api.delete_variable('SPAN')
+            self.assertTrue(response['ok'])
+            self.assertEqual(response['deleted'], 'span')
+            self.assertNotIn('span', response['variables'])
+            self.assertFalse(any(item.get('label') == 'span' for item in response['suggestions']))
+            self.assertNotIn('span', app.AppApi(storage).bootstrap()['variables'])
+
+            missing = api.delete_variable('span')
+            self.assertFalse(missing['ok'])
+            self.assertEqual(missing['error'], 'Переменная не найдена')
+
     def test_legacy_history_migration(self):
         with tempfile.TemporaryDirectory() as directory:
             storage = app.Storage(Path(directory) / 'state.json')
@@ -65,6 +124,32 @@ class StorageAndApiTests(unittest.TestCase):
             settings = api.set_settings({'angle_mode': 'RAD', 'number_base': 'HEX'})
             self.assertEqual(settings['angle_mode'], 'RAD')
             self.assertEqual(settings['number_base'], 'HEX')
+
+    def test_format_settings_and_history_survive_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = app.Storage(Path(directory) / 'state.json')
+            api = app.AppApi(storage)
+            settings = api.set_settings(
+                {
+                    'number_format': 'engineering',
+                    'precision': 4,
+                    'decimal_separator': ',',
+                }
+            )
+            self.assertEqual(settings['number_format'], 'engineering')
+            self.assertEqual(settings['decimal_separator'], ',')
+            committed = api.commit('1234')
+            self.assertEqual(committed['result'], '1,234e+3')
+            entry = committed['history_entry']
+            self.assertEqual(entry['normalized_expression'], '1234')
+            self.assertEqual(entry['precision'], 4)
+            self.assertEqual(entry['number_format'], 'engineering')
+            self.assertEqual(entry['decimal_separator'], ',')
+
+            restored = app.AppApi(storage).bootstrap()
+            self.assertEqual(restored['settings']['number_format'], 'engineering')
+            self.assertEqual(restored['settings']['decimal_separator'], ',')
+            self.assertEqual(restored['history'][0]['normalized_expression'], '1234')
 
     def test_html_is_keyboard_first(self):
         html = app.build_html()

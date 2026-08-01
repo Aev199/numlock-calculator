@@ -16,3 +16,4 @@ if errorlevel 1 (
 echo.
 echo Готово. Скопируйте весь проект вместе с папкой wheelhouse на офлайн-машину.
 endlocal
+

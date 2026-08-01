@@ -208,3 +208,4 @@
   function insertSuggestion(item) {
     const token = currentToken();
     dom.input.setSelectionRange(token.start, token.end);
+

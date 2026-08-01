@@ -2,43 +2,73 @@
 
 from __future__ import annotations
 
-import ctypes
 import os
 import sys
 import threading
 from pathlib import Path
 from typing import Any, Callable
 
+import app_native_dialogs
+
 
 TRAY_TITLE = "NumCalc"
 AUTOSTART_VALUE = "NumCalc"
-HELP_TEXT = """NumCalc — компактный клавиатурный калькулятор.
+ABOUT_LINKS: tuple[tuple[str, str], ...] = (
+    ("NumLock Calculator", "https://nlcalc.narod.ru/"),
+    ("Репозиторий NumCalc", "https://github.com/Aev199/numlock-calculator"),
+)
+HELP_TEXT = """NumCalc — компактный клавиатурный калькулятор для Windows.
 
-Основное:
-• NumLock показывает или скрывает окно.
-• Введите выражение и нажмите Enter для фиксации результата.
-• Поддерживаются скобки, степени, проценты, тригонометрия, логарифмы и другие функции.
-• Tab открывает палитру функций; стрелки выбирают группу и функцию, Enter вставляет её.
-• История хранит предыдущие выражения и результаты. Запись можно вернуть в поле, скопировать или удалить.
-• Режим «Единицы» преобразует инженерные величины, включая силы, давления, моменты, распределённые нагрузки, скорости и ускорения.
+Быстрый старт:
+• NumLock показывает скрытое окно, возвращает ему фокус или скрывает активное окно.
+• Введите выражение. Предварительный результат появляется во время ввода.
+• Enter фиксирует вычисление, сохраняет его в историю и подставляет ответ как новое рабочее значение.
+• Полный выход выполняется через меню значка NumCalc в области уведомлений.
 
-Память:
-• Доступно 10 ячеек M0–M9.
-• В окне памяти можно записать текущее выражение в выбранную ячейку или вставить сохранённое значение.
+Выражения:
+• Поддерживаются +, −, умножение, деление, скобки, степень ^, проценты и факториал !.
+• Клавиша * отображается как знак ⋅. Неявное умножение также показывается явно: 150(5) → 150⋅(5).
+• Можно использовать точку или запятую как десятичный разделитель.
+• Tab открывает палитру функций. Доступны тригонометрия, корни, степени, логарифмы и другие функции.
+• Открывающая скобка автоматически получает пару; уровни вложенности различаются цветом.
 
-Переменные:
-• Присваивание: имя = выражение или имя := выражение.
-• Сохранённые переменные доступны в палитре и в отдельном окне переменных.
+Память и переменные:
+• Доступно 10 ячеек памяти M0–M9.
+• Переменные создаются как имя = выражение или имя := выражение.
+• ans содержит последний подтверждённый результат.
 
-Управление окном:
-• Кнопка «—» и закрытие окна скрывают NumCalc в область уведомлений.
-• Полный выход выполняется только через контекстное меню значка NumCalc.
+Горячие клавиши:
+• По умолчанию NumLock показывает окно, возвращает ему фокус или скрывает его; комбинацию можно изменить в «Настройках».
+• Ctrl+C — копировать выражение и результат; для отдельного числа копируется только число.
+• Формат результата, точность и десятичный разделитель настраиваются в «Настройках».
+• Alt+← / Alt+→ — переключить «Калькулятор» и «Единицы».
+• Tab — открыть палитру функций.
+• Ctrl+Space — открыть автодополнение.
+• ↑ / ↓ — выбрать подсказку или перемещаться по истории.
+• Escape — закрыть подсказку, очистить поле либо скрыть пустое окно.
+
+Режим «Единицы»:
+• Преобразует инженерные величины: длину, площадь, объём, массу, силу, давление, момент, скорость, ускорение, температуру и другие категории.
+• В поле можно вводить простую арифметику со скобками.
+
+Данные и диагностика:
+• История, память, переменные и настройки хранятся локально.
+• NumCalc не содержит телеметрии и не отправляет вычисления в сеть.
+• Пункт «Копировать диагностику» помещает в буфер локальные сведения, необходимые для разбора ошибок.
 """
 ABOUT_TEXT = """NumCalc
 Компактный keyboard-first калькулятор для Windows.
 
-Калькулятор, история, память, переменные и инженерный конвертер единиц — в одном небольшом окне.
+Калькулятор - идеологическое продолжение NumLock Calculator от Владимира Потапова (https://nlcalc.narod.ru/).
+
+Репозиторий: https://github.com/Aev199/numlock-calculator
+Лицензия: MIT
 """
+ABOUT_DIALOG_CONTENT = (
+    "Калькулятор - идеологическое продолжение NumLock Calculator "
+    "от Владимира Потапова.\n\n"
+    "Лицензия исходного кода NumCalc: MIT"
+)
 
 
 def install(app: Any) -> None:
@@ -50,6 +80,7 @@ def install(app: Any) -> None:
     app.APP_NAME = TRAY_TITLE
     app._tray_icon = None
     app._tray_thread = None
+    app._suppress_emergency_hotkey = True
 
     original_create_window = app.webview.create_window
     original_webview_start = app.webview.start
@@ -133,18 +164,34 @@ def install(app: Any) -> None:
                 pass
 
     def message_box(title: str, text: str) -> None:
-        if os.name == "nt":
-            try:
-                ctypes.windll.user32.MessageBoxW(None, text, title, 0x40)
-                return
-            except Exception:
-                pass
+        app_native_dialogs.show_message(title, text)
 
     def show_help(_icon: Any = None, _item: Any = None) -> None:
         run_async(lambda: message_box("Справка NumCalc", HELP_TEXT))
 
     def show_about(_icon: Any = None, _item: Any = None) -> None:
-        run_async(lambda: message_box("О программе", ABOUT_TEXT))
+        def show() -> None:
+            instruction = ABOUT_TEXT.splitlines()[0] if ABOUT_TEXT else TRAY_TITLE
+            if not app_native_dialogs.show_link_dialog(
+                "О программе",
+                instruction,
+                ABOUT_DIALOG_CONTENT,
+                ABOUT_LINKS,
+            ):
+                message_box("О программе", ABOUT_TEXT)
+
+        run_async(show)
+
+    def copy_diagnostics_from_tray(_icon: Any = None, _item: Any = None) -> None:
+        def copy() -> None:
+            callback = getattr(app, "copy_diagnostics", None)
+            if callback is None or not callback():
+                message_box(
+                    "Диагностика NumCalc",
+                    "Не удалось скопировать диагностику в буфер обмена.",
+                )
+
+        run_async(copy)
 
     def quit_from_tray(icon: Any = None, _item: Any = None) -> None:
         if icon is not None:
@@ -182,6 +229,7 @@ def install(app: Any) -> None:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Справка", show_help),
                 pystray.MenuItem("О программе", show_about),
+                pystray.MenuItem("Копировать диагностику", copy_diagnostics_from_tray),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Выйти", quit_from_tray),
             )
@@ -261,4 +309,5 @@ def install(app: Any) -> None:
     app.set_autostart = set_autostart
     app.show_help = show_help
     app.show_about = show_about
+    app.copy_diagnostics_from_tray = copy_diagnostics_from_tray
     app.main = main

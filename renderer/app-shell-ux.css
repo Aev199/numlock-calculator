@@ -10,6 +10,8 @@
   inset: 0;
   box-sizing: border-box;
   overflow: hidden;
+  /* Base-size fallback. JavaScript copies the live textarea metrics after every
+     responsive or DPI layout change so the two text runs remain pixel-aligned. */
   padding: 5px 72px 6px 6px;
   border-radius: 8px;
   pointer-events: none;
@@ -26,8 +28,10 @@
 }
 
 .bracket-color-overlay .bracket {
-  font-weight: 800;
-  text-shadow: 0 0 5px color-mix(in srgb, currentColor 22%, transparent);
+  /* Color alone marks nesting depth. Different weight or glow changes the glyph
+     outline and makes the native bracket underneath look like a duplicate. */
+  font-weight: inherit;
+  text-shadow: none;
 }
 
 .bracket-color-overlay .depth-0 { color: #63a8ff; }
@@ -40,3 +44,4 @@
 body[data-app-mode="units"] .bracket-color-overlay .bracket {
   opacity: .8;
 }
+

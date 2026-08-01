@@ -3,7 +3,7 @@
 
   function historyMatches(entry, query) {
     if (!query) return true;
-    return `${entry.expression} ${entry.result}`
+    return `${entry.expression} ${entry.normalized_expression || entry.normalized || ''} ${entry.result}`
       .toLowerCase()
       .includes(query.toLowerCase());
   }
@@ -25,6 +25,7 @@
       '<div class="history-result" title="Нажмите, чтобы скопировать результат"></div>',
       '<div class="history-entry-actions">',
       '  <button class="history-action" type="button" data-history-action="copy" title="Копировать результат">⧉</button>',
+      '  <button class="history-action" type="button" data-history-action="copy-calculation" title="Копировать выражение и результат">=</button>',
       '  <button class="history-action delete" type="button" data-history-action="delete" title="Удалить запись">×</button>',
       '</div>',
     ].join('');
@@ -39,6 +40,9 @@
     const row = slot.querySelector('.history-entry');
     row.classList.toggle('pending', Boolean(entry.pending));
     row.dataset.historyId = entry.id;
+    row.title = entry.normalized_expression && entry.normalized_expression !== entry.expression
+      ? `Загрузить выражение для редактирования\nНормализовано: ${entry.normalized_expression}`
+      : 'Загрузить выражение для редактирования';
     slot.querySelector('.history-expression').textContent = entry.expression;
     slot.querySelector('.history-meta').textContent = historyMeta(entry);
     slot.querySelector('.history-result').textContent = entry.result;
@@ -100,9 +104,13 @@
     state.calculator.history.unshift({
       id,
       expression,
+      normalized_expression: expression,
       result,
       angle_mode: state.settings.angle_mode,
       number_base: state.settings.number_base,
+      precision: state.settings.precision,
+      number_format: state.settings.number_format,
+      decimal_separator: state.settings.decimal_separator,
       created_at: new Date().toISOString(),
       pending: true,
     });

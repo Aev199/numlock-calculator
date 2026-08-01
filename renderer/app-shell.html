@@ -23,6 +23,7 @@
         <button class="mode-pill calculator-setting" id="angleMode" type="button" title="Режим углов">DEG</button>
         <button class="mode-pill calculator-setting" id="numberBase" type="button" title="Формат чисел">DEC</button>
         <button class="icon-button" id="themeButton" type="button" title="Сменить тему" aria-label="Сменить тему">◐</button>
+        <button class="icon-button" id="settingsButton" type="button" title="Настройки" aria-label="Настройки">⚙</button>
         <button class="icon-button" id="hideButton" type="button" title="Скрыть окно" aria-label="Скрыть окно">—</button>
         <button class="hidden" id="quitButton" type="button" aria-hidden="true" tabindex="-1">×</button>
       </div>
@@ -42,6 +43,7 @@
             <button class="tool-button" id="paletteButton" type="button" title="Функции (Tab)">ƒx</button>
             <button class="tool-button" id="memoryButton" type="button" title="Память">M</button>
             <button class="tool-button" id="variablesButton" type="button" title="Переменные">x</button>
+            <button class="tool-button" id="formulasButton" type="button" title="Формулы и профили">Σ</button>
           </div>
         </div>
 
@@ -111,7 +113,7 @@
 
   <div class="commit-overlay" id="commitOverlay" aria-hidden="true"></div>
 
-  <div class="overlay hidden" id="paletteOverlay" aria-hidden="true">
+  <div class="overlay palette-overlay hidden" id="paletteOverlay" aria-hidden="true">
     <section class="palette" role="dialog" aria-modal="true" aria-label="Функции">
       <div class="palette-search-wrap">
         <span>⌕</span>
@@ -120,12 +122,6 @@
       </div>
       <nav class="palette-groups" id="paletteGroups" aria-label="Группы функций"></nav>
       <div class="palette-results" id="paletteResults"></div>
-      <div class="palette-footer">
-        <span><kbd>Tab</kbd> открыть</span>
-        <span><kbd>←</kbd><kbd>→</kbd> группы</span>
-        <span><kbd>↑</kbd><kbd>↓</kbd> выбор</span>
-        <span><kbd>Enter</kbd> вставить</span>
-      </div>
     </section>
   </div>
 
