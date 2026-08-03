@@ -21,14 +21,19 @@ STYLE_PARTS = (
     "app-shell-formulas.css",
 )
 SCRIPT_PARTS = (
-    *(f"app-shell-v2.part{index:02d}.js" for index in range(8)),
+    *(f"app-shell-v2.part{index:02d}.js" for index in range(6)),
     "app-shell-v2.ux.js",
     "app-shell-v2.multiply.js",
     "app-shell-v2.copy.js",
+    # part06 starts the event binder and part07 continues it before opening
+    # initialize(); keep feature layers before that boundary so their drawer
+    # functions remain in the consolidated controller scope.
     "app-shell-v2.variables.js",
     "app-shell-v2.formulas.js",
     "app-shell-v2.hotkey.js",
     "app-shell-v2.about.js",
+    "app-shell-v2.part06.js",
+    "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
