@@ -70,7 +70,6 @@
   }
 
   function onInput(event) {
-    cancelCommitAnimation();
     typingFeedback(event);
     rememberSelection();
     if (state.mode === 'calculator') {
