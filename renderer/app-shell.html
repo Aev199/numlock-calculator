@@ -24,6 +24,7 @@
         <button class="mode-pill calculator-setting" id="numberBase" type="button" title="Формат чисел">DEC</button>
         <button class="icon-button" id="themeButton" type="button" title="Сменить тему" aria-label="Сменить тему">◐</button>
         <button class="icon-button" id="settingsButton" type="button" title="Настройки" aria-label="Настройки">⚙</button>
+        <button class="icon-button" id="helpButton" type="button" title="Помощник и горячие клавиши" aria-label="Помощник и горячие клавиши">?</button>
         <button class="icon-button" id="hideButton" type="button" title="Скрыть окно" aria-label="Скрыть окно">—</button>
         <button class="hidden" id="quitButton" type="button" aria-hidden="true" tabindex="-1">×</button>
       </div>
@@ -33,6 +34,7 @@
       <span class="mode-indicator" id="modeIndicator" aria-hidden="true"></span>
       <button class="mode-switch-button active" id="calculatorModeTab" type="button" data-mode="calculator" aria-selected="true">Калькулятор</button>
       <button class="mode-switch-button" id="unitsModeTab" type="button" data-mode="units" aria-selected="false">Единицы</button>
+      <button class="mode-switch-button" id="interpolationTab" type="button" data-mode="interpolation" aria-selected="false">Интерполяция</button>
     </nav>
 
     <main class="workspace">
@@ -107,11 +109,73 @@
             <p class="converter-help">Введите число или выражение с операциями + − × ÷, степенью и скобками. Enter упрощает исходное выражение.</p>
           </div>
         </section>
+
+        <section class="mode-panel interpolation-card" id="interpolationPanel" data-mode-panel="interpolation" aria-label="Линейная интерполяция" aria-hidden="true">
+          <div class="section-header interpolation-header">
+            <div class="section-heading converter-heading">
+              <h2>Интерполяция</h2>
+              <span class="converter-caption">линейная</span>
+            </div>
+            <div class="interpolation-mode-switch" role="tablist" aria-label="Размерность интерполяции">
+              <button class="interpolation-mode-button active" id="interpolation1dTab" type="button" data-interpolation-mode="1d" role="tab" aria-selected="true">1D</button>
+              <button class="interpolation-mode-button" id="interpolation2dTab" type="button" data-interpolation-mode="2d" role="tab" aria-selected="false">2D</button>
+            </div>
+          </div>
+          <div class="interpolation-content" id="interpolationContent">
+            <div class="interpolation-form" id="interpolation1dForm" data-interpolation-form="1d">
+              <div class="interpolation-form-heading">
+                <strong>Две опорные точки</strong>
+                <span>y(x) по точкам (x₀, y₀) и (x₁, y₁)</span>
+              </div>
+              <div class="interpolation-grid">
+                <label class="interpolation-field"><span>x₀</span><input id="interpolation1dX0" data-interpolation-field="x0" type="text" inputmode="decimal" placeholder="0"></label>
+                <label class="interpolation-field"><span>y₀</span><input id="interpolation1dY0" data-interpolation-field="y0" type="text" inputmode="decimal" placeholder="0"></label>
+                <label class="interpolation-field"><span>x₁</span><input id="interpolation1dX1" data-interpolation-field="x1" type="text" inputmode="decimal" placeholder="10"></label>
+                <label class="interpolation-field"><span>y₁</span><input id="interpolation1dY1" data-interpolation-field="y1" type="text" inputmode="decimal" placeholder="100"></label>
+              </div>
+              <label class="interpolation-field interpolation-target-field"><span>Найти y при x</span><input id="interpolation1dX" data-interpolation-field="x" type="text" inputmode="decimal" placeholder="5"></label>
+            </div>
+
+            <div class="interpolation-form hidden" id="interpolation2dForm" data-interpolation-form="2d">
+              <div class="interpolation-form-heading">
+                <strong>Четыре угловые точки</strong>
+                <span>z(x, y) на прямоугольной области</span>
+              </div>
+              <div class="interpolation-grid">
+                <label class="interpolation-field"><span>x₀</span><input id="interpolation2dX0" data-interpolation-field="x0" type="text" inputmode="decimal" placeholder="0"></label>
+                <label class="interpolation-field"><span>x₁</span><input id="interpolation2dX1" data-interpolation-field="x1" type="text" inputmode="decimal" placeholder="10"></label>
+                <label class="interpolation-field"><span>y₀</span><input id="interpolation2dY0" data-interpolation-field="y0" type="text" inputmode="decimal" placeholder="0"></label>
+                <label class="interpolation-field"><span>y₁</span><input id="interpolation2dY1" data-interpolation-field="y1" type="text" inputmode="decimal" placeholder="10"></label>
+              </div>
+              <div class="interpolation-corner-grid" aria-label="Значения в углах">
+                <label class="interpolation-field"><span>z₀₀</span><input id="interpolation2dZ00" data-interpolation-field="z00" type="text" inputmode="decimal" placeholder="0"></label>
+                <label class="interpolation-field"><span>z₁₀</span><input id="interpolation2dZ10" data-interpolation-field="z10" type="text" inputmode="decimal" placeholder="10"></label>
+                <label class="interpolation-field"><span>z₀₁</span><input id="interpolation2dZ01" data-interpolation-field="z01" type="text" inputmode="decimal" placeholder="20"></label>
+                <label class="interpolation-field"><span>z₁₁</span><input id="interpolation2dZ11" data-interpolation-field="z11" type="text" inputmode="decimal" placeholder="30"></label>
+              </div>
+              <div class="interpolation-grid">
+                <label class="interpolation-field"><span>Найти при x</span><input id="interpolation2dX" data-interpolation-field="x" type="text" inputmode="decimal" placeholder="5"></label>
+                <label class="interpolation-field"><span>Найти при y</span><input id="interpolation2dY" data-interpolation-field="y" type="text" inputmode="decimal" placeholder="5"></label>
+              </div>
+            </div>
+
+            <div class="interpolation-actions">
+              <button class="row-button primary" id="interpolationCalculateButton" type="button">Рассчитать</button>
+              <button class="row-button" id="interpolationClearButton" type="button">Очистить</button>
+              <button class="row-button" id="interpolationCopyButton" type="button" title="Скопировать результат">Копировать</button>
+            </div>
+            <div class="interpolation-result" id="interpolationResult" aria-live="polite">
+              <span class="interpolation-result-label">Результат</span>
+              <strong id="interpolationResultValue">Введите исходные данные</strong>
+              <span class="interpolation-result-formula" id="interpolationResultFormula"></span>
+              <span class="interpolation-result-error hidden" id="interpolationResultError"></span>
+            </div>
+            <p class="interpolation-help">Точки вне интервала дают линейную экстраполяцию. Запятые в числах поддерживаются.</p>
+          </div>
+        </section>
       </div>
     </main>
   </div>
-
-  <div class="commit-overlay" id="commitOverlay" aria-hidden="true"></div>
 
   <div class="overlay palette-overlay hidden" id="paletteOverlay" aria-hidden="true">
     <section class="palette" role="dialog" aria-modal="true" aria-label="Функции">
@@ -135,6 +199,23 @@
         <button class="icon-button" id="drawerClose" type="button" aria-label="Закрыть">×</button>
       </div>
       <div class="drawer-content" id="drawerContent"></div>
+    </section>
+  </div>
+
+  <div class="onboarding-overlay hidden" id="onboardingOverlay" aria-hidden="true">
+    <section class="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+      <button class="onboarding-close" id="onboardingClose" type="button" aria-label="Закрыть помощник">×</button>
+      <div class="onboarding-kicker" id="onboardingKicker"></div>
+      <h2 id="onboardingTitle"></h2>
+      <p class="onboarding-description" id="onboardingDescription"></p>
+      <div class="onboarding-items" id="onboardingItems"></div>
+      <div class="onboarding-progress" id="onboardingProgress" aria-label="Прогресс помощника"></div>
+      <div class="onboarding-actions">
+        <button class="row-button" id="onboardingSkip" type="button">Пропустить</button>
+        <span class="onboarding-spacer"></span>
+        <button class="row-button" id="onboardingBack" type="button">Назад</button>
+        <button class="row-button primary" id="onboardingNext" type="button">Далее</button>
+      </div>
     </section>
   </div>
 

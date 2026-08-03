@@ -206,6 +206,10 @@
   };
 
   async function copyCurrentCalculation() {
+    if (state.mode === 'interpolation') {
+      await copyInterpolationResult();
+      return;
+    }
     const expression = normalize(dom.input.value);
     if (!expression) {
       showToast('Нет выражения для копирования');
@@ -259,6 +263,7 @@
   // Global shortcuts work from the editor, selects, history and popovers.
   // Capture prevents WebView navigation on Alt+Left/Right.
   document.addEventListener('keydown', event => {
+    if (!dom.onboardingOverlay.classList.contains('hidden')) return;
     if (
       event.altKey
       && !event.ctrlKey
@@ -269,7 +274,10 @@
       event.preventDefault();
       event.stopImmediatePropagation();
       closeTransientUi();
-      switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units');
+      const modes = ['calculator', 'units', 'interpolation'];
+      const currentIndex = Math.max(0, modes.indexOf(state.mode));
+      const delta = event.key === 'ArrowLeft' ? -1 : 1;
+      switchMode(modes[(currentIndex + delta + modes.length) % modes.length]);
       return;
     }
 

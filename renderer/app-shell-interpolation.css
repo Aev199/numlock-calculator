@@ -1,0 +1,229 @@
+body[data-app-mode="interpolation"] .editor-card {
+  display: none;
+}
+
+body[data-app-mode="interpolation"] .workspace {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.interpolation-card {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.interpolation-header {
+  min-height: 43px;
+}
+
+.interpolation-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--soft);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.interpolation-mode-button {
+  min-width: 34px;
+  height: 25px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.interpolation-mode-button.active,
+.interpolation-mode-button:hover {
+  background: var(--panel-raised);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.interpolation-content {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 9px;
+}
+
+.interpolation-form {
+  display: grid;
+  gap: 8px;
+}
+
+.interpolation-form-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.interpolation-form-heading strong {
+  font-size: 11px;
+}
+
+.interpolation-form-heading span,
+.interpolation-help {
+  color: var(--subtle);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.interpolation-form-heading span {
+  font-family: "Cascadia Mono", "Consolas", monospace;
+}
+
+.interpolation-grid,
+.interpolation-corner-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.interpolation-corner-grid {
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--soft) 55%, transparent);
+}
+
+.interpolation-field {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.interpolation-field input {
+  width: 100%;
+  min-width: 0;
+  height: 29px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--soft);
+  color: var(--text);
+  font: 11px "Cascadia Mono", "Consolas", monospace;
+  transition: border-color var(--fast) ease, box-shadow var(--fast) ease;
+}
+
+.interpolation-field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.interpolation-target-field {
+  grid-template-columns: minmax(0, 1fr) minmax(105px, 1.4fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.interpolation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.interpolation-actions .row-button.primary {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.interpolation-actions .row-button.primary:hover {
+  background: var(--accent-hover);
+}
+
+.interpolation-result {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--soft));
+}
+
+.interpolation-result-label {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.interpolation-result strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 750 17px "Cascadia Mono", "Consolas", monospace;
+}
+
+.interpolation-result-formula {
+  color: var(--subtle);
+  font-size: 9px;
+}
+
+.interpolation-result-error {
+  color: var(--danger);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.interpolation-help {
+  margin: 0;
+}
+
+@media (max-width: 410px), (max-height: 460px) {
+  .interpolation-header {
+    min-height: 38px;
+  }
+
+  .interpolation-mode-switch {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .interpolation-mode-button {
+    min-width: 30px;
+    height: 22px;
+    font-size: 9px;
+  }
+
+  .interpolation-content {
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .interpolation-form {
+    gap: 6px;
+  }
+
+  .interpolation-field input {
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+
+  .interpolation-target-field {
+    grid-template-columns: minmax(0, 1fr) minmax(95px, 1.4fr);
+  }
+
+  .interpolation-result {
+    padding: 7px;
+  }
+
+  .interpolation-result strong {
+    font-size: 15px;
+  }
+}

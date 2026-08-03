@@ -3,7 +3,9 @@
     bindEvents();
     setInputValue(state.calculator.expression);
     renderResult(null);
-    restoreEditorFocus();
+    renderInterpolation();
+    if (state.ui.onboarding_seen !== true) showOnboarding();
+    else restoreEditorFocus();
 
     function reportRendererDiagnostic(source, message, details = '') {
       try {
@@ -46,4 +48,3 @@
     dom.resultError.classList.remove('hidden');
   });
 })();
-

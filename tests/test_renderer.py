@@ -31,8 +31,12 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertEqual(html.count("nlcalc-consolidated-v2"), 1)
         self.assertIn('id="calculatorModeTab"', html)
         self.assertIn('id="unitsModeTab"', html)
+        self.assertIn('id="interpolationTab"', html)
         self.assertIn('id="calculatorPanel"', html)
         self.assertIn('id="unitsPanel"', html)
+        self.assertIn('id="interpolationPanel"', html)
+        self.assertIn('id="helpButton"', html)
+        self.assertIn('id="onboardingOverlay"', html)
         self.assertIn("function commitCalculator()", html)
         self.assertIn("function commitUnits()", html)
         self.assertIn("function reconcileHistory", html)
@@ -74,6 +78,14 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertLess(
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.variables.js"),
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
+        )
+        self.assertLess(
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.interpolation.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.part06.js"),
+        )
+        self.assertLess(
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.onboarding.js"),
+            app_renderer.SCRIPT_PARTS.index("app-shell-v2.part06.js"),
         )
 
     def test_drawer_layers_stay_outside_event_bootstrap_scope(self):
@@ -117,7 +129,8 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("function copyCurrentCalculation()", html)
         self.assertIn("event.code === 'KeyC'", html)
         self.assertIn("event.key === 'ArrowLeft' || event.key === 'ArrowRight'", html)
-        self.assertIn("switchMode(event.key === 'ArrowLeft' ? 'calculator' : 'units')", html)
+        self.assertIn("const modes = ['calculator', 'units', 'interpolation'];", html)
+        self.assertIn("switchMode(modes[(currentIndex + delta + modes.length) % modes.length]);", html)
 
     def test_standalone_number_copies_without_redundant_result(self):
         app, _calls = self.make_app()
@@ -255,15 +268,35 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
         calculator = html.index('id="calculatorPanel"')
         units = html.index('id="unitsPanel"')
+        interpolation = html.index('id="interpolationPanel"')
         stage_start = html.index('id="modeStage"')
         stage_end = html.index("</main>")
         self.assertLess(stage_start, calculator)
         self.assertLess(calculator, units)
-        self.assertLess(units, stage_end)
+        self.assertLess(units, interpolation)
+        self.assertLess(interpolation, stage_end)
         self.assertIn(".mode-panel {", html)
         self.assertIn("position: absolute", html)
         self.assertIn("opacity: 0", html)
         self.assertIn(".mode-panel.active", html)
+
+    def test_interpolation_and_onboarding_layers_are_exposed(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        for marker in (
+            'id="interpolation1dX0"',
+            'id="interpolation2dZ11"',
+            "function calculateInterpolation()",
+            "state.api.interpolate({ mode, values })",
+            "function showOnboarding()",
+            "onboarding_seen: false",
+            "Alt+← / →",
+        ):
+            self.assertIn(marker, html)
+        self.assertIn("app-shell-interpolation.css", app_renderer.STYLE_PARTS)
+        self.assertIn("app-shell-onboarding.css", app_renderer.STYLE_PARTS)
 
     def test_keyboard_entry_point_uses_release_layers(self):
         source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")

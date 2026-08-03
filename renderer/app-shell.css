@@ -236,7 +236,9 @@ select:focus-visible {
 }
 
 body[data-app-mode="units"] .calculator-setting,
-body[data-app-mode="units"] .calculator-only {
+body[data-app-mode="units"] .calculator-only,
+body[data-app-mode="interpolation"] .calculator-setting,
+body[data-app-mode="interpolation"] .calculator-only {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -248,14 +250,16 @@ body[data-app-mode="units"] .calculator-only {
 }
 
 body[data-app-mode="units"] .calculator-setting,
-body[data-app-mode="units"] .calculator-only {
+body[data-app-mode="units"] .calculator-only,
+body[data-app-mode="interpolation"] .calculator-setting,
+body[data-app-mode="interpolation"] .calculator-only {
   transition: opacity 150ms ease, visibility 0s linear 150ms;
 }
 
 .mode-switch {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0;
   margin: 6px 7px 0;
   padding: 3px;
@@ -273,7 +277,7 @@ body[data-app-mode="units"] .calculator-only {
   top: 3px;
   bottom: 3px;
   left: 3px;
-  width: calc(50% - 3px);
+  width: calc(33.333333% - 2px);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel-raised) 94%, var(--accent-soft));
   box-shadow:
@@ -287,6 +291,10 @@ body[data-app-mode="units"] .calculator-only {
 
 body[data-app-mode="units"] .mode-indicator {
   transform: translate3d(100%, 0, 0);
+}
+
+body[data-app-mode="interpolation"] .mode-indicator {
+  transform: translate3d(200%, 0, 0);
 }
 
 .mode-switch-button {
@@ -401,11 +409,6 @@ body[data-app-mode="units"] .mode-indicator {
   color: var(--subtle);
 }
 
-.expression-input.commit-hidden {
-  color: transparent;
-  caret-color: transparent;
-}
-
 .field-unit-badge,
 .result-unit-badge {
   opacity: 0;
@@ -446,22 +449,6 @@ body[data-app-mode="units"] .result-unit-badge {
   padding: 4px 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.commit-overlay {
-  position: fixed;
-  z-index: 1000;
-  display: none;
-  pointer-events: none;
-  white-space: nowrap;
-  color: var(--text);
-  font-family: "Cascadia Mono", "Consolas", monospace;
-  transform-origin: left center;
-  will-change: transform, opacity;
-}
-
-.commit-overlay.active {
-  display: block;
 }
 
 .completion-popover {
@@ -1160,9 +1147,4 @@ kbd {
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-
-  .commit-overlay {
-    display: none !important;
-  }
 }
-

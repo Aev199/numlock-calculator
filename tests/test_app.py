@@ -168,6 +168,43 @@ class StorageAndApiTests(unittest.TestCase):
             )
             self.assertTrue(enabled['select_result_on_enter'])
 
+    def test_onboarding_and_interpolation_state_survive_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = app.Storage(Path(directory) / 'state.json')
+            api = app.AppApi(storage)
+            self.assertFalse(api.bootstrap()['ui_settings']['onboarding_seen'])
+
+            result = api.interpolate(
+                {
+                    'mode': '1d',
+                    'values': {'x0': '0', 'y0': '0', 'x1': '10', 'y1': '100', 'x': '2,5'},
+                }
+            )
+            self.assertTrue(result['ok'], result.get('error'))
+            self.assertEqual(result['result'], '25')
+
+            api.set_settings(
+                {'number_format': 'engineering', 'precision': 4, 'decimal_separator': ','}
+            )
+            formatted = api.interpolate(
+                {
+                    'mode': '1d',
+                    'values': {'x0': '0', 'y0': '0', 'x1': '1', 'y1': '1234', 'x': '1'},
+                }
+            )
+            self.assertEqual(formatted['result'], '1,234e+3')
+
+            saved = api.save_interpolation_state(
+                {'mode': '2d', 'two_d': {'z11': '30,5'}, 'one_d': {'x': '2'}}
+            )
+            self.assertEqual(saved['mode'], '2d')
+            api.set_ui_settings({'onboarding_seen': True})
+            restored = app.AppApi(storage).bootstrap()
+            self.assertTrue(restored['ui_settings']['onboarding_seen'])
+            self.assertEqual(restored['interpolation']['mode'], '2d')
+            self.assertEqual(restored['interpolation']['two_d']['z11'], '30,5')
+            self.assertEqual(restored['interpolation']['one_d']['x'], '2')
+
     def test_html_is_keyboard_first(self):
         html = app.build_html()
         self.assertIn('id="expressionInput"', html)

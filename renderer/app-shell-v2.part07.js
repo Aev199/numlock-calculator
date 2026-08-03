@@ -207,6 +207,7 @@
       ...state.calculator.handoff,
       ...(unitData.calculator_handoff || {}),
     };
+    loadInterpolationState(data.interpolation);
 
     applySettings(state.settings);
     setTheme(state.ui.theme, false);

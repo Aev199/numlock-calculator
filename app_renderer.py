@@ -19,6 +19,8 @@ STYLE_PARTS = (
     "app-shell-about.css",
     "app-shell-hotkey.css",
     "app-shell-formulas.css",
+    "app-shell-interpolation.css",
+    "app-shell-onboarding.css",
 )
 SCRIPT_PARTS = (
     *(f"app-shell-v2.part{index:02d}.js" for index in range(6)),
@@ -30,8 +32,10 @@ SCRIPT_PARTS = (
     # functions remain in the consolidated controller scope.
     "app-shell-v2.variables.js",
     "app-shell-v2.formulas.js",
+    "app-shell-v2.interpolation.js",
     "app-shell-v2.hotkey.js",
     "app-shell-v2.about.js",
+    "app-shell-v2.onboarding.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",
@@ -77,6 +81,18 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Consolidated renderer formula layer is incomplete")
     if "app-shell-v2.about.js" not in SCRIPT_PARTS or "about-overlay" not in css:
         raise RuntimeError("Consolidated renderer About dialog is incomplete")
+    if (
+        "app-shell-v2.interpolation.js" not in SCRIPT_PARTS
+        or "interpolationTab" not in template
+        or "interpolationPanel" not in template
+    ):
+        raise RuntimeError("Consolidated renderer interpolation layer is incomplete")
+    if (
+        "app-shell-v2.onboarding.js" not in SCRIPT_PARTS
+        or "onboardingOverlay" not in template
+        or "helpButton" not in template
+    ):
+        raise RuntimeError("Consolidated renderer onboarding layer is incomplete")
 
     return (
         template.replace(CSS_PLACEHOLDER, css, 1)

@@ -9,6 +9,7 @@ import sys
 import tempfile
 import threading
 import time
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,11 @@ from calc_engine import (
     serialize_dimensions,
 )
 from hotkey_config import DEFAULT_HOTKEY, validate_hotkey
+from interpolation import (
+    calculate as calculate_interpolation,
+    normalize_state as normalize_interpolation_state,
+)
+from number_formatting import format_number
 
 
 APP_NAME = "NumLock Calc"
@@ -190,6 +196,13 @@ class AppApi:
             self._ui_settings.get("select_result_on_enter", True),
             True,
         )
+        self._ui_settings["onboarding_seen"] = _coerce_bool(
+            self._ui_settings.get("onboarding_seen", False),
+            False,
+        )
+        self._interpolation_state = normalize_interpolation_state(
+            storage.get("interpolation_state")
+        )
         self._sequence = len(self._history)
         self._lock = threading.RLock()
 
@@ -255,6 +268,7 @@ class AppApi:
                 "memories": [self._session.format_quantity(value) for value in self._session.memories],
                 "suggestions": self._session.suggestions(),
                 "ui_settings": dict(self._ui_settings),
+                "interpolation": deepcopy(self._interpolation_state),
             }
 
     def preview(self, expression: str) -> dict[str, Any]:
@@ -296,16 +310,43 @@ class AppApi:
 
     def set_ui_settings(self, settings: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
-            allowed = {"theme", "compact_history", "select_result_on_enter"}
+            allowed = {
+                "theme",
+                "compact_history",
+                "select_result_on_enter",
+                "onboarding_seen",
+            }
             for key, value in settings.items():
                 if key in allowed:
                     self._ui_settings[key] = (
-                        _coerce_bool(value, True)
-                        if key == "select_result_on_enter"
+                        _coerce_bool(value, key != "onboarding_seen")
+                        if key in {"select_result_on_enter", "onboarding_seen"}
                         else value
                     )
             self._storage.set("ui_settings", self._ui_settings)
             return dict(self._ui_settings)
+
+    def interpolate(self, payload: dict[str, Any] | None) -> dict[str, Any]:
+        """Calculate a 1D or bilinear interpolation using display settings."""
+
+        with self._lock:
+            response = calculate_interpolation(payload)
+            if response.get("ok"):
+                response["result"] = format_number(
+                    float(response["raw_value"]),
+                    self._session.settings.precision,
+                    self._session.settings.number_format,
+                    self._session.settings.decimal_separator,
+                )
+            return response
+
+    def save_interpolation_state(self, value: dict[str, Any] | None) -> dict[str, Any]:
+        """Persist interpolation inputs without allowing unbounded JSON state."""
+
+        with self._lock:
+            self._interpolation_state = normalize_interpolation_state(value)
+            self._storage.set("interpolation_state", self._interpolation_state)
+            return deepcopy(self._interpolation_state)
 
     def get_global_hotkey(self) -> dict[str, Any]:
         with self._lock:

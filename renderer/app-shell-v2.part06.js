@@ -78,7 +78,7 @@
       scheduleCalculatorPreview();
       updateCompletion();
       maybeWrapTypedFunction(event);
-    } else {
+    } else if (state.mode === 'units') {
       state.units.expression = dom.input.value;
       scheduleUnitsPreview();
     }
@@ -136,7 +136,7 @@
       event.preventDefault();
       if (event.repeat) return;
       if (state.mode === 'calculator') commitCalculator();
-      else commitUnits();
+      else if (state.mode === 'units') commitUnits();
       return;
     }
 
@@ -193,6 +193,8 @@
 
     dom.calculatorTab.addEventListener('click', () => switchMode('calculator'));
     dom.unitsTab.addEventListener('click', () => switchMode('units'));
+    bindInterpolationEvents();
+    bindOnboardingEvents();
     dom.historySearch.addEventListener('input', () => reconcileHistory());
 
     dom.historyList.addEventListener('click', async event => {
