@@ -42,11 +42,7 @@
     sourceUnit: byId('sourceUnitSelect'),
     targetUnit: byId('targetUnitSelect'),
     swapUnits: byId('swapUnitsButton'),
-    interpolation1dTab: byId('interpolation1dTab'),
-    interpolation2dTab: byId('interpolation2dTab'),
-    interpolationContent: byId('interpolationContent'),
     interpolation1dForm: byId('interpolation1dForm'),
-    interpolation2dForm: byId('interpolation2dForm'),
     interpolationCalculateButton: byId('interpolationCalculateButton'),
     interpolationClearButton: byId('interpolationClearButton'),
     interpolationCopyButton: byId('interpolationCopyButton'),
@@ -132,13 +128,7 @@
       commitSequence: 0,
     },
     interpolation: {
-      mode: '1d',
       one_d: { x0: '', y0: '', x1: '', y1: '', x: '' },
-      two_d: {
-        x0: '', x1: '', y0: '', y1: '',
-        z00: '', z10: '', z01: '', z11: '',
-        x: '', y: '',
-      },
       result: null,
       saveTimer: null,
       calculateTimer: null,
@@ -267,8 +257,7 @@
       switchMode('calculator');
     }
     if (state.mode === 'interpolation') {
-      const modeName = interpolationMode();
-      interpolationField(modeName, INTERPOLATION_FIELDS[modeName][0])?.focus();
+      interpolationField(INTERPOLATION_FIELDS[0])?.focus();
       return;
     }
     restoreEditorFocus(Boolean(selectAll));

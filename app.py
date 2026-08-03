@@ -336,7 +336,7 @@ class AppApi:
             return dict(self._ui_settings)
 
     def interpolate(self, payload: dict[str, Any] | None) -> dict[str, Any]:
-        """Calculate a 1D or bilinear interpolation using display settings."""
+        """Calculate a 1D interpolation using display settings."""
 
         with self._lock:
             response = calculate_interpolation(payload)

@@ -209,13 +209,13 @@ class StorageAndApiTests(unittest.TestCase):
             saved = api.save_interpolation_state(
                 {'mode': '2d', 'two_d': {'z11': '30,5'}, 'one_d': {'x': '2'}}
             )
-            self.assertEqual(saved['mode'], '2d')
+            self.assertEqual(saved['one_d']['x'], '2')
+            self.assertNotIn('two_d', saved)
             api.set_ui_settings({'onboarding_seen': True})
             restored = app.AppApi(storage).bootstrap()
             self.assertTrue(restored['ui_settings']['onboarding_seen'])
-            self.assertEqual(restored['interpolation']['mode'], '2d')
-            self.assertEqual(restored['interpolation']['two_d']['z11'], '30,5')
             self.assertEqual(restored['interpolation']['one_d']['x'], '2')
+            self.assertNotIn('two_d', restored['interpolation'])
 
     def test_html_is_keyboard_first(self):
         html = app.build_html()

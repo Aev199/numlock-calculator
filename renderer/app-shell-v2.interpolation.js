@@ -1,34 +1,24 @@
+  const INTERPOLATION_FIELDS = ['x0', 'y0', 'x1', 'y1', 'x'];
 
-  const INTERPOLATION_FIELDS = {
-    '1d': ['x0', 'y0', 'x1', 'y1', 'x'],
-    '2d': ['x0', 'x1', 'y0', 'y1', 'z00', 'z10', 'z01', 'z11', 'x', 'y'],
-  };
-
-  function interpolationMode(value = state.interpolation.mode) {
-    return String(value) === '2d' ? '2d' : '1d';
-  }
-
-  function interpolationForm(mode = state.interpolation.mode) {
-    return mode === '2d' ? dom.interpolation2dForm : dom.interpolation1dForm;
-  }
-
-  function interpolationField(mode, name) {
-    return interpolationForm(mode)?.querySelector(
+  function interpolationField(name) {
+    return dom.interpolation1dForm?.querySelector(
       `[data-interpolation-field="${name}"]`,
     );
   }
 
-  function interpolationValues(mode = state.interpolation.mode) {
-    const normalizedMode = interpolationMode(mode);
-    const values = state.interpolation[normalizedMode === '2d' ? 'two_d' : 'one_d'];
+  function interpolationValues() {
     return Object.fromEntries(
-      INTERPOLATION_FIELDS[normalizedMode].map(name => [name, String(values[name] ?? '')]),
+      INTERPOLATION_FIELDS.map(name => [
+        name,
+        String(state.interpolation.one_d[name] ?? ''),
+      ]),
     );
   }
 
-  function interpolationComplete(values, mode = state.interpolation.mode) {
-    return INTERPOLATION_FIELDS[interpolationMode(mode)]
-      .every(name => String(values[name] ?? '').trim() !== '');
+  function interpolationComplete(values) {
+    return INTERPOLATION_FIELDS.every(
+      name => String(values[name] ?? '').trim() !== '',
+    );
   }
 
   function renderInterpolationResult(response = state.interpolation.result) {
@@ -44,18 +34,9 @@
   }
 
   function renderInterpolation() {
-    const mode = interpolationMode();
-    dom.interpolationContent.dataset.interpolationMode = mode;
-    dom.interpolation1dTab.classList.toggle('active', mode === '1d');
-    dom.interpolation2dTab.classList.toggle('active', mode === '2d');
-    dom.interpolation1dTab.setAttribute('aria-selected', String(mode === '1d'));
-    dom.interpolation2dTab.setAttribute('aria-selected', String(mode === '2d'));
-    dom.interpolation1dForm.classList.toggle('hidden', mode !== '1d');
-    dom.interpolation2dForm.classList.toggle('hidden', mode !== '2d');
-
-    const values = interpolationValues(mode);
-    for (const name of INTERPOLATION_FIELDS[mode]) {
-      const field = interpolationField(mode, name);
+    const values = interpolationValues();
+    for (const name of INTERPOLATION_FIELDS) {
+      const field = interpolationField(name);
       if (field && field.value !== values[name]) field.value = values[name];
     }
     renderInterpolationResult();
@@ -63,36 +44,25 @@
 
   function loadInterpolationState(saved) {
     if (!saved || typeof saved !== 'object') return;
-    state.interpolation.mode = interpolationMode(saved.mode);
-    for (const [section, target] of [
-      ['one_d', state.interpolation.one_d],
-      ['two_d', state.interpolation.two_d],
-    ]) {
-      const source = saved[section];
-      if (!source || typeof source !== 'object') continue;
-      for (const name of Object.keys(target)) {
-        target[name] = String(source[name] ?? '').slice(0, 80);
-      }
+    const source = saved.one_d;
+    if (!source || typeof source !== 'object') return;
+    for (const name of INTERPOLATION_FIELDS) {
+      state.interpolation.one_d[name] = String(source[name] ?? '').slice(0, 80);
     }
   }
 
   function saveInterpolationStateSoon() {
     window.clearTimeout(state.interpolation.saveTimer);
     state.interpolation.saveTimer = window.setTimeout(() => {
-      const payload = {
-        mode: interpolationMode(),
+      state.api?.save_interpolation_state?.({
         one_d: { ...state.interpolation.one_d },
-        two_d: { ...state.interpolation.two_d },
-      };
-      state.api?.save_interpolation_state?.(payload).catch?.(() => {});
+      }).catch?.(() => {});
     }, SAVE_DELAY);
   }
 
   function interpolationFieldChanged(event) {
-    const mode = interpolationMode();
     const name = event.currentTarget.dataset.interpolationField;
-    const section = mode === '2d' ? state.interpolation.two_d : state.interpolation.one_d;
-    section[name] = String(event.currentTarget.value || '').slice(0, 80);
+    state.interpolation.one_d[name] = String(event.currentTarget.value || '').slice(0, 80);
     state.interpolation.result = null;
     renderInterpolationResult(null);
     saveInterpolationStateSoon();
@@ -104,15 +74,14 @@
   }
 
   async function calculateInterpolation() {
-    const mode = interpolationMode();
-    const values = interpolationValues(mode);
-    if (!interpolationComplete(values, mode)) {
+    const values = interpolationValues();
+    if (!interpolationComplete(values)) {
       renderInterpolationResult(null);
       return null;
     }
     const request = ++state.interpolation.requestSequence;
     try {
-      const response = await state.api.interpolate({ mode, values });
+      const response = await state.api.interpolate({ mode: '1d', values });
       if (request !== state.interpolation.requestSequence || state.mode !== 'interpolation') {
         return response;
       }
@@ -125,24 +94,12 @@
     }
   }
 
-  function selectInterpolationMode(mode) {
-    const next = interpolationMode(mode);
-    if (next === interpolationMode()) return;
-    state.interpolation.mode = next;
-    state.interpolation.result = null;
-    renderInterpolation();
-    saveInterpolationStateSoon();
-    window.requestAnimationFrame(() => interpolationField(next, INTERPOLATION_FIELDS[next][0])?.focus());
-  }
-
   function clearInterpolation() {
-    const mode = interpolationMode();
-    const section = mode === '2d' ? state.interpolation.two_d : state.interpolation.one_d;
-    for (const name of INTERPOLATION_FIELDS[mode]) section[name] = '';
+    for (const name of INTERPOLATION_FIELDS) state.interpolation.one_d[name] = '';
     state.interpolation.result = null;
     renderInterpolation();
     saveInterpolationStateSoon();
-    interpolationField(mode, INTERPOLATION_FIELDS[mode][0])?.focus();
+    interpolationField(INTERPOLATION_FIELDS[0])?.focus();
   }
 
   async function copyInterpolationResult() {
@@ -153,9 +110,7 @@
       return;
     }
     const values = interpolationValues();
-    const text = interpolationMode() === '1d'
-      ? `y(${values.x}) = ${response.result}`
-      : `z(${values.x}; ${values.y}) = ${response.result}`;
+    const text = `y(${values.x}) = ${response.result}`;
     try {
       const copied = await state.api.copy_text(text);
       showToast(copied ? 'Результат скопирован' : 'Не удалось открыть буфер обмена');
@@ -166,8 +121,6 @@
 
   function bindInterpolationEvents() {
     dom.interpolationTab.addEventListener('click', () => switchMode('interpolation'));
-    dom.interpolation1dTab.addEventListener('click', () => selectInterpolationMode('1d'));
-    dom.interpolation2dTab.addEventListener('click', () => selectInterpolationMode('2d'));
     dom.interpolationPanel.querySelectorAll('[data-interpolation-field]').forEach(field => {
       field.addEventListener('input', interpolationFieldChanged);
       field.addEventListener('keydown', event => {

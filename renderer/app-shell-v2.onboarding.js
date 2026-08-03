@@ -32,10 +32,9 @@
     {
       kicker: 'Новая возможность',
       title: 'Линейная интерполяция',
-      description: 'Во вкладке «Интерполяция» доступны расчёты по двум точкам и билинейный расчёт по четырём углам.',
+      description: 'Во вкладке «Интерполяция» можно найти значение функции между двумя опорными точками.',
       items: [
         ['1D', 'найти y по двум опорным точкам'],
-        ['2D', 'найти z(x, y) по значениям в углах'],
       ],
     },
     {
@@ -87,7 +86,7 @@
     dom.onboardingOverlay.classList.add('hidden');
     dom.onboardingOverlay.setAttribute('aria-hidden', 'true');
     if (state.mode === 'interpolation') {
-      interpolationField(interpolationMode(), INTERPOLATION_FIELDS[interpolationMode()][0])?.focus();
+      interpolationField(INTERPOLATION_FIELDS[0])?.focus();
     } else {
       restoreEditorFocus();
     }

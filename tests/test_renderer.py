@@ -312,9 +312,8 @@ class ConsolidatedRendererTests(unittest.TestCase):
 
         for marker in (
             'id="interpolation1dX0"',
-            'id="interpolation2dZ11"',
             "function calculateInterpolation()",
-            "state.api.interpolate({ mode, values })",
+            "state.api.interpolate({ mode: '1d', values })",
             "function showOnboarding()",
             "onboarding_seen: false",
             "Alt+← / →",
@@ -323,17 +322,23 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("app-shell-interpolation.css", app_renderer.STYLE_PARTS)
         self.assertIn("app-shell-onboarding.css", app_renderer.STYLE_PARTS)
 
-    def test_interpolation_frontend_is_compact_and_mode_switch_is_animated(self):
+    def test_interpolation_is_one_dimensional_and_tabs_swipe(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
         html = app.build_html()
 
-        self.assertIn('class="interpolation-2d-layout"', html)
-        self.assertIn('z₀₁ <small>(x₀, y₁)</small>', html)
-        self.assertIn('z₁₀ <small>(x₁, y₀)</small>', html)
+        self.assertNotIn('interpolation2d', html)
+        self.assertNotIn('bilinear', html.lower())
+        self.assertNotIn('two_d', html)
         self.assertIn('id="modeStage"', html)
         self.assertIn('mode-panel-enter-forward', html)
         self.assertIn('mode-panel-enter-backward', html)
+        self.assertIn('mode-panel-leave-forward', html)
+        self.assertIn('mode-panel-leave-backward', html)
+        self.assertIn('translate3d(100%, 0, 0)', html)
+        self.assertIn('translate3d(-100%, 0, 0)', html)
+        self.assertIn("previousPanel.classList.add('mode-panel-leaving')", html)
+        self.assertIn("nextPanel.classList.add('mode-panel-entering')", html)
         self.assertIn('function playModeTransition(previousMode, nextMode)', html)
         self.assertNotIn('умножение отображается как ⋅', html)
         self.assertNotIn('десятичный разделитель в полях поддерживается', html)

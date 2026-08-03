@@ -14,49 +14,20 @@ body[data-app-mode="interpolation"] .workspace {
   min-height: 40px;
 }
 
-.interpolation-mode-switch {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px;
-  padding: 3px;
-  border-radius: 8px;
-  background: var(--soft);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
-.interpolation-mode-button {
-  min-width: 34px;
-  height: 25px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 10px;
-  font-weight: 750;
-}
-
-.interpolation-mode-button.active,
-.interpolation-mode-button:hover {
-  background: var(--panel-raised);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
 .interpolation-content {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 7px;
+  gap: 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 8px;
+  padding: 9px;
   scrollbar-gutter: stable;
 }
 
 .interpolation-form {
   display: grid;
-  gap: 7px;
+  gap: 8px;
 }
 
 .interpolation-form-heading {
@@ -79,187 +50,10 @@ body[data-app-mode="interpolation"] .workspace {
   font-family: "Cascadia Mono", "Consolas", monospace;
 }
 
-.interpolation-grid,
-.interpolation-corner-grid {
+.interpolation-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.interpolation-corner-grid {
-  padding: 7px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--soft) 55%, transparent);
-}
-
-.interpolation-2d-layout {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
-  gap: 6px;
-}
-
-.interpolation-step-card {
-  min-width: 0;
-  padding: 7px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--soft) 45%, transparent);
-}
-
-.interpolation-step-heading {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-  margin-bottom: 5px;
-}
-
-.interpolation-step-heading strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-}
-
-.interpolation-step-heading span {
-  overflow: hidden;
-  color: var(--subtle);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 8px;
-}
-
-.interpolation-axis-inputs {
-  display: grid;
-  gap: 5px;
-}
-
-.interpolation-axis-row {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 12px repeat(2, minmax(0, 1fr));
-  align-items: end;
-  gap: 4px;
-}
-
-.interpolation-axis-name {
-  padding-bottom: 7px;
-  color: var(--accent);
-  font: 700 10px "Cascadia Mono", "Consolas", monospace;
-  text-align: center;
-}
-
-.interpolation-2d-layout .interpolation-field {
-  gap: 2px;
-  font-size: 8px;
-}
-
-.interpolation-2d-layout .interpolation-field input {
-  height: 26px;
-  padding: 0 5px;
-  border-radius: 6px;
-  font-size: 10px;
-}
-
-.interpolation-corner-card {
-  min-width: 0;
-}
-
-.interpolation-corner-card .interpolation-corner-grid {
-  display: grid;
-  grid-template-columns: 15px repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.interpolation-corner-axis-empty,
-.interpolation-corner-axis {
-  min-width: 0;
-  align-self: center;
-  color: var(--subtle);
-  font: 700 8px "Cascadia Mono", "Consolas", monospace;
-  text-align: center;
-}
-
-.interpolation-corner-axis {
-  align-self: end;
-  padding-bottom: 1px;
-}
-
-.interpolation-corner-field {
-  min-width: 0;
-  gap: 2px;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--panel) 65%, var(--soft));
-}
-
-.interpolation-corner-field > span {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 3px;
-  color: var(--muted);
-  font-size: 8px;
-}
-
-.interpolation-corner-field small {
-  overflow: hidden;
-  color: var(--subtle);
-  font: 7px "Cascadia Mono", "Consolas", monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.interpolation-target-card {
-  grid-column: 1 / -1;
-}
-
-.interpolation-target-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-/* In 2D the form is the tall part of the screen. Put the controls and the
-   result beside one another so the complete workflow remains visible in the
-   compact 384×432 shell. */
-.interpolation-content[data-interpolation-mode="2d"] {
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
-}
-
-.interpolation-content[data-interpolation-mode="2d"] .interpolation-form,
-.interpolation-content[data-interpolation-mode="2d"] .interpolation-help {
-  grid-column: 1 / -1;
-}
-
-.interpolation-content[data-interpolation-mode="2d"] .interpolation-actions {
-  grid-column: 1;
-  align-self: center;
-  flex-wrap: nowrap;
-}
-
-.interpolation-content[data-interpolation-mode="2d"] .interpolation-actions .row-button {
-  min-width: 0;
-  padding-right: 5px;
-  padding-left: 5px;
-  white-space: nowrap;
-}
-
-.interpolation-content[data-interpolation-mode="2d"] .interpolation-result {
-  grid-column: 2;
-  min-width: 0;
-  align-self: stretch;
-  padding: 7px;
-}
-
-.interpolation-content[data-interpolation-mode="2d"] .interpolation-help {
-  display: none;
+  gap: 7px;
 }
 
 .interpolation-field {
@@ -274,7 +68,7 @@ body[data-app-mode="interpolation"] .workspace {
 .interpolation-field input {
   width: 100%;
   min-width: 0;
-  height: 29px;
+  height: 30px;
   padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -358,17 +152,6 @@ body[data-app-mode="interpolation"] .workspace {
     min-height: 38px;
   }
 
-  .interpolation-mode-switch {
-    gap: 2px;
-    padding: 2px;
-  }
-
-  .interpolation-mode-button {
-    min-width: 30px;
-    height: 22px;
-    font-size: 9px;
-  }
-
   .interpolation-content {
     gap: 6px;
     padding: 7px;
@@ -379,70 +162,10 @@ body[data-app-mode="interpolation"] .workspace {
   }
 
   .interpolation-field input {
-    height: 26px;
+    height: 27px;
     padding: 0 6px;
     border-radius: 6px;
     font-size: 10px;
-  }
-
-  .interpolation-target-field {
-    grid-template-columns: minmax(0, 1fr) minmax(95px, 1.4fr);
-  }
-
-  .interpolation-2d-layout {
-    gap: 5px;
-  }
-
-  .interpolation-step-card {
-    padding: 6px;
-  }
-
-  .interpolation-step-heading {
-    margin-bottom: 4px;
-  }
-
-  .interpolation-axis-inputs {
-    gap: 4px;
-  }
-
-  .interpolation-axis-row,
-  .interpolation-corner-card .interpolation-corner-grid {
-    gap: 3px;
-  }
-
-  .interpolation-2d-layout .interpolation-field input {
-    height: 24px;
-    font-size: 9px;
-  }
-
-  .interpolation-corner-field {
-    padding: 3px;
-  }
-
-  .interpolation-corner-field > span {
-    font-size: 7px;
-  }
-
-  .interpolation-corner-field small {
-    font-size: 6px;
-  }
-
-  .interpolation-target-grid {
-    gap: 5px;
-  }
-
-  .interpolation-content[data-interpolation-mode="2d"] {
-    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
-  }
-
-  .interpolation-content[data-interpolation-mode="2d"] .interpolation-actions {
-    gap: 3px;
-  }
-
-  .interpolation-content[data-interpolation-mode="2d"] .interpolation-actions .row-button {
-    padding-right: 4px;
-    padding-left: 4px;
-    font-size: 9px;
   }
 
   .interpolation-result {

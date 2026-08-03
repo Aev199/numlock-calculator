@@ -114,15 +114,11 @@
           <div class="section-header interpolation-header">
             <div class="section-heading converter-heading">
               <h2>Интерполяция</h2>
-              <span class="converter-caption">1D / 2D</span>
-            </div>
-            <div class="interpolation-mode-switch" role="tablist" aria-label="Размерность интерполяции">
-              <button class="interpolation-mode-button active" id="interpolation1dTab" type="button" data-interpolation-mode="1d" role="tab" aria-selected="true">1D</button>
-              <button class="interpolation-mode-button" id="interpolation2dTab" type="button" data-interpolation-mode="2d" role="tab" aria-selected="false">2D</button>
+              <span class="converter-caption">линейная</span>
             </div>
           </div>
           <div class="interpolation-content" id="interpolationContent">
-            <div class="interpolation-form" id="interpolation1dForm" data-interpolation-form="1d">
+            <div class="interpolation-form" id="interpolation1dForm">
               <div class="interpolation-form-heading">
                 <strong>1. Две опорные точки</strong>
                 <span>Построить y(x) по точкам (x₀, y₀) и (x₁, y₁)</span>
@@ -134,62 +130,6 @@
                 <label class="interpolation-field"><span>y₁</span><input id="interpolation1dY1" data-interpolation-field="y1" type="text" inputmode="decimal" placeholder="100"></label>
               </div>
               <label class="interpolation-field interpolation-target-field"><span>2. Найти y при x</span><input id="interpolation1dX" data-interpolation-field="x" type="text" inputmode="decimal" placeholder="5"></label>
-            </div>
-
-            <div class="interpolation-form hidden" id="interpolation2dForm" data-interpolation-form="2d">
-              <div class="interpolation-form-heading">
-                <strong>Билинейная интерполяция</strong>
-                <span>Заполните область, значения в углах и точку, где нужен результат.</span>
-              </div>
-              <div class="interpolation-2d-layout">
-                <section class="interpolation-step-card interpolation-domain-card" aria-labelledby="interpolationDomainTitle">
-                  <div class="interpolation-step-heading">
-                    <strong id="interpolationDomainTitle">1. Границы области</strong>
-                    <span>координаты прямоугольника</span>
-                  </div>
-                  <div class="interpolation-axis-inputs">
-                    <div class="interpolation-axis-row">
-                      <span class="interpolation-axis-name">x</span>
-                      <label class="interpolation-field"><span>x₀</span><input id="interpolation2dX0" data-interpolation-field="x0" type="text" inputmode="decimal" placeholder="0"></label>
-                      <label class="interpolation-field"><span>x₁</span><input id="interpolation2dX1" data-interpolation-field="x1" type="text" inputmode="decimal" placeholder="10"></label>
-                    </div>
-                    <div class="interpolation-axis-row">
-                      <span class="interpolation-axis-name">y</span>
-                      <label class="interpolation-field"><span>y₀</span><input id="interpolation2dY0" data-interpolation-field="y0" type="text" inputmode="decimal" placeholder="0"></label>
-                      <label class="interpolation-field"><span>y₁</span><input id="interpolation2dY1" data-interpolation-field="y1" type="text" inputmode="decimal" placeholder="10"></label>
-                    </div>
-                  </div>
-                </section>
-
-                <section class="interpolation-step-card interpolation-corner-card" aria-labelledby="interpolationCornersTitle">
-                  <div class="interpolation-step-heading">
-                    <strong id="interpolationCornersTitle">2. Значения в углах</strong>
-                    <span>zᵢⱼ = z(xᵢ, yⱼ)</span>
-                  </div>
-                  <div class="interpolation-corner-grid" aria-label="Значения z в углах прямоугольника">
-                    <span class="interpolation-corner-axis-empty" aria-hidden="true"></span>
-                    <span class="interpolation-corner-axis">x₀</span>
-                    <span class="interpolation-corner-axis">x₁</span>
-                    <span class="interpolation-corner-axis">y₁</span>
-                    <label class="interpolation-field interpolation-corner-field"><span>z₀₁ <small>(x₀, y₁)</small></span><input id="interpolation2dZ01" data-interpolation-field="z01" type="text" inputmode="decimal" placeholder="20"></label>
-                    <label class="interpolation-field interpolation-corner-field"><span>z₁₁ <small>(x₁, y₁)</small></span><input id="interpolation2dZ11" data-interpolation-field="z11" type="text" inputmode="decimal" placeholder="30"></label>
-                    <span class="interpolation-corner-axis">y₀</span>
-                    <label class="interpolation-field interpolation-corner-field"><span>z₀₀ <small>(x₀, y₀)</small></span><input id="interpolation2dZ00" data-interpolation-field="z00" type="text" inputmode="decimal" placeholder="0"></label>
-                    <label class="interpolation-field interpolation-corner-field"><span>z₁₀ <small>(x₁, y₀)</small></span><input id="interpolation2dZ10" data-interpolation-field="z10" type="text" inputmode="decimal" placeholder="10"></label>
-                  </div>
-                </section>
-
-                <section class="interpolation-step-card interpolation-target-card" aria-labelledby="interpolationTargetTitle">
-                  <div class="interpolation-step-heading">
-                    <strong id="interpolationTargetTitle">3. Точка расчёта</strong>
-                    <span>найти z в координатах (x, y)</span>
-                  </div>
-                  <div class="interpolation-target-grid">
-                    <label class="interpolation-field"><span>x</span><input id="interpolation2dX" data-interpolation-field="x" type="text" inputmode="decimal" placeholder="5"></label>
-                    <label class="interpolation-field"><span>y</span><input id="interpolation2dY" data-interpolation-field="y" type="text" inputmode="decimal" placeholder="5"></label>
-                  </div>
-                </section>
-              </div>
             </div>
 
             <div class="interpolation-actions">

@@ -43,11 +43,10 @@
   function playModeTransition(previousMode, nextMode) {
     if (!dom.modeStage) return;
     window.clearTimeout(state.modeTransitionTimer);
-    dom.modeStage.classList.remove(
-      'mode-transition',
-      'mode-transition-forward',
-      'mode-transition-backward',
-    );
+    dom.modeStage.querySelectorAll('.mode-panel').forEach(panel => {
+      panel.classList.remove('mode-panel-entering', 'mode-panel-leaving');
+    });
+    dom.modeStage.classList.remove('mode-transition-forward', 'mode-transition-backward');
     delete dom.modeStage.dataset.modeTransition;
     if (reducedMotion()) return;
 
@@ -56,19 +55,21 @@
     const nextIndex = modes.indexOf(nextMode);
     if (previousIndex < 0 || nextIndex < 0 || previousIndex === nextIndex) return;
     const direction = nextIndex > previousIndex ? 'forward' : 'backward';
+    const previousPanel = dom.modeStage.querySelector(`[data-mode-panel="${previousMode}"]`);
+    const nextPanel = dom.modeStage.querySelector(`[data-mode-panel="${nextMode}"]`);
+    if (!previousPanel || !nextPanel) return;
     dom.modeStage.dataset.modeTransition = direction;
-    // Restart the CSS animation even when the user changes tabs repeatedly.
+    previousPanel.classList.add('mode-panel-leaving');
+    nextPanel.classList.add('mode-panel-entering');
     void dom.modeStage.offsetWidth;
-    dom.modeStage.classList.add('mode-transition', `mode-transition-${direction}`);
+    dom.modeStage.classList.add(`mode-transition-${direction}`);
     state.modeTransitionTimer = window.setTimeout(() => {
-      dom.modeStage.classList.remove(
-        'mode-transition',
-        'mode-transition-forward',
-        'mode-transition-backward',
-      );
+      previousPanel.classList.remove('mode-panel-leaving');
+      nextPanel.classList.remove('mode-panel-entering');
+      dom.modeStage.classList.remove('mode-transition-forward', 'mode-transition-backward');
       delete dom.modeStage.dataset.modeTransition;
       state.modeTransitionTimer = null;
-    }, 320);
+    }, 300);
   }
 
   function switchMode(mode) {
@@ -135,13 +136,12 @@
       scheduleUnitsPreview(0);
     } else {
       renderInterpolation();
-      const interpolationValuesForMode = interpolationValues(interpolationMode());
-      if (interpolationComplete(interpolationValuesForMode, interpolationMode())) {
+      const currentInterpolationValues = interpolationValues();
+      if (interpolationComplete(currentInterpolationValues)) {
         void calculateInterpolation();
       }
       window.requestAnimationFrame(() => {
-        const modeName = interpolationMode();
-        interpolationField(modeName, INTERPOLATION_FIELDS[modeName][0])?.focus();
+        interpolationField(INTERPOLATION_FIELDS[0])?.focus();
       });
     }
     if (mode !== 'interpolation') restoreEditorFocus();
