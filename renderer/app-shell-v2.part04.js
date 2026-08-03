@@ -40,9 +40,41 @@
     return true;
   }
 
+  function playModeTransition(previousMode, nextMode) {
+    if (!dom.modeStage) return;
+    window.clearTimeout(state.modeTransitionTimer);
+    dom.modeStage.classList.remove(
+      'mode-transition',
+      'mode-transition-forward',
+      'mode-transition-backward',
+    );
+    delete dom.modeStage.dataset.modeTransition;
+    if (reducedMotion()) return;
+
+    const modes = ['calculator', 'units', 'interpolation'];
+    const previousIndex = modes.indexOf(previousMode);
+    const nextIndex = modes.indexOf(nextMode);
+    if (previousIndex < 0 || nextIndex < 0 || previousIndex === nextIndex) return;
+    const direction = nextIndex > previousIndex ? 'forward' : 'backward';
+    dom.modeStage.dataset.modeTransition = direction;
+    // Restart the CSS animation even when the user changes tabs repeatedly.
+    void dom.modeStage.offsetWidth;
+    dom.modeStage.classList.add('mode-transition', `mode-transition-${direction}`);
+    state.modeTransitionTimer = window.setTimeout(() => {
+      dom.modeStage.classList.remove(
+        'mode-transition',
+        'mode-transition-forward',
+        'mode-transition-backward',
+      );
+      delete dom.modeStage.dataset.modeTransition;
+      state.modeTransitionTimer = null;
+    }, 320);
+  }
+
   function switchMode(mode) {
     const modes = ['calculator', 'units', 'interpolation'];
     if (!modes.includes(mode) || mode === state.mode) return;
+    const previousMode = state.mode;
     hideCompletion();
 
     if (state.mode === 'calculator') {
@@ -70,6 +102,7 @@
     dom.calculatorPanel.setAttribute('aria-hidden', String(!calculator));
     dom.unitsPanel.setAttribute('aria-hidden', String(!units));
     dom.interpolationPanel.setAttribute('aria-hidden', String(mode !== 'interpolation'));
+    playModeTransition(previousMode, mode);
     dom.editorLabel.textContent = calculator
       ? 'Выражение'
       : units ? 'Исходное значение' : 'Интерполяция';

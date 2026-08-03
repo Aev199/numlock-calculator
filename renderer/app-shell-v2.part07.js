@@ -109,6 +109,17 @@
 
     dom.paletteSearch.addEventListener('input', filterPalette);
     dom.paletteSearch.addEventListener('keydown', event => {
+      if (
+        event.key === 'Tab'
+        && !event.ctrlKey
+        && !event.metaKey
+        && !event.altKey
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        closePalette();
+        return;
+      }
       if (event.key === 'Escape') {
         event.preventDefault();
         closePalette();

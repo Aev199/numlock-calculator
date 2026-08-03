@@ -33,6 +33,7 @@
     calculatorPanel: byId('calculatorPanel'),
     unitsPanel: byId('unitsPanel'),
     interpolationPanel: byId('interpolationPanel'),
+    modeStage: byId('modeStage'),
     historyList: byId('historyList'),
     historyCounter: byId('historyCounter'),
     historySearch: byId('historySearch'),
@@ -43,6 +44,7 @@
     swapUnits: byId('swapUnitsButton'),
     interpolation1dTab: byId('interpolation1dTab'),
     interpolation2dTab: byId('interpolation2dTab'),
+    interpolationContent: byId('interpolationContent'),
     interpolation1dForm: byId('interpolation1dForm'),
     interpolation2dForm: byId('interpolation2dForm'),
     interpolationCalculateButton: byId('interpolationCalculateButton'),
@@ -76,6 +78,7 @@
   const state = {
     api: null,
     mode: 'calculator',
+    modeTransitionTimer: null,
     settings: {
       angle_mode: 'DEG',
       number_base: 'DEC',
@@ -86,6 +89,7 @@
     ui: {
       theme: 'dark',
       select_result_on_enter: true,
+      focus_calculator_on_restore: true,
       onboarding_seen: false,
     },
     variables: {},
@@ -259,6 +263,14 @@
 
   window.__nlcalcRestoreEditorFocus = function (selectAll = true) {
     closeTransientUi();
+    if (state.ui.focus_calculator_on_restore !== false && state.mode !== 'calculator') {
+      switchMode('calculator');
+    }
+    if (state.mode === 'interpolation') {
+      const modeName = interpolationMode();
+      interpolationField(modeName, INTERPOLATION_FIELDS[modeName][0])?.focus();
+      return;
+    }
     restoreEditorFocus(Boolean(selectAll));
   };
 

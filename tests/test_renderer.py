@@ -168,6 +168,31 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("set_ui_settings({", html)
         self.assertIn("selectEditorResultAfterEnter()", html)
         self.assertIn("if (dom.input.value === next)", html)
+
+    def test_settings_drawer_and_restore_mode_are_exposed(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn('dataset.drawerKind = kind', html)
+        self.assertIn('#drawerOverlay[data-drawer-kind="settings"]', html)
+        self.assertIn('id="focusCalculatorOnRestore"', html)
+        self.assertIn('focus_calculator_on_restore: true', html)
+        self.assertIn("switchMode('calculator')", html)
+        self.assertIn("if (state.mode === 'interpolation')", html)
+        self.assertNotIn('Формат, Enter и горячая клавиша', html)
+        self.assertNotIn('Настройки применяются к результату', html)
+
+    def test_second_tab_closes_function_palette(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        search_handler = html.index("dom.paletteSearch.addEventListener('keydown'")
+        close_call = html.index('closePalette();', search_handler)
+        escape_handler = html.index("if (event.key === 'Escape')", search_handler)
+        self.assertIn("event.key === 'Tab'", html[search_handler:escape_handler])
+        self.assertLess(close_call, escape_handler)
         self.assertIn("const changed = dom.input.value !== visual", html)
 
     def test_saved_formula_and_profile_drawer_is_exposed(self):
@@ -297,6 +322,22 @@ class ConsolidatedRendererTests(unittest.TestCase):
             self.assertIn(marker, html)
         self.assertIn("app-shell-interpolation.css", app_renderer.STYLE_PARTS)
         self.assertIn("app-shell-onboarding.css", app_renderer.STYLE_PARTS)
+
+    def test_interpolation_frontend_is_compact_and_mode_switch_is_animated(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn('class="interpolation-2d-layout"', html)
+        self.assertIn('z₀₁ <small>(x₀, y₁)</small>', html)
+        self.assertIn('z₁₀ <small>(x₁, y₀)</small>', html)
+        self.assertIn('id="modeStage"', html)
+        self.assertIn('mode-panel-enter-forward', html)
+        self.assertIn('mode-panel-enter-backward', html)
+        self.assertIn('function playModeTransition(previousMode, nextMode)', html)
+        self.assertNotIn('умножение отображается как ⋅', html)
+        self.assertNotIn('десятичный разделитель в полях поддерживается', html)
+        self.assertNotIn('Запятые в числах поддерживаются.', html)
 
     def test_keyboard_entry_point_uses_release_layers(self):
         source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")

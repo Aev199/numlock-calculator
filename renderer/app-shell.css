@@ -530,7 +530,10 @@ body[data-app-mode="units"] .result-unit-badge {
   pointer-events: none;
   transition:
     opacity var(--mode) ease,
+    transform var(--mode) var(--ease),
     visibility 0s linear var(--mode);
+  transform: translate3d(0, 0, 0) scale(1);
+  will-change: opacity, transform;
 }
 
 .mode-panel.active {
@@ -539,7 +542,39 @@ body[data-app-mode="units"] .result-unit-badge {
   pointer-events: auto;
   transition:
     opacity var(--mode) ease,
+    transform var(--mode) var(--ease),
     visibility 0s linear 0s;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.mode-stage.mode-transition-forward .mode-panel.active {
+  animation: mode-panel-enter-forward var(--mode) var(--ease) both;
+}
+
+.mode-stage.mode-transition-backward .mode-panel.active {
+  animation: mode-panel-enter-backward var(--mode) var(--ease) both;
+}
+
+@keyframes mode-panel-enter-forward {
+  from {
+    opacity: 0;
+    transform: translate3d(22px, 0, 0) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes mode-panel-enter-backward {
+  from {
+    opacity: 0;
+    transform: translate3d(-22px, 0, 0) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .section-header {

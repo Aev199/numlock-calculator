@@ -152,6 +152,7 @@
 
   function openDrawer(kind) {
     if (state.mode !== 'calculator' && kind !== 'settings' && kind !== 'formulas') return;
+    dom.drawerOverlay.dataset.drawerKind = kind;
     dom.drawerOverlay.classList.remove('hidden');
     dom.drawerOverlay.setAttribute('aria-hidden', 'false');
     if (kind === 'memory') renderMemoryDrawer();
@@ -163,6 +164,7 @@
   function closeDrawer(focus = true) {
     dom.drawerOverlay.classList.add('hidden');
     dom.drawerOverlay.setAttribute('aria-hidden', 'true');
+    delete dom.drawerOverlay.dataset.drawerKind;
     if (focus) restoreEditorFocus();
   }
 

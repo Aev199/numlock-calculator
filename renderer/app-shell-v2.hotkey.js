@@ -85,7 +85,7 @@
 
   function renderSettingsDrawer() {
     dom.drawerTitle.textContent = 'Настройки';
-    dom.drawerSubtitle.textContent = 'Формат, Enter и горячая клавиша';
+    dom.drawerSubtitle.textContent = '';
     dom.drawerContent.replaceChildren();
 
     const content = document.createElement('div');
@@ -113,7 +113,6 @@
             </select>
           </label>
         </div>
-        <p class="settings-help">Настройки применяются к результату, истории, копированию и вкладке «Единицы».</p>
         <div class="hotkey-status" id="formatStatus" role="status"></div>
       </section>
       <section class="settings-section">
@@ -124,6 +123,10 @@
         </label>
         <p class="settings-help">Включено по умолчанию. Выделение удобно для немедленной замены результата новым выражением.</p>
         <div class="hotkey-status" id="behaviorStatus" role="status"></div>
+        <label class="settings-checkbox">
+          <input id="focusCalculatorOnRestore" type="checkbox">
+          <span>При открытии окна переходить в калькулятор</span>
+        </label>
       </section>
       <div class="settings-divider" aria-hidden="true"></div>
       <section class="settings-section">
@@ -154,6 +157,7 @@
     const separatorSelect = content.querySelector('#decimalSeparatorSelect');
     const formatStatus = content.querySelector('#formatStatus');
     const selectResultOnEnter = content.querySelector('#selectResultOnEnter');
+    const focusCalculatorOnRestore = content.querySelector('#focusCalculatorOnRestore');
     const behaviorStatus = content.querySelector('#behaviorStatus');
     let pending = state.ui.global_hotkey || 'num lock';
     capture.value = hotkeyDisplay(pending);
@@ -161,6 +165,7 @@
     precisionInput.value = String(state.settings.precision || 12);
     separatorSelect.value = state.settings.decimal_separator || '.';
     selectResultOnEnter.checked = state.ui.select_result_on_enter !== false;
+    focusCalculatorOnRestore.checked = state.ui.focus_calculator_on_restore !== false;
 
     const setStatus = (message, kind = '') => {
       status.textContent = message;
@@ -228,6 +233,25 @@
         setBehaviorStatus('Не удалось сохранить настройку', 'error');
       } finally {
         selectResultOnEnter.disabled = false;
+      }
+    });
+
+    focusCalculatorOnRestore.addEventListener('change', async () => {
+      const enabled = focusCalculatorOnRestore.checked;
+      focusCalculatorOnRestore.disabled = true;
+      setBehaviorStatus('Сохранение…');
+      try {
+        const response = await state.api.set_ui_settings({
+          focus_calculator_on_restore: enabled,
+        });
+        state.ui = { ...state.ui, ...(response || {}) };
+        focusCalculatorOnRestore.checked = state.ui.focus_calculator_on_restore !== false;
+        setBehaviorStatus('Настройка сохранена', 'success');
+      } catch (_) {
+        focusCalculatorOnRestore.checked = state.ui.focus_calculator_on_restore !== false;
+        setBehaviorStatus('Не удалось сохранить настройку', 'error');
+      } finally {
+        focusCalculatorOnRestore.disabled = false;
       }
     });
 

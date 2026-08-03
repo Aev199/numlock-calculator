@@ -196,6 +196,10 @@ class AppApi:
             self._ui_settings.get("select_result_on_enter", True),
             True,
         )
+        self._ui_settings["focus_calculator_on_restore"] = _coerce_bool(
+            self._ui_settings.get("focus_calculator_on_restore", True),
+            True,
+        )
         self._ui_settings["onboarding_seen"] = _coerce_bool(
             self._ui_settings.get("onboarding_seen", False),
             False,
@@ -314,13 +318,18 @@ class AppApi:
                 "theme",
                 "compact_history",
                 "select_result_on_enter",
+                "focus_calculator_on_restore",
                 "onboarding_seen",
             }
             for key, value in settings.items():
                 if key in allowed:
                     self._ui_settings[key] = (
                         _coerce_bool(value, key != "onboarding_seen")
-                        if key in {"select_result_on_enter", "onboarding_seen"}
+                        if key in {
+                            "select_result_on_enter",
+                            "focus_calculator_on_restore",
+                            "onboarding_seen",
+                        }
                         else value
                     )
             self._storage.set("ui_settings", self._ui_settings)

@@ -45,6 +45,7 @@
 
   function renderInterpolation() {
     const mode = interpolationMode();
+    dom.interpolationContent.dataset.interpolationMode = mode;
     dom.interpolation1dTab.classList.toggle('active', mode === '1d');
     dom.interpolation2dTab.classList.toggle('active', mode === '2d');
     dom.interpolation1dTab.setAttribute('aria-selected', String(mode === '1d'));

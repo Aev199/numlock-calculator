@@ -168,6 +168,18 @@ class StorageAndApiTests(unittest.TestCase):
             )
             self.assertTrue(enabled['select_result_on_enter'])
 
+    def test_restore_mode_ui_setting_defaults_on_and_survives_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = app.Storage(Path(directory) / 'state.json')
+            api = app.AppApi(storage)
+            self.assertTrue(api.bootstrap()['ui_settings']['focus_calculator_on_restore'])
+
+            disabled = api.set_ui_settings({'focus_calculator_on_restore': False})
+            self.assertFalse(disabled['focus_calculator_on_restore'])
+            self.assertFalse(
+                app.AppApi(storage).bootstrap()['ui_settings']['focus_calculator_on_restore']
+            )
+
     def test_onboarding_and_interpolation_state_survive_restart(self):
         with tempfile.TemporaryDirectory() as directory:
             storage = app.Storage(Path(directory) / 'state.json')
