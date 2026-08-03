@@ -121,6 +121,7 @@
 
   function confirmHistoryEntry(localId, persisted, expectedEpoch) {
     if (!persisted || expectedEpoch !== state.calculator.historyEpoch) return;
+    let needsReconcile = Boolean(normalize(dom.historySearch.value));
     const localIndex = state.calculator.history.findIndex(
       entry => entry.id === localId,
     );
@@ -141,11 +142,16 @@
     state.calculator.historyNodes.delete(localId);
     if (localNode) {
       const oldPersistedNode = state.calculator.historyNodes.get(persisted.id);
-      if (oldPersistedNode && oldPersistedNode !== localNode) oldPersistedNode.remove();
+      if (oldPersistedNode && oldPersistedNode !== localNode) {
+        oldPersistedNode.remove();
+        needsReconcile = true;
+      }
       state.calculator.historyNodes.set(persisted.id, localNode);
       updateHistoryNode(localNode, persisted);
+    } else {
+      needsReconcile = true;
     }
-    reconcileHistory();
+    if (needsReconcile) reconcileHistory();
   }
 
   function rollbackHistoryEntry(localId, expectedEpoch) {
@@ -164,55 +170,3 @@
       reconcileHistory();
     }, reducedMotion() ? 0 : 215);
   }
-
-  function cancelCommitAnimation() {
-    const active = state.commitAnimation;
-    state.commitAnimation = null;
-    if (active) {
-      try { active.cancel(); } catch (_) {}
-    }
-    dom.input.classList.remove('commit-hidden');
-    dom.commitOverlay.classList.remove('active');
-    dom.commitOverlay.textContent = '';
-  }
-
-  function animateCommit(result) {
-    cancelCommitAnimation();
-    if (reducedMotion() || typeof dom.commitOverlay.animate !== 'function') {
-      return;
-    }
-    const sourceRect = dom.resultValue.getBoundingClientRect();
-    const targetRect = dom.input.getBoundingClientRect();
-    if (!sourceRect.width || !targetRect.width) return;
-
-    const sourceStyle = getComputedStyle(dom.resultValue);
-    const targetStyle = getComputedStyle(dom.input);
-    const targetLeft = targetRect.left + Number.parseFloat(targetStyle.paddingLeft || '0');
-    const targetTop = targetRect.top + Number.parseFloat(targetStyle.paddingTop || '0');
-    const sourceFont = Number.parseFloat(sourceStyle.fontSize || '20');
-    const targetFont = Number.parseFloat(targetStyle.fontSize || '16');
-    const scale = sourceFont ? targetFont / sourceFont : 1;
-
-    dom.commitOverlay.textContent = result;
-    dom.commitOverlay.style.left = `${sourceRect.left}px`;
-    dom.commitOverlay.style.top = `${sourceRect.top}px`;
-    dom.commitOverlay.style.fontFamily = sourceStyle.fontFamily;
-    dom.commitOverlay.style.fontSize = sourceStyle.fontSize;
-    dom.commitOverlay.style.fontWeight = sourceStyle.fontWeight;
-    dom.commitOverlay.style.lineHeight = sourceStyle.lineHeight;
-    dom.commitOverlay.classList.add('active');
-    dom.input.classList.add('commit-hidden');
-
-    const dx = targetLeft - sourceRect.left;
-    const dy = targetTop - sourceRect.top;
-    const animation = dom.commitOverlay.animate(
-      [
-        { opacity: .96, transform: 'translate3d(0,0,0) scale(1)' },
-        {
-          opacity: 1,
-          offset: .72,
-          transform: `translate3d(${dx}px,${dy}px,0) scale(${scale})`,
-        },
-        {
-          opacity: 0,
-          transform: `translate3d(${dx}px,${dy}px,0) scale(${scale})`,
