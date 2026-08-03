@@ -10,6 +10,9 @@
       if (state.mode === 'units') {
         setInputValue(response.source_value);
         renderResult(response);
+        if (!resultSelected || response.source_value !== optimisticValue) {
+          resultSelected = selectEditorResultAfterEnter();
+        }
       }
     } catch (_) {
       const stillCurrent = (
@@ -39,15 +42,14 @@
 
   function switchMode(mode) {
     if (!['calculator', 'units'].includes(mode) || mode === state.mode) return;
-    cancelCommitAnimation();
     hideCompletion();
 
     if (state.mode === 'calculator') {
+      cancelCalculatorPreview();
       state.calculator.expression = dom.input.value;
-      ++state.calculator.previewSequence;
     } else {
+      cancelUnitsPreview();
       state.units.expression = dom.input.value;
-      ++state.units.previewSequence;
       persistUnitsSoon();
     }
 
@@ -208,4 +210,3 @@
   function insertSuggestion(item) {
     const token = currentToken();
     dom.input.setSelectionRange(token.start, token.end);
-

@@ -178,8 +178,11 @@
 
   const baseSetInputValueUx = setInputValue;
   setInputValue = function (value, selection = null) {
-    baseSetInputValueUx(displayExpression(value), selection);
-    renderBracketColors();
+    const visual = displayExpression(value);
+    const changed = dom.input.value !== visual;
+    baseSetInputValueUx(visual, selection);
+    if (changed) renderBracketColors();
+    return changed;
   };
 
   const baseOnInputUx = onInput;

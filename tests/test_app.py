@@ -151,6 +151,23 @@ class StorageAndApiTests(unittest.TestCase):
             self.assertEqual(restored['settings']['decimal_separator'], ',')
             self.assertEqual(restored['history'][0]['normalized_expression'], '1234')
 
+    def test_enter_selection_ui_setting_defaults_on_and_survives_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = app.Storage(Path(directory) / 'state.json')
+            api = app.AppApi(storage)
+            self.assertTrue(api.bootstrap()['ui_settings']['select_result_on_enter'])
+
+            disabled = api.set_ui_settings({'select_result_on_enter': False})
+            self.assertFalse(disabled['select_result_on_enter'])
+            self.assertFalse(
+                app.AppApi(storage).bootstrap()['ui_settings']['select_result_on_enter']
+            )
+
+            enabled = app.AppApi(storage).set_ui_settings(
+                {'select_result_on_enter': True}
+            )
+            self.assertTrue(enabled['select_result_on_enter'])
+
     def test_html_is_keyboard_first(self):
         html = app.build_html()
         self.assertIn('id="expressionInput"', html)

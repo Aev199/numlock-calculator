@@ -85,7 +85,7 @@
 
   function renderSettingsDrawer() {
     dom.drawerTitle.textContent = 'Настройки';
-    dom.drawerSubtitle.textContent = 'Формат результата и горячая клавиша';
+    dom.drawerSubtitle.textContent = 'Формат, Enter и горячая клавиша';
     dom.drawerContent.replaceChildren();
 
     const content = document.createElement('div');
@@ -116,6 +116,15 @@
         <p class="settings-help">Настройки применяются к результату, истории, копированию и вкладке «Единицы».</p>
         <div class="hotkey-status" id="formatStatus" role="status"></div>
       </section>
+      <section class="settings-section">
+        <span class="settings-label">После Enter</span>
+        <label class="settings-checkbox">
+          <input id="selectResultOnEnter" type="checkbox">
+          <span>Выделять результат в строке ввода</span>
+        </label>
+        <p class="settings-help">Включено по умолчанию. Выделение удобно для немедленной замены результата новым выражением.</p>
+        <div class="hotkey-status" id="behaviorStatus" role="status"></div>
+      </section>
       <div class="settings-divider" aria-hidden="true"></div>
       <section class="settings-section">
         <label class="settings-label" for="globalHotkeyCapture">Глобальная клавиша</label>
@@ -144,11 +153,14 @@
     const precisionInput = content.querySelector('#precisionInput');
     const separatorSelect = content.querySelector('#decimalSeparatorSelect');
     const formatStatus = content.querySelector('#formatStatus');
+    const selectResultOnEnter = content.querySelector('#selectResultOnEnter');
+    const behaviorStatus = content.querySelector('#behaviorStatus');
     let pending = state.ui.global_hotkey || 'num lock';
     capture.value = hotkeyDisplay(pending);
     formatSelect.value = state.settings.number_format || 'auto';
     precisionInput.value = String(state.settings.precision || 12);
     separatorSelect.value = state.settings.decimal_separator || '.';
+    selectResultOnEnter.checked = state.ui.select_result_on_enter !== false;
 
     const setStatus = (message, kind = '') => {
       status.textContent = message;
@@ -158,6 +170,11 @@
     const setFormatStatus = (message, kind = '') => {
       formatStatus.textContent = message;
       formatStatus.className = `hotkey-status${kind ? ` ${kind}` : ''}`;
+    };
+
+    const setBehaviorStatus = (message, kind = '') => {
+      behaviorStatus.textContent = message;
+      behaviorStatus.className = `hotkey-status${kind ? ` ${kind}` : ''}`;
     };
 
     async function saveFormatSettings() {
@@ -193,6 +210,25 @@
 
     [formatSelect, precisionInput, separatorSelect].forEach(control => {
       control.addEventListener('change', saveFormatSettings);
+    });
+
+    selectResultOnEnter.addEventListener('change', async () => {
+      const enabled = selectResultOnEnter.checked;
+      selectResultOnEnter.disabled = true;
+      setBehaviorStatus('Сохранение…');
+      try {
+        const response = await state.api.set_ui_settings({
+          select_result_on_enter: enabled,
+        });
+        state.ui = { ...state.ui, ...(response || {}) };
+        selectResultOnEnter.checked = state.ui.select_result_on_enter !== false;
+        setBehaviorStatus('Настройка сохранена', 'success');
+      } catch (_) {
+        selectResultOnEnter.checked = state.ui.select_result_on_enter !== false;
+        setBehaviorStatus('Не удалось сохранить настройку', 'error');
+      } finally {
+        selectResultOnEnter.disabled = false;
+      }
     });
 
     capture.addEventListener('focus', () => {

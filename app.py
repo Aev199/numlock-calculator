@@ -39,6 +39,22 @@ CF_UNICODETEXT = 13
 GMEM_MOVEABLE = 0x0002
 
 
+def _coerce_bool(value: Any, default: bool) -> bool:
+    """Read a persisted UI boolean without treating ``"false"`` as true."""
+
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"", "0", "false", "no", "off"}:
+            return False
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+    return default
+
+
 def resource_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys._MEIPASS)  # type: ignore[attr-defined]
@@ -170,6 +186,10 @@ class AppApi:
         self._ui_settings["global_hotkey"] = (
             saved_hotkey.hotkey if saved_hotkey.ok else DEFAULT_HOTKEY
         )
+        self._ui_settings["select_result_on_enter"] = _coerce_bool(
+            self._ui_settings.get("select_result_on_enter", True),
+            True,
+        )
         self._sequence = len(self._history)
         self._lock = threading.RLock()
 
@@ -276,10 +296,14 @@ class AppApi:
 
     def set_ui_settings(self, settings: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
-            allowed = {"theme", "compact_history"}
+            allowed = {"theme", "compact_history", "select_result_on_enter"}
             for key, value in settings.items():
                 if key in allowed:
-                    self._ui_settings[key] = value
+                    self._ui_settings[key] = (
+                        _coerce_bool(value, True)
+                        if key == "select_result_on_enter"
+                        else value
+                    )
             self._storage.set("ui_settings", self._ui_settings)
             return dict(self._ui_settings)
 
@@ -579,4 +603,3 @@ def register_hotkeys() -> None:
         )
     except Exception:
         _keyboard_module = None
-

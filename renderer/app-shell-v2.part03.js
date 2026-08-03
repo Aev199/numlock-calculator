@@ -1,17 +1,3 @@
-        },
-      ],
-      {
-        duration: 225,
-        easing: 'cubic-bezier(.16,1,.3,1)',
-        fill: 'both',
-      },
-    );
-    state.commitAnimation = animation;
-    animation.finished.catch(() => {}).finally(() => {
-      if (state.commitAnimation === animation) cancelCommitAnimation();
-    });
-  }
-
   function applyHandoff(incoming) {
     if (!incoming) return;
     const currentRevision = Number(state.calculator.handoff.revision || 0);
@@ -28,6 +14,7 @@
   }
 
   async function commitCalculator() {
+    cancelCalculatorPreview();
     const expression = normalize(state.calculator.expression);
     if (!expression) return;
     hideCompletion();
@@ -47,6 +34,7 @@
     };
     let optimisticRevision = null;
     let localId = null;
+    let resultSelected = false;
 
     const rollbackOptimisticState = () => {
       if (
@@ -77,7 +65,7 @@
       };
       state.calculator.previewExpression = optimisticResult;
       renderResult(state.calculator.preview);
-      animateCommit(optimisticResult);
+      resultSelected = selectEditorResultAfterEnter();
 
       if (isPlainNumber(optimisticResult)) {
         optimisticRevision = Number(previousHandoff.revision || 0) + 1;
@@ -135,6 +123,9 @@
         if (state.mode === 'calculator') {
           setInputValue(result);
           renderResult(state.calculator.preview);
+          if (!resultSelected || result !== visibleCommittedValue) {
+            resultSelected = selectEditorResultAfterEnter();
+          }
         }
       }
 
@@ -168,6 +159,7 @@
   }
 
   async function commitUnits() {
+    cancelUnitsPreview();
     const expression = normalize(state.units.expression);
     if (!expression) return;
 
@@ -181,12 +173,14 @@
     const optimisticValue = preview?.source_value
       ? String(preview.source_value)
       : expression;
+    let resultSelected = false;
 
     if (preview?.source_value) {
       state.units.expression = optimisticValue;
       if (state.mode === 'units') {
         setInputValue(optimisticValue);
         renderResult(preview);
+        resultSelected = selectEditorResultAfterEnter();
       }
     }
 
@@ -208,4 +202,3 @@
         if (stillCurrent && state.mode === 'units') renderResult(response);
         return;
       }
-

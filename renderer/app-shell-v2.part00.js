@@ -2,7 +2,7 @@
   'use strict';
 
   const RENDERER_MARKER = 'nlcalc-consolidated-v2';
-  const PREVIEW_DELAY = 18;
+  const PREVIEW_DELAY = 60;
   const SAVE_DELAY = 180;
   const FUNCTION_WRAP_DELAY = 230;
   const PLAIN_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
@@ -11,7 +11,6 @@
   const dom = {
     input: byId('expressionInput'),
     fieldShell: byId('expressionFieldShell'),
-    commitOverlay: byId('commitOverlay'),
     resultValue: byId('resultValue'),
     resultError: byId('resultError'),
     sourceBadge: byId('sourceUnitBadge'),
@@ -61,7 +60,7 @@
       number_format: 'auto',
       decimal_separator: '.',
     },
-    ui: { theme: 'dark' },
+    ui: { theme: 'dark', select_result_on_enter: true },
     variables: {},
     memories: Array(10).fill('0'),
     formulas: [],
@@ -108,7 +107,6 @@
     toastTimer: null,
     typingTimer: null,
     functionWrapTimer: null,
-    commitAnimation: null,
   };
 
   const normalize = value => String(value ?? '').trim();
@@ -173,8 +171,27 @@
   }
 
   function setInputValue(value, selectEnd = true) {
-    dom.input.value = String(value ?? '');
+    const next = String(value ?? '');
+    if (dom.input.value === next) {
+      if (selectEnd) setSelection(next.length);
+      return false;
+    }
+    dom.input.value = next;
     if (selectEnd) setSelection(dom.input.value.length);
+    return true;
+  }
+
+  function selectEditorResultAfterEnter() {
+    if (state.ui.select_result_on_enter === false) return false;
+    try {
+      dom.input.focus({ preventScroll: true });
+    } catch (_) {
+      dom.input.focus();
+    }
+    dom.input.select();
+    state.selection.start = 0;
+    state.selection.end = dom.input.value.length;
+    return true;
   }
 
   function restoreEditorFocus(selectAll = false) {

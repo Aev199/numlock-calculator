@@ -145,6 +145,18 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("Вычисление скопировано", html)
         self.assertIn("copyExpression(entry.expression)", html)
 
+    def test_enter_selection_setting_and_no_duplicate_input_repaint_are_exposed(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn('id="selectResultOnEnter"', html)
+        self.assertIn("select_result_on_enter: true", html)
+        self.assertIn("set_ui_settings({", html)
+        self.assertIn("selectEditorResultAfterEnter()", html)
+        self.assertIn("if (dom.input.value === next)", html)
+        self.assertIn("const changed = dom.input.value !== visual", html)
+
     def test_saved_formula_and_profile_drawer_is_exposed(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
@@ -219,7 +231,22 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("incomingRevision < currentRevision", html)
         self.assertIn("if (event.repeat) return", html)
         self.assertIn("event.stopPropagation()", html)
-        self.assertIn("cancelCommitAnimation()", html)
+        self.assertIn("cancelCalculatorPreview()", html)
+        self.assertIn("cancelUnitsPreview()", html)
+        self.assertNotIn("function animateCommit", html)
+        self.assertNotIn("commitOverlay", html)
+
+    def test_enter_commit_path_does_not_wait_for_preview_or_animation(self):
+        app, _calls = self.make_app()
+        app_renderer.install(app)
+        html = app.build_html()
+
+        self.assertIn("const PREVIEW_DELAY = 60;", html)
+        self.assertIn("state.calculator.previewTimer = null", html)
+        self.assertIn("state.units.previewTimer = null", html)
+        self.assertIn("cancelCalculatorPreview();", html)
+        self.assertIn("cancelUnitsPreview();", html)
+        self.assertNotIn("duration: 225", html)
 
     def test_both_mode_panels_are_permanent_dom_siblings(self):
         app, _calls = self.make_app()
