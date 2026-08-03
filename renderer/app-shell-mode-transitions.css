@@ -1,0 +1,47 @@
+/* Restore the stable release-style mode transition.
+
+   The tab indicator keeps its horizontal glide from app-shell.css. The
+   workspace itself must not participate in Chromium View Transitions, and
+   the legacy directional panel classes are reduced to a soft cross-fade.
+   This avoids the competing full-workspace snapshot and panel slide that
+   previously made the transition jump or disappear in WebView2. */
+
+.workspace {
+  view-transition-name: none;
+}
+
+::view-transition-group(mode-workspace),
+::view-transition-old(mode-workspace),
+::view-transition-new(mode-workspace) {
+  animation: none !important;
+}
+
+.mode-panel {
+  transform: none !important;
+  will-change: opacity;
+}
+
+.mode-stage.mode-transition-forward .mode-panel-entering,
+.mode-stage.mode-transition-backward .mode-panel-entering {
+  animation: mode-panel-soft-fade-in var(--mode) ease both;
+}
+
+.mode-stage.mode-transition-forward .mode-panel-leaving,
+.mode-stage.mode-transition-backward .mode-panel-leaving {
+  animation: mode-panel-soft-fade-out var(--mode) ease both;
+}
+
+.mode-panel.mode-panel-entering,
+.mode-panel.mode-panel-leaving {
+  transform: none !important;
+}
+
+@keyframes mode-panel-soft-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mode-panel-soft-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
