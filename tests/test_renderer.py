@@ -76,6 +76,18 @@ class ConsolidatedRendererTests(unittest.TestCase):
             app_renderer.SCRIPT_PARTS.index("app-shell-v2.part08.js"),
         )
 
+    def test_drawer_layers_stay_outside_event_bootstrap_scope(self):
+        renderer = ROOT / "renderer"
+        source = "\n".join(
+            (renderer / name).read_text(encoding="utf-8")
+            for name in app_renderer.SCRIPT_PARTS
+        )
+
+        binder = source.index("function bindEvents()")
+        self.assertLess(source.index("function renderVariablesDrawer()"), binder)
+        self.assertLess(source.index("function renderFormulasDrawer()"), binder)
+        self.assertLess(source.index("function renderSettingsDrawer()"), binder)
+
     def test_character_input_is_native_and_has_no_caret_animation(self):
         app, _calls = self.make_app()
         app_renderer.install(app)
