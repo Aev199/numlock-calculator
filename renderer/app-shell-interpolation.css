@@ -18,36 +18,16 @@ body[data-app-mode="interpolation"] .workspace {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 6px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 9px;
+  padding: 7px 9px;
   scrollbar-gutter: stable;
 }
 
 .interpolation-form {
   display: grid;
-  gap: 8px;
-}
-
-.interpolation-form-heading {
-  display: grid;
-  gap: 2px;
-}
-
-.interpolation-form-heading strong {
-  font-size: 11px;
-}
-
-.interpolation-form-heading span,
-.interpolation-help {
-  color: var(--subtle);
-  font-size: 9px;
-  line-height: 1.35;
-}
-
-.interpolation-form-heading span {
-  font-family: "Cascadia Mono", "Consolas", monospace;
+  gap: 6px;
 }
 
 .interpolation-grid {
@@ -141,10 +121,6 @@ body[data-app-mode="interpolation"] .workspace {
   color: var(--danger);
   font-size: 10px;
   line-height: 1.35;
-}
-
-.interpolation-help {
-  margin: -1px 0 0;
 }
 
 @media (max-width: 410px), (max-height: 460px) {

@@ -140,22 +140,13 @@
       return;
     }
 
-    if (
-      state.mode === 'calculator'
-      && event.key === 'ArrowUp'
-      && dom.input.selectionStart === 0
-      && dom.input.selectionEnd === 0
-    ) {
+    if (state.mode === 'calculator' && event.key === 'ArrowUp') {
       event.preventDefault();
       navigateHistory(1);
       return;
     }
 
-    if (
-      state.mode === 'calculator'
-      && event.key === 'ArrowDown'
-      && dom.input.selectionStart === dom.input.value.length
-    ) {
+    if (state.mode === 'calculator' && event.key === 'ArrowDown') {
       event.preventDefault();
       navigateHistory(-1);
       return;

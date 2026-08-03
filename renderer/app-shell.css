@@ -328,6 +328,49 @@ body[data-app-mode="interpolation"] .mode-indicator {
   overflow: hidden;
 }
 
+/* Chromium/WebView snapshots both layouts, so modes with different heights
+   still move as two intact pages instead of stretching individual cards. */
+.workspace {
+  view-transition-name: mode-workspace;
+}
+
+::view-transition-group(mode-workspace) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+}
+
+html.mode-swipe-forward::view-transition-old(mode-workspace) {
+  animation: mode-workspace-old-forward 320ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+html.mode-swipe-forward::view-transition-new(mode-workspace) {
+  animation: mode-workspace-new-forward 320ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+html.mode-swipe-backward::view-transition-old(mode-workspace) {
+  animation: mode-workspace-old-backward 320ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+html.mode-swipe-backward::view-transition-new(mode-workspace) {
+  animation: mode-workspace-new-backward 320ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes mode-workspace-old-forward {
+  to { transform: translateX(-100%); }
+}
+
+@keyframes mode-workspace-new-forward {
+  from { transform: translateX(100%); }
+}
+
+@keyframes mode-workspace-old-backward {
+  to { transform: translateX(100%); }
+}
+
+@keyframes mode-workspace-new-backward {
+  from { transform: translateX(-100%); }
+}
+
 .editor-card,
 .mode-panel {
   min-width: 0;

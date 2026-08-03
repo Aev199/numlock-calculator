@@ -40,6 +40,14 @@
     return true;
   }
 
+  function modeTransitionDirection(previousMode, nextMode) {
+    const modes = ['calculator', 'units', 'interpolation'];
+    const previousIndex = modes.indexOf(previousMode);
+    const nextIndex = modes.indexOf(nextMode);
+    if (previousIndex < 0 || nextIndex < 0 || previousIndex === nextIndex) return null;
+    return nextIndex > previousIndex ? 'forward' : 'backward';
+  }
+
   function playModeTransition(previousMode, nextMode) {
     if (!dom.modeStage) return;
     window.clearTimeout(state.modeTransitionTimer);
@@ -50,11 +58,8 @@
     delete dom.modeStage.dataset.modeTransition;
     if (reducedMotion()) return;
 
-    const modes = ['calculator', 'units', 'interpolation'];
-    const previousIndex = modes.indexOf(previousMode);
-    const nextIndex = modes.indexOf(nextMode);
-    if (previousIndex < 0 || nextIndex < 0 || previousIndex === nextIndex) return;
-    const direction = nextIndex > previousIndex ? 'forward' : 'backward';
+    const direction = modeTransitionDirection(previousMode, nextMode);
+    if (!direction) return;
     const previousPanel = dom.modeStage.querySelector(`[data-mode-panel="${previousMode}"]`);
     const nextPanel = dom.modeStage.querySelector(`[data-mode-panel="${nextMode}"]`);
     if (!previousPanel || !nextPanel) return;
@@ -87,64 +92,90 @@
       persistUnitsSoon();
     }
 
-    state.mode = mode;
-    document.body.dataset.appMode = mode;
-    const calculator = mode === 'calculator';
-    const units = mode === 'units';
-    dom.calculatorTab.classList.toggle('active', calculator);
-    dom.unitsTab.classList.toggle('active', units);
-    dom.interpolationTab.classList.toggle('active', mode === 'interpolation');
-    dom.calculatorTab.setAttribute('aria-selected', String(calculator));
-    dom.unitsTab.setAttribute('aria-selected', String(units));
-    dom.interpolationTab.setAttribute('aria-selected', String(mode === 'interpolation'));
-    dom.calculatorPanel.classList.toggle('active', calculator);
-    dom.unitsPanel.classList.toggle('active', units);
-    dom.interpolationPanel.classList.toggle('active', mode === 'interpolation');
-    dom.calculatorPanel.setAttribute('aria-hidden', String(!calculator));
-    dom.unitsPanel.setAttribute('aria-hidden', String(!units));
-    dom.interpolationPanel.setAttribute('aria-hidden', String(mode !== 'interpolation'));
-    playModeTransition(previousMode, mode);
-    dom.editorLabel.textContent = calculator
-      ? 'Выражение'
-      : units ? 'Исходное значение' : 'Интерполяция';
-    dom.input.placeholder = calculator
-      ? 'Например: (120 + 30) / 5'
-      : units ? 'Например: (100 + 25) / 2' : '';
-    dom.input.setAttribute(
-      'aria-label',
-      calculator
-        ? 'Введите выражение'
-        : units ? 'Введите исходное значение' : 'Поля интерполяции',
-    );
+    const applyMode = () => {
+      state.mode = mode;
+      document.body.dataset.appMode = mode;
+      const calculator = mode === 'calculator';
+      const units = mode === 'units';
+      dom.calculatorTab.classList.toggle('active', calculator);
+      dom.unitsTab.classList.toggle('active', units);
+      dom.interpolationTab.classList.toggle('active', mode === 'interpolation');
+      dom.calculatorTab.setAttribute('aria-selected', String(calculator));
+      dom.unitsTab.setAttribute('aria-selected', String(units));
+      dom.interpolationTab.setAttribute('aria-selected', String(mode === 'interpolation'));
+      dom.calculatorPanel.classList.toggle('active', calculator);
+      dom.unitsPanel.classList.toggle('active', units);
+      dom.interpolationPanel.classList.toggle('active', mode === 'interpolation');
+      dom.calculatorPanel.setAttribute('aria-hidden', String(!calculator));
+      dom.unitsPanel.setAttribute('aria-hidden', String(!units));
+      dom.interpolationPanel.setAttribute('aria-hidden', String(mode !== 'interpolation'));
+      dom.editorLabel.textContent = calculator
+        ? 'Выражение'
+        : units ? 'Исходное значение' : 'Интерполяция';
+      dom.input.placeholder = calculator
+        ? 'Например: (120 + 30) / 5'
+        : units ? 'Например: (100 + 25) / 2' : '';
+      dom.input.setAttribute(
+        'aria-label',
+        calculator
+          ? 'Введите выражение'
+          : units ? 'Введите исходное значение' : 'Поля интерполяции',
+      );
 
-    if (calculator) {
-      setInputValue(state.calculator.expression);
-      const currentPreview = (
-        state.calculator.previewExpression === state.calculator.expression
-      ) ? state.calculator.preview : null;
-      renderResult(currentPreview);
-      scheduleCalculatorPreview(0);
-    } else if (units) {
-      importCalculatorHandoff();
-      renderUnitControls();
-      setInputValue(state.units.expression);
-      const currentPreview = (
-        state.units.previewExpression === state.units.expression
-        && state.units.previewContext === unitContext()
-      ) ? state.units.preview : null;
-      renderResult(currentPreview);
-      scheduleUnitsPreview(0);
-    } else {
-      renderInterpolation();
-      const currentInterpolationValues = interpolationValues();
-      if (interpolationComplete(currentInterpolationValues)) {
-        void calculateInterpolation();
+      if (calculator) {
+        setInputValue(state.calculator.expression);
+        const currentPreview = (
+          state.calculator.previewExpression === state.calculator.expression
+        ) ? state.calculator.preview : null;
+        renderResult(currentPreview);
+        scheduleCalculatorPreview(0);
+      } else if (units) {
+        importCalculatorHandoff();
+        renderUnitControls();
+        setInputValue(state.units.expression);
+        const currentPreview = (
+          state.units.previewExpression === state.units.expression
+          && state.units.previewContext === unitContext()
+        ) ? state.units.preview : null;
+        renderResult(currentPreview);
+        scheduleUnitsPreview(0);
+      } else {
+        renderInterpolation();
+        const currentInterpolationValues = interpolationValues();
+        if (interpolationComplete(currentInterpolationValues)) {
+          void calculateInterpolation();
+        }
       }
+    };
+
+    const direction = modeTransitionDirection(previousMode, mode);
+    const canTransitionWorkspace = (
+      direction
+      && dom.workspace
+      && typeof document.startViewTransition === 'function'
+      && !reducedMotion()
+    );
+    const focusActiveMode = () => {
       window.requestAnimationFrame(() => {
-        interpolationField(INTERPOLATION_FIELDS[0])?.focus();
+        if (mode === 'interpolation') interpolationField(INTERPOLATION_FIELDS[0])?.focus();
+        else restoreEditorFocus();
       });
+    };
+    if (canTransitionWorkspace) {
+      document.documentElement.classList.add(`mode-swipe-${direction}`);
+      const transition = document.startViewTransition(applyMode);
+      transition.updateCallbackDone.then(focusActiveMode);
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove(
+          'mode-swipe-forward',
+          'mode-swipe-backward',
+        );
+      });
+    } else {
+      applyMode();
+      playModeTransition(previousMode, mode);
+      focusActiveMode();
     }
-    if (mode !== 'interpolation') restoreEditorFocus();
   }
 
   function setCatalog(items) {

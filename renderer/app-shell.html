@@ -37,7 +37,7 @@
       <button class="mode-switch-button" id="interpolationTab" type="button" data-mode="interpolation" aria-selected="false">Интерполяция</button>
     </nav>
 
-    <main class="workspace">
+    <main class="workspace" id="workspace">
       <section class="editor-card" aria-label="Рабочее значение">
         <div class="editor-toolbar">
           <span class="editor-label" id="editorLabel">Выражение</span>
@@ -114,22 +114,17 @@
           <div class="section-header interpolation-header">
             <div class="section-heading converter-heading">
               <h2>Интерполяция</h2>
-              <span class="converter-caption">линейная</span>
             </div>
           </div>
           <div class="interpolation-content" id="interpolationContent">
             <div class="interpolation-form" id="interpolation1dForm">
-              <div class="interpolation-form-heading">
-                <strong>1. Две опорные точки</strong>
-                <span>Построить y(x) по точкам (x₀, y₀) и (x₁, y₁)</span>
-              </div>
               <div class="interpolation-grid">
                 <label class="interpolation-field"><span>x₀</span><input id="interpolation1dX0" data-interpolation-field="x0" type="text" inputmode="decimal" placeholder="0"></label>
                 <label class="interpolation-field"><span>y₀</span><input id="interpolation1dY0" data-interpolation-field="y0" type="text" inputmode="decimal" placeholder="0"></label>
                 <label class="interpolation-field"><span>x₁</span><input id="interpolation1dX1" data-interpolation-field="x1" type="text" inputmode="decimal" placeholder="10"></label>
                 <label class="interpolation-field"><span>y₁</span><input id="interpolation1dY1" data-interpolation-field="y1" type="text" inputmode="decimal" placeholder="100"></label>
               </div>
-              <label class="interpolation-field interpolation-target-field"><span>2. Найти y при x</span><input id="interpolation1dX" data-interpolation-field="x" type="text" inputmode="decimal" placeholder="5"></label>
+              <label class="interpolation-field interpolation-target-field"><span>Найти y при x</span><input id="interpolation1dX" data-interpolation-field="x" type="text" inputmode="decimal" placeholder="5"></label>
             </div>
 
             <div class="interpolation-actions">
@@ -143,7 +138,6 @@
               <span class="interpolation-result-formula" id="interpolationResultFormula"></span>
               <span class="interpolation-result-error hidden" id="interpolationResultError"></span>
             </div>
-            <p class="interpolation-help">Точка вне заданной области считается экстраполяцией.</p>
           </div>
         </section>
       </div>
