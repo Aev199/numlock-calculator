@@ -34,11 +34,26 @@
     dom.resultValue.classList.remove('updating');
   }
 
+  function cancelCalculatorPreview() {
+    window.clearTimeout(state.calculator.previewTimer);
+    state.calculator.previewTimer = null;
+    ++state.calculator.previewSequence;
+    settleResult();
+  }
+
+  function cancelUnitsPreview() {
+    window.clearTimeout(state.units.previewTimer);
+    state.units.previewTimer = null;
+    ++state.units.previewSequence;
+    settleResult();
+  }
+
   function scheduleCalculatorPreview(delay = PREVIEW_DELAY) {
     window.clearTimeout(state.calculator.previewTimer);
     const sequence = ++state.calculator.previewSequence;
     const expression = state.calculator.expression;
     state.calculator.previewTimer = window.setTimeout(async () => {
+      state.calculator.previewTimer = null;
       if (state.mode !== 'calculator') return;
       if (!normalize(expression)) {
         state.calculator.preview = null;
@@ -156,6 +171,7 @@
     const expression = state.units.expression;
     const context = unitContext();
     state.units.previewTimer = window.setTimeout(async () => {
+      state.units.previewTimer = null;
       if (state.mode !== 'units') return;
       persistUnitsSoon();
       if (!normalize(expression)) {
