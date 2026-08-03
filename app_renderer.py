@@ -37,6 +37,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.hotkey.js",
     "app-shell-v2.about.js",
     "app-shell-v2.onboarding.js",
+    "app-shell-v2.mode-transitions.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",
@@ -94,6 +95,12 @@ def render_document(renderer_dir: Path) -> str:
         or "helpButton" not in template
     ):
         raise RuntimeError("Consolidated renderer onboarding layer is incomplete")
+    if (
+        "app-shell-v2.mode-transitions.js" not in SCRIPT_PARTS
+        or "MODE_MOTION_ORDER" not in javascript
+        or "modeIndicator" not in template
+    ):
+        raise RuntimeError("Consolidated renderer mode motion is incomplete")
 
     return (
         template.replace(CSS_PLACEHOLDER, css, 1)
