@@ -21,6 +21,7 @@ STYLE_PARTS = (
     "app-shell-formulas.css",
     "app-shell-interpolation.css",
     "app-shell-onboarding.css",
+    "app-shell-mode-transitions.css",
 )
 SCRIPT_PARTS = (
     *(f"app-shell-v2.part{index:02d}.js" for index in range(6)),
