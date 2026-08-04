@@ -2,7 +2,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:  # Linux source-only CI does not install runtime packages.
+    Image = None
 
 import app_icon
 from calc_engine import EngineSettings
@@ -26,6 +29,7 @@ class ReleaseCandidateFormattingTests(unittest.TestCase):
         self.assertEqual(EngineSettings.from_mapping({"precision": 0}).precision, 0)
         self.assertEqual(EngineSettings.from_mapping({"precision": 99}).precision, 15)
 
+    @unittest.skipIf(Image is None, "Pillow is verified by the Windows build job")
     def test_shared_icon_writes_multiresolution_ico(self):
         tray = app_icon.create_icon_image(64)
         self.assertEqual(tray.getpixel((10, 32)), app_icon.ICON_BACKGROUND)
