@@ -6,6 +6,7 @@ from unittest.mock import patch
 import app_native_dialogs
 import app_product
 import app_renderer
+import product_info
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,10 +66,16 @@ class AboutModalTests(unittest.TestCase):
             ),
         )
 
-    def test_renderer_contains_real_about_anchors_and_bridge_calls(self):
+    def test_renderer_contains_release_identity_and_real_links(self):
         html = app_renderer.render_document(ROOT / "renderer")
 
         self.assertIn("window.__nlcalcShowAbout = showAbout", html)
+        self.assertIn(
+            f'id="aboutTitle">{product_info.APP_NAME} {product_info.APP_VERSION}</h2>',
+            html,
+        )
+        self.assertNotIn(app_renderer.PRODUCT_NAME_PLACEHOLDER, html)
+        self.assertNotIn(app_renderer.PRODUCT_VERSION_PLACEHOLDER, html)
         self.assertIn('href="https://nlcalc.narod.ru/"', html)
         self.assertIn(
             'href="https://github.com/Aev199/numlock-calculator"',
@@ -80,4 +87,3 @@ class AboutModalTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
