@@ -10,6 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from product_info import APP_NAME, APP_VERSION
+
 
 TEMPLATE_NAME = "app-shell.html"
 STYLE_PARTS = (
@@ -44,23 +46,36 @@ SCRIPT_PARTS = (
 )
 CSS_PLACEHOLDER = "/*__NUMLOCK_CALC_CSS__*/"
 JS_PLACEHOLDER = "/*__NUMLOCK_CALC_JS__*/"
+PRODUCT_NAME_PLACEHOLDER = "__NUMCALC_PRODUCT_NAME__"
+PRODUCT_VERSION_PLACEHOLDER = "__NUMCALC_PRODUCT_VERSION__"
 DEFAULT_WIDTH = 384
 DEFAULT_HEIGHT = 432
 MIN_SIZE = (360, 380)
+
+
+def _inject_product_identity(source: str) -> str:
+    return (
+        source.replace(PRODUCT_NAME_PLACEHOLDER, APP_NAME)
+        .replace(PRODUCT_VERSION_PLACEHOLDER, APP_VERSION)
+    )
 
 
 def render_document(renderer_dir: Path) -> str:
     """Assemble the one supported frontend document from checked-in parts."""
 
     renderer = Path(renderer_dir)
-    template = (renderer / TEMPLATE_NAME).read_text(encoding="utf-8")
+    template = _inject_product_identity(
+        (renderer / TEMPLATE_NAME).read_text(encoding="utf-8")
+    )
     css = "\n".join(
         (renderer / name).read_text(encoding="utf-8")
         for name in STYLE_PARTS
     )
-    javascript = "\n".join(
-        (renderer / name).read_text(encoding="utf-8")
-        for name in SCRIPT_PARTS
+    javascript = _inject_product_identity(
+        "\n".join(
+            (renderer / name).read_text(encoding="utf-8")
+            for name in SCRIPT_PARTS
+        )
     )
 
     if CSS_PLACEHOLDER not in template or JS_PLACEHOLDER not in template:
@@ -71,7 +86,7 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Consolidated renderer controller is incomplete")
     if "TRIG_ORDER" not in javascript or "bracket-color-overlay" not in css:
         raise RuntimeError("Consolidated renderer keyboard UX is incomplete")
-    if "pywebview-no-drag" not in css or "NumCalc" not in template:
+    if "pywebview-no-drag" not in css or APP_NAME not in template:
         raise RuntimeError("NumCalc product shell is incomplete")
     if "app-shell-v2.multiply.js" not in SCRIPT_PARTS:
         raise RuntimeError("Consolidated renderer multiplication display is incomplete")
@@ -101,6 +116,8 @@ def render_document(renderer_dir: Path) -> str:
         or "modeIndicator" not in template
     ):
         raise RuntimeError("Consolidated renderer mode motion is incomplete")
+    if PRODUCT_NAME_PLACEHOLDER in javascript or PRODUCT_VERSION_PLACEHOLDER in javascript:
+        raise RuntimeError("Renderer product identity placeholders were not resolved")
 
     return (
         template.replace(CSS_PLACEHOLDER, css, 1)
