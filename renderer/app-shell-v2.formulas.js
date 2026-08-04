@@ -57,6 +57,9 @@
     if (options.id) input.id = options.id;
     if (options.name) input.name = options.name;
     if (options.type) input.type = options.type;
+    if (options.min !== undefined) input.min = String(options.min);
+    if (options.max !== undefined) input.max = String(options.max);
+    if (options.step !== undefined) input.step = String(options.step);
     label.append(caption, input);
     return label;
   }
@@ -187,7 +190,7 @@
     const formulaSettings = formula?.settings || {};
     settingsGrid.append(
       drawerField('Вид', formulaSettings.number_format || state.settings.number_format, { id: 'formulaFormat' }),
-      drawerField('Знаков', formulaSettings.precision || state.settings.precision, { id: 'formulaPrecision', type: 'number' }),
+      drawerField('Знаков после запятой', formulaSettings.precision ?? state.settings.precision, { id: 'formulaPrecision', type: 'number', min: 0, max: 15, step: 1 }),
       drawerField('Разделитель', formulaSettings.decimal_separator || state.settings.decimal_separator, { id: 'formulaSeparator' }),
     );
     form.append(settingsTitle, settingsGrid);
@@ -214,7 +217,7 @@
         parameters: parseFormulaParameters(form.querySelector('#formulaParameters').value),
         settings: {
           number_format: form.querySelector('#formulaFormat input').value.trim(),
-          precision: Number.parseInt(form.querySelector('#formulaPrecision input').value, 10) || state.settings.precision,
+          precision: normalizeDecimalPlacesInput(form.querySelector('#formulaPrecision input').value, state.settings.precision ?? 6),
           decimal_separator: form.querySelector('#formulaSeparator input').value.trim(),
         },
       };
@@ -468,7 +471,7 @@
     const angle = drawerField('Углы', profileSettings.angle_mode || state.settings.angle_mode, { id: 'profileAngle' });
     angle.querySelector('input').setAttribute('list', 'profile-angle-options');
     const format = drawerField('Формат', profileSettings.number_format || state.settings.number_format, { id: 'profileFormat' });
-    const precision = drawerField('Знаков', profileSettings.precision || state.settings.precision, { id: 'profilePrecision', type: 'number' });
+    const precision = drawerField('Знаков после запятой', profileSettings.precision ?? state.settings.precision, { id: 'profilePrecision', type: 'number', min: 0, max: 15, step: 1 });
     const separator = drawerField('Разделитель', profileSettings.decimal_separator || state.settings.decimal_separator, { id: 'profileSeparator' });
     settingsGrid.append(angle, format, precision, separator);
     form.appendChild(settingsGrid);
@@ -505,7 +508,7 @@
         settings: {
           angle_mode: form.querySelector('#profileAngle input').value.trim(),
           number_format: form.querySelector('#profileFormat input').value.trim(),
-          precision: Number.parseInt(form.querySelector('#profilePrecision input').value, 10) || state.settings.precision,
+          precision: normalizeDecimalPlacesInput(form.querySelector('#profilePrecision input').value, state.settings.precision ?? 6),
           decimal_separator: form.querySelector('#profileSeparator input').value.trim(),
         },
       };

@@ -248,7 +248,7 @@ class AppApi:
             normalized_item["dimensions"] = serialize_dimensions(DIMENSIONLESS)
         normalized_item.setdefault("angle_mode", "DEG")
         normalized_item.setdefault("number_base", "DEC")
-        normalized_item.setdefault("precision", 12)
+        normalized_item.setdefault("precision", 6)
         normalized_item.setdefault("number_format", "auto")
         normalized_item.setdefault("decimal_separator", ".")
         normalized_item.setdefault("created_at", "")

@@ -191,7 +191,7 @@ class Quantity:
 class EngineSettings:
     angle_mode: str = "DEG"
     number_base: str = "DEC"
-    precision: int = 12
+    precision: int = 6
     number_format: str = "auto"
     decimal_separator: str = "."
 
@@ -201,15 +201,15 @@ class EngineSettings:
         angle = str(data.get("angle_mode", "DEG")).upper()
         base = str(data.get("number_base", "DEC")).upper()
         try:
-            precision = int(data.get("precision", 12))
+            precision = int(data.get("precision", 6))
         except (TypeError, ValueError):
-            precision = 12
+            precision = 6
         number_format = data.get("number_format", data.get("notation", "auto"))
         decimal_separator = data.get("decimal_separator", ".")
         return cls(
             angle_mode=angle if angle in {"DEG", "RAD", "GRAD"} else "DEG",
             number_base=base if base in {"DEC", "HEX", "OCT", "BIN"} else "DEC",
-            precision=max(3, min(17, precision)),
+            precision=max(0, min(15, precision)),
             number_format=normalize_number_format(number_format),
             decimal_separator=normalize_decimal_separator(decimal_separator),
         )
