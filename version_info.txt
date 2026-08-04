@@ -30,4 +30,3 @@ VSVersionInfo(
     VarFileInfo([VarStruct('Translation', [0x0409, 1200])])
   ]
 )
-
