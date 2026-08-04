@@ -1,12 +1,10 @@
 name: apply-release-candidate-fixes
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - release/v1.1.0
-    paths:
-      - tools/apply_release_candidate_fixes.py
-      - .github/workflows/apply-release-candidate-fixes.yml
 
 permissions:
   contents: write
