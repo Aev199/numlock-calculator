@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-
-from PIL import Image, ImageDraw
+from typing import Any
 
 
 ICON_BACKGROUND = (82, 109, 255, 255)
@@ -12,8 +11,10 @@ ICON_FOREGROUND = (248, 250, 255, 255)
 WINDOWS_ICON_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
 
-def create_icon_image(size: int = 64) -> Image.Image:
+def create_icon_image(size: int = 64) -> Any:
     """Draw the rounded blue NumCalc tile with the white N glyph."""
+
+    from PIL import Image, ImageDraw
 
     size = max(16, int(size))
     scale = size / 64.0
