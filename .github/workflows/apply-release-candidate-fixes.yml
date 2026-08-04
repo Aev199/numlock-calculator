@@ -5,12 +5,16 @@ on:
   push:
     branches:
       - release/v1.1.0
+  pull_request:
+    branches:
+      - redesign/keyboard-first
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: github.event_name != 'pull_request' || github.head_ref == 'release/v1.1.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
