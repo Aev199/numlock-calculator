@@ -34,8 +34,7 @@ Release-ветка: `release/v1.1.0`
 - [x] Собран и повторно распакован `NumCalc-1.1.0-windows-x64.zip`.
 - [x] В архиве присутствуют EXE, SHA-256, лицензии и release notes.
 - [x] В архив включён исходный пакет `pystray 0.19.5`.
-- [x] Release-candidate artifact создан workflow `release #40`.
-- [x] Digest GitHub artifact: `sha256:e37660ea5ce9498a61d185f4fae82eef4d62703f350107f2ca7b90c14e718aae`.
+- [x] Release-candidate artifact создан workflow `release #40` для проверенного кода.
 
 ## 3. Ручная Windows-приёмка
 
@@ -64,7 +63,7 @@ Release-ветка: `release/v1.1.0`
 - [x] Runtime- и build-зависимости разделены.
 - [x] Документы по лицензированию и сторонним компонентам присутствуют.
 - [x] Release workflow публикует выпуск только для тега `v*`.
-- [x] Последний чистый CI release-ветки зелёный.
+- [x] Последний чистый CI проверенного кода зелёный.
 - [x] Временные workflow и скрипты подготовки удалены.
 - [ ] Проверены тексты issue/PR и вложения, относящиеся к выпуску.
 - [ ] Все блокирующие дефекты закрыты.
