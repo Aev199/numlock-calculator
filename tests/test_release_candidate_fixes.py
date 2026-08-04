@@ -28,7 +28,8 @@ class ReleaseCandidateFormattingTests(unittest.TestCase):
 
     def test_shared_icon_writes_multiresolution_ico(self):
         tray = app_icon.create_icon_image(64)
-        self.assertEqual(tray.getpixel((32, 32)), app_icon.ICON_BACKGROUND)
+        self.assertEqual(tray.getpixel((10, 32)), app_icon.ICON_BACKGROUND)
+        self.assertEqual(tray.getpixel((32, 32)), app_icon.ICON_FOREGROUND)
         with tempfile.TemporaryDirectory() as directory:
             target = app_icon.write_windows_icon(Path(directory) / "NumCalc.ico")
             self.assertTrue(target.is_file())
