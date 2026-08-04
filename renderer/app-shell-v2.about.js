@@ -6,8 +6,8 @@
     <section class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
       <button class="about-close" type="button" aria-label="Закрыть">×</button>
       <div class="about-mark" aria-hidden="true">N</div>
-      <h2 id="aboutTitle">NumCalc 1.0.0</h2>
-      <p class="about-description">Компактный keyboard-first калькулятор для Windows.</p>
+      <h2 id="aboutTitle">__NUMCALC_PRODUCT_NAME__ __NUMCALC_PRODUCT_VERSION__</h2>
+      <p class="about-description">Компактный keyboard-first инженерный калькулятор для Windows.</p>
       <p>
         Калькулятор — идеологическое продолжение
         <a class="about-link" href="https://nlcalc.narod.ru/" data-product-link>
