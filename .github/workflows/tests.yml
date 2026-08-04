@@ -11,34 +11,6 @@ permissions:
   contents: read
 
 jobs:
-  apply-release-fixes:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/release/v1.1.0'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: release/v1.1.0
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Apply deterministic release fixes
-        run: python tools/apply_release_candidate_fixes.py
-      - name: Commit generated release fixes
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Fix release icon and decimal-place formatting"
-          git push origin HEAD:release/v1.1.0
-
   test:
     runs-on: ubuntu-latest
     steps:
@@ -54,7 +26,7 @@ jobs:
           app.py app_keyboard.py app_window.py app_numlock_compat.py
           app_tray.py app_native_dialogs.py app_units_backend.py app_variables.py
           app_renderer.py app_diagnostics.py app_product.py app_single_instance.py
-          app_storage.py app_formulas.py calculation_limits.py
+          app_storage.py app_formulas.py app_icon.py calculation_limits.py
           collect_third_party_licenses.py generate_version_info.py
           hotkey_config.py input_normalization.py interpolation.py
           number_formatting.py product_info.py unit_conversion.py
