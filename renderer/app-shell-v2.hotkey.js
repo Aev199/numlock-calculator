@@ -32,6 +32,15 @@
     PrintScreen: 'PrintScreen',
   };
 
+  const KEYPAD_NAVIGATION_ALIASES = new Set([
+    'Insert', 'Delete', 'Home', 'End', 'PageUp', 'PageDown',
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+  ]);
+
+  function isKeypadNavigationAlias(event) {
+    return Number(event.location) === 3 && KEYPAD_NAVIGATION_ALIASES.has(String(event.key || ''));
+  }
+
   function browserHotkeyKey(event) {
     const key = String(event.key || '');
     if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return '';
@@ -270,6 +279,10 @@
       if (event.key === 'Escape') {
         capture.blur();
         setStatus('Изменение отменено');
+        return;
+      }
+      if (isKeypadNavigationAlias(event)) {
+        setStatus('Клавиша цифрового блока не может заменять отдельную навигационную клавишу', 'error');
         return;
       }
       const next = hotkeyFromEvent(event);

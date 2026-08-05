@@ -100,6 +100,66 @@ class HotkeyRuntimeTests(unittest.TestCase):
             finally:
                 app.unregister_hotkeys()
 
+    def test_navigation_hotkey_ignores_keypad_alias(self):
+        calls = []
+        hooks = []
+        toggles = []
+
+        class Event:
+            def __init__(self, event_type, name, is_keypad):
+                self.event_type = event_type
+                self.name = name
+                self.is_keypad = is_keypad
+
+        class ImmediateThread:
+            def __init__(self, target, args=(), kwargs=None, **_options):
+                self.target = target
+                self.args = args
+                self.kwargs = kwargs or {}
+
+            def start(self):
+                self.target(*self.args, **self.kwargs)
+
+        class FakeKeyboard:
+            @staticmethod
+            def hook(callback, suppress=False):
+                hooks.append((callback, suppress))
+                return callback
+
+            @staticmethod
+            def add_hotkey(key, callback, **kwargs):
+                calls.append(('hotkey', key, callback, kwargs))
+                return f'handle:{key}'
+
+            @staticmethod
+            def unhook_all():
+                calls.append(('unhook',))
+
+        app._global_hotkey = 'page down'
+        app._quitting = False
+        with (
+            patch.object(app_numlock_compat.os, 'name', 'nt'),
+            patch.object(app_numlock_compat.threading, 'Thread', ImmediateThread),
+            patch.object(app, 'toggle_window', lambda: toggles.append('toggle')),
+            patch.dict(sys.modules, {'keyboard': FakeKeyboard}),
+        ):
+            app.register_hotkeys()
+            try:
+                self.assertTrue(app._hotkey_registration_ok)
+                self.assertEqual(len(hooks), 1)
+                handler, suppress = hooks[0]
+                self.assertTrue(suppress)
+
+                self.assertTrue(handler(Event('down', 'page down', True)))
+                self.assertTrue(handler(Event('up', 'page down', True)))
+                self.assertEqual(toggles, [])
+
+                self.assertFalse(handler(Event('down', 'page down', False)))
+                self.assertFalse(handler(Event('up', 'page down', False)))
+                self.assertEqual(toggles, ['toggle'])
+            finally:
+                app.unregister_hotkeys()
+
     def test_api_persists_only_after_successful_registration(self):
         with tempfile.TemporaryDirectory() as directory:
             storage = app.Storage(Path(directory) / 'state.json')
@@ -137,6 +197,8 @@ class HotkeyRuntimeTests(unittest.TestCase):
         self.assertIn('id="settingsButton"', html)
         self.assertIn('id="globalHotkeyCapture"', html)
         self.assertIn('set_global_hotkey', html)
+        self.assertIn('KEYPAD_NAVIGATION_ALIASES', html)
+        self.assertIn('Number(event.location) === 3', html)
 
 
 if __name__ == '__main__':
