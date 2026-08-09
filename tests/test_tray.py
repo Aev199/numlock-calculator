@@ -82,7 +82,7 @@ class TrayShellTests(unittest.TestCase):
         self.assertTrue(callable(app.copy_diagnostics_from_tray))
         self.assertFalse(hasattr(app, "open_repository"))
 
-    def test_help_and_menu_document_public_product(self):
+    def test_tray_menu_documents_public_product(self):
         source = (ROOT / "app_tray.py").read_text(encoding="utf-8")
         self.assertNotIn('pystray.MenuItem("Репозиторий"', source)
         self.assertIn('pystray.MenuItem("Копировать диагностику"', source)
