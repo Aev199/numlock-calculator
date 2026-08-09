@@ -90,14 +90,17 @@ class TrayShellTests(unittest.TestCase):
         self.assertNotIn('pystray.MenuItem("Репозиторий"', source)
         self.assertIn('pystray.MenuItem("Копировать диагностику"', source)
 
-    def test_product_metadata_adds_attribution_and_trusted_links(self):
+    def test_product_metadata_adds_compact_help_and_attribution(self):
         app, _, _ = self.make_app()
         tray_module = types.SimpleNamespace()
         app_product.install(app, tray_module)
 
+        self.assertIn("Основные клавиши", tray_module.HELP_TEXT)
+        self.assertIn("NumLock — показать или скрыть NumCalc", tray_module.HELP_TEXT)
+        self.assertIn("не содержит телеметрии", tray_module.HELP_TEXT)
+        self.assertNotIn("Быстрый старт:", tray_module.HELP_TEXT)
         self.assertIn(
-            "Калькулятор - идеологическое продолжение NumLock Calculator "
-            "от Владимира Потапова",
+            "Продолжает идеи NumLock Calculator Владимира Потапова",
             tray_module.ABOUT_TEXT,
         )
         self.assertIn("https://nlcalc.narod.ru/", tray_module.ABOUT_TEXT)
@@ -116,6 +119,7 @@ class TrayShellTests(unittest.TestCase):
             ),
         )
         self.assertNotIn("<A HREF=", tray_module.ABOUT_DIALOG_CONTENT)
+        self.assertNotIn("идеологическое продолжение", tray_module.ABOUT_DIALOG_CONTENT)
 
     def test_install_is_idempotent(self):
         app, _, _ = self.make_app()
@@ -127,4 +131,3 @@ class TrayShellTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
