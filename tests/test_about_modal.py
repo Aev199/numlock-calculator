@@ -70,10 +70,7 @@ class AboutModalTests(unittest.TestCase):
         html = app_renderer.render_document(ROOT / "renderer")
 
         self.assertIn("window.__nlcalcShowAbout = showAbout", html)
-        self.assertIn(
-            f'id="aboutTitle">{product_info.APP_NAME}</h2>',
-            html,
-        )
+        self.assertIn(f'id="aboutTitle">{product_info.APP_NAME}</h2>', html)
         self.assertIn(f"Версия {product_info.APP_VERSION}", html)
         self.assertIn('class="about-details"', html)
         self.assertIn("Продолжает идеи", html)
