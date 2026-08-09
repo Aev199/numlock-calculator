@@ -84,9 +84,6 @@ class TrayShellTests(unittest.TestCase):
 
     def test_help_and_menu_document_public_product(self):
         source = (ROOT / "app_tray.py").read_text(encoding="utf-8")
-        self.assertIn("Ctrl+C", app_tray.HELP_TEXT)
-        self.assertIn("Alt+← / Alt+→", app_tray.HELP_TEXT)
-        self.assertIn("не содержит телеметрии", app_tray.HELP_TEXT)
         self.assertNotIn('pystray.MenuItem("Репозиторий"', source)
         self.assertIn('pystray.MenuItem("Копировать диагностику"', source)
 
@@ -97,6 +94,8 @@ class TrayShellTests(unittest.TestCase):
 
         self.assertIn("Основные клавиши", tray_module.HELP_TEXT)
         self.assertIn("NumLock — показать или скрыть NumCalc", tray_module.HELP_TEXT)
+        self.assertIn("Ctrl+C", tray_module.HELP_TEXT)
+        self.assertIn("Alt+← / Alt+→", tray_module.HELP_TEXT)
         self.assertIn("не содержит телеметрии", tray_module.HELP_TEXT)
         self.assertNotIn("Быстрый старт:", tray_module.HELP_TEXT)
         self.assertIn(
