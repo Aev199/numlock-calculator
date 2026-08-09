@@ -33,17 +33,19 @@ def install(app: Any, tray_module: Any) -> None:
         ("Репозиторий NumCalc", REPOSITORY_URL),
     )
     tray_module.ABOUT_TEXT = (
-        f"{APP_NAME} {APP_VERSION}\n"
-        f"{DESCRIPTION}.\n\n"
-        "Калькулятор - идеологическое продолжение NumLock Calculator "
-        f"от Владимира Потапова ({INSPIRATION_URL}).\n\n"
-        f"Репозиторий: {REPOSITORY_URL}\n"
+        f"{APP_NAME}\n"
+        f"Версия {APP_VERSION}\n\n"
+        "Калькулятор для Windows с управлением с клавиатуры.\n\n"
+        "Продолжает идеи NumLock Calculator Владимира Потапова "
+        f"({INSPIRATION_URL}).\n\n"
+        f"GitHub: {REPOSITORY_URL}\n"
         f"Лицензия: {LICENSE_NAME}"
     )
     tray_module.ABOUT_DIALOG_CONTENT = (
-        "Калькулятор - идеологическое продолжение NumLock Calculator "
-        "от Владимира Потапова.\n\n"
-        f"Лицензия исходного кода NumCalc: {LICENSE_NAME}"
+        f"Версия {APP_VERSION}\n\n"
+        "Калькулятор для Windows с управлением с клавиатуры.\n\n"
+        "Продолжает идеи NumLock Calculator Владимира Потапова.\n\n"
+        f"Лицензия: {LICENSE_NAME}"
     )
 
     def open_product_link(self: Any, url: str) -> bool:
@@ -85,4 +87,3 @@ def install(app: Any, tray_module: Any) -> None:
     dialogs = getattr(tray_module, "app_native_dialogs", None)
     if dialogs is not None:
         dialogs.show_link_dialog = show_about_in_renderer
-
