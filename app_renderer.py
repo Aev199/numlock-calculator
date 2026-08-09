@@ -24,6 +24,7 @@ STYLE_PARTS = (
     "app-shell-interpolation.css",
     "app-shell-onboarding.css",
     "app-shell-mode-transitions.css",
+    "app-shell-icons.css",
     "app-shell-utility.css",
 )
 SCRIPT_PARTS = (
@@ -41,6 +42,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.about.js",
     "app-shell-v2.onboarding.js",
     "app-shell-v2.mode-transitions.js",
+    "app-shell-v2.icons.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",
@@ -101,6 +103,8 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Consolidated renderer formula layer is incomplete")
     if "app-shell-v2.about.js" not in SCRIPT_PARTS or "about-overlay" not in css:
         raise RuntimeError("Consolidated renderer About dialog is incomplete")
+    if "app-shell-v2.icons.js" not in SCRIPT_PARTS or "ui-glyph" not in css:
+        raise RuntimeError("Unified utility icon layer is incomplete")
     if (
         "app-shell-v2.interpolation.js" not in SCRIPT_PARTS
         or "interpolationTab" not in template
