@@ -68,6 +68,8 @@ def render_document(renderer_dir: Path) -> str:
     template = _inject_product_identity(
         (renderer / TEMPLATE_NAME).read_text(encoding="utf-8")
     )
+    if not STYLE_PARTS or STYLE_PARTS[-1] != "app-shell-utility.css":
+        raise RuntimeError("Visual hardening stylesheet must be last in the cascade")
     css = "\n".join(
         (renderer / name).read_text(encoding="utf-8")
         for name in STYLE_PARTS
