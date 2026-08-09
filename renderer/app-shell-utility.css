@@ -505,6 +505,254 @@ kbd {
   background: var(--panel-raised);
 }
 
+/* Final pass: secondary tools must use the same utility language as the shell. */
+#drawerOverlay .drawer {
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+#drawerOverlay .drawer-header {
+  min-height: 38px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--border);
+}
+
+#drawerOverlay .drawer-header h2 {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#drawerOverlay .drawer-header p,
+.formula-help,
+.settings-help {
+  color: var(--subtle);
+}
+
+#drawerOverlay[data-drawer-kind="settings"] {
+  padding: 6px;
+}
+
+#drawerOverlay[data-drawer-kind="settings"] .drawer {
+  width: calc(100vw - 12px);
+  height: calc(100vh - 12px);
+}
+
+#drawerOverlay[data-drawer-kind="settings"] .drawer-content {
+  padding: 8px;
+}
+
+.settings-content {
+  gap: 8px;
+}
+
+.settings-section {
+  gap: 5px;
+}
+
+.settings-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.settings-select,
+.settings-number,
+.hotkey-capture,
+.formula-input,
+.formula-profile-selector select {
+  min-height: 29px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-raised);
+  box-shadow: none;
+  font-size: 11px;
+}
+
+.formula-input {
+  padding: 6px 7px;
+}
+
+.settings-select:focus,
+.settings-number:focus,
+.hotkey-capture:focus,
+.formula-input:focus,
+.formula-profile-selector select:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.hotkey-capture-row {
+  gap: 5px;
+}
+
+.hotkey-capture {
+  min-height: 30px;
+}
+
+.hotkey-capture.is-listening {
+  color: var(--text);
+  background: var(--panel-raised);
+}
+
+.hotkey-save {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.hotkey-save:hover {
+  filter: none;
+  background: var(--soft-strong);
+}
+
+.hotkey-status.success {
+  color: var(--muted);
+}
+
+.settings-checkbox {
+  gap: 6px;
+  font-size: 10px;
+}
+
+.formula-content,
+.formula-editor,
+.formula-runner {
+  gap: 7px;
+}
+
+.formula-tabs {
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.formula-tab {
+  min-height: 29px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.formula-tab.active,
+.formula-tab:hover {
+  border-color: transparent;
+  color: var(--text);
+  background: transparent;
+}
+
+.formula-tab.active {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.formula-list,
+.formula-profile-formulas {
+  gap: 0;
+}
+
+.formula-row {
+  gap: 7px;
+  padding: 7px 3px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.formula-row.active {
+  border-color: var(--border);
+  background: var(--soft);
+}
+
+.formula-row code,
+.formula-expression-preview {
+  color: var(--muted);
+}
+
+.formula-check {
+  gap: 6px;
+  padding: 6px 3px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  font-size: 10px;
+}
+
+.formula-actions,
+.formula-row-actions,
+.formula-toolbar {
+  gap: 4px;
+}
+
+.palette-overlay {
+  padding: 6px;
+}
+
+.palette-overlay .palette {
+  max-height: calc(100vh - 12px);
+  border-radius: 6px;
+}
+
+.palette-search-wrap {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.palette-groups {
+  gap: 0;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.palette-group {
+  height: 27px;
+  padding: 0 7px;
+  border-radius: 0;
+  font-size: 9px;
+}
+
+.palette-results {
+  padding: 2px 4px 4px;
+}
+
+.palette-item {
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 2px;
+}
+
+.palette-item .item-kind {
+  min-width: 29px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.palette-item .item-label {
+  font-size: 11px;
+}
+
+.palette-item .item-description {
+  display: none;
+}
+
+.toast {
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--panel-raised);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 10px;
+}
+
 ::-webkit-scrollbar-thumb {
   border-radius: 3px;
 }
@@ -590,7 +838,12 @@ kbd {
   }
 
   .palette-overlay .palette,
-  .onboarding-card {
-    border-radius: 6px;
+  .onboarding-card,
+  #drawerOverlay .drawer {
+    border-radius: 5px;
+  }
+
+  .formula-row {
+    padding: 6px 2px;
   }
 }
