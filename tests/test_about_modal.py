@@ -75,6 +75,8 @@ class AboutModalTests(unittest.TestCase):
             html,
         )
         self.assertIn(f"Версия {product_info.APP_VERSION}", html)
+        self.assertIn('class="about-details"', html)
+        self.assertIn("Продолжает идеи", html)
         self.assertNotIn(app_renderer.PRODUCT_NAME_PLACEHOLDER, html)
         self.assertNotIn(app_renderer.PRODUCT_VERSION_PLACEHOLDER, html)
         self.assertIn('href="https://nlcalc.narod.ru/"', html)
@@ -85,6 +87,7 @@ class AboutModalTests(unittest.TestCase):
         self.assertIn("state.api.open_product_link(url)", html)
         self.assertIn("about-overlay", html)
         self.assertNotIn("keyboard-first инженерный", html)
+        self.assertNotIn("идеологическое продолжение", html)
 
 
 if __name__ == "__main__":
