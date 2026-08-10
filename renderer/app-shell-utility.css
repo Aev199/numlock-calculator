@@ -1,35 +1,13 @@
 /*
- * Cross-feature utility rules.
- *
- * Core, responsive and feature styles now carry the canonical NumCalc visual
- * language themselves. Keep this file small and last in the cascade only for
- * rules shared by independently maintained renderer layers.
+ * Small cross-feature rules only.
+ * Core and feature styles carry the canonical NumCalc visual language.
  */
-
-.bracket-color-overlay {
-  border-radius: 4px;
-}
-
-.overlay,
-.onboarding-overlay {
-  backdrop-filter: none;
-}
 
 .settings-compact-help {
   margin: 0;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.35;
-}
-
-#drawerOverlay .drawer-header p:empty {
-  display: none;
-}
-
-.row-button.primary,
-.interpolation-actions .row-button.primary,
-.onboarding-actions .row-button.primary {
-  border-color: var(--accent);
 }
 
 @media (max-width: 410px), (max-height: 460px) {
