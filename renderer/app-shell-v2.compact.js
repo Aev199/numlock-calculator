@@ -50,10 +50,10 @@
   renderSettingsDrawer = function () {
     renderSettingsDrawerWithoutCompact();
     const content = dom.drawerContent.querySelector('.settings-content');
-    const focusCheckbox = content?.querySelector('#focusCalculatorOnRestore');
-    const section = focusCheckbox?.closest('.settings-section');
-    if (!content || !section || content.querySelector('#compactMode')) return;
+    if (!content || content.querySelector('#compactMode')) return;
 
+    const section = document.createElement('section');
+    section.className = 'settings-section settings-compact-section';
     const compactLabel = document.createElement('label');
     compactLabel.className = 'settings-checkbox';
     compactLabel.innerHTML = `
@@ -64,6 +64,7 @@
     compactHelp.className = 'settings-compact-help';
     compactHelp.textContent = 'Только калькулятор: без истории, единиц и интерполяции.';
     section.append(compactLabel, compactHelp);
+    content.prepend(section);
 
     const checkbox = compactLabel.querySelector('#compactMode');
     checkbox.checked = compactModeEnabled();
