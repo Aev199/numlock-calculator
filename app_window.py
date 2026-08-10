@@ -1,7 +1,7 @@
-"""Renderer-agnostic window focus and visibility controller.
+"""Renderer-agnostic window focus, visibility and compact-mode controller.
 
-This module owns only native window activation, visibility and renderer focus
-state. It never builds or modifies frontend HTML.
+The renderer owns markup and CSS. This module owns native window activation,
+visibility, compact sizing and the persisted compact-mode UI setting.
 """
 
 from __future__ import annotations
@@ -12,15 +12,55 @@ import time
 from typing import Any
 
 SW_RESTORE = 9
+DEFAULT_WINDOW_WIDTH = 384
+DEFAULT_WINDOW_HEIGHT = 432
+COMPACT_WINDOW_HEIGHT = 220
+COMPACT_MIN_SIZE = (360, 200)
 
 
 def install(app: Any) -> None:
-    """Install focus-aware window behavior without touching the renderer."""
+    """Install focus-aware window behavior without touching renderer markup."""
 
     if getattr(app, "_window_controller_installed", False):
         return
     app._window_controller_installed = True
     app._renderer_focused = False
+    app._full_window_height = DEFAULT_WINDOW_HEIGHT
+
+    original_api_init = app.AppApi.__init__
+    original_set_ui_settings = app.AppApi.set_ui_settings
+
+    def normalize_compact_setting(api: Any) -> None:
+        api._ui_settings["compact_mode"] = app._coerce_bool(
+            api._ui_settings.get("compact_mode", False),
+            False,
+        )
+
+    def api_init(self: Any, *args: Any, **kwargs: Any) -> None:
+        original_api_init(self, *args, **kwargs)
+        normalize_compact_setting(self)
+
+    def api_set_ui_settings(self: Any, settings: dict[str, Any]) -> dict[str, Any]:
+        values = dict(settings or {})
+        marker = object()
+        compact_value = values.pop("compact_mode", marker)
+
+        if values:
+            original_set_ui_settings(self, values)
+
+        normalize_compact_setting(self)
+        if compact_value is not marker:
+            self._ui_settings["compact_mode"] = app._coerce_bool(
+                compact_value,
+                False,
+            )
+            self._storage.set("ui_settings", self._ui_settings)
+        return dict(self._ui_settings)
+
+    def compact_mode_enabled() -> bool:
+        api = getattr(app, "_api", None)
+        settings = getattr(api, "_ui_settings", {})
+        return app._coerce_bool(settings.get("compact_mode", False), False)
 
     def set_renderer_focused(focused: bool) -> None:
         with app._state_lock:
@@ -29,6 +69,45 @@ def install(app: Any) -> None:
     def api_window_focus_changed(_self: Any, focused: bool) -> bool:
         set_renderer_focused(bool(focused))
         return True
+
+    def api_set_compact_window(_self: Any, compact: bool) -> dict[str, Any]:
+        enabled = app._coerce_bool(compact, False)
+        window = app._window
+        if window is None or app._quitting:
+            return {
+                "ok": True,
+                "compact_mode": enabled,
+                "width": DEFAULT_WINDOW_WIDTH,
+                "height": COMPACT_WINDOW_HEIGHT if enabled else DEFAULT_WINDOW_HEIGHT,
+            }
+
+        try:
+            width = int(getattr(window, "width", DEFAULT_WINDOW_WIDTH) or DEFAULT_WINDOW_WIDTH)
+            current_height = int(
+                getattr(window, "height", DEFAULT_WINDOW_HEIGHT) or DEFAULT_WINDOW_HEIGHT
+            )
+            if enabled:
+                if current_height > COMPACT_WINDOW_HEIGHT + 24:
+                    app._full_window_height = current_height
+                target_height = COMPACT_WINDOW_HEIGHT
+            else:
+                target_height = max(
+                    COMPACT_WINDOW_HEIGHT + 24,
+                    int(getattr(app, "_full_window_height", DEFAULT_WINDOW_HEIGHT)),
+                )
+            window.resize(width, target_height)
+            return {
+                "ok": True,
+                "compact_mode": enabled,
+                "width": width,
+                "height": target_height,
+            }
+        except Exception as exc:
+            return {
+                "ok": False,
+                "compact_mode": enabled,
+                "error": str(exc) or "Не удалось изменить размер окна",
+            }
 
     def window_handle() -> int | None:
         if os.name != "nt" or app._window is None:
@@ -146,7 +225,13 @@ def install(app: Any) -> None:
     def on_loaded() -> None:
         request_editor_focus(True)
 
+    app.AppApi.__init__ = api_init
+    app.AppApi.set_ui_settings = api_set_ui_settings
     app.AppApi.window_focus_changed = api_window_focus_changed
+    app.AppApi.set_compact_window = api_set_compact_window
+    app.compact_mode_enabled = compact_mode_enabled
+    app.COMPACT_WINDOW_HEIGHT = COMPACT_WINDOW_HEIGHT
+    app.COMPACT_MIN_SIZE = COMPACT_MIN_SIZE
     app.set_renderer_focused = set_renderer_focused
     app.window_handle = window_handle
     app.capture_foreground_window = capture_foreground_window
@@ -159,3 +244,7 @@ def install(app: Any) -> None:
     app.on_shown = on_shown
     app.on_loaded = on_loaded
 
+    # app_storage.install() runs before this module in production; normalize its
+    # already-created API as well as all future AppApi instances.
+    if getattr(app, "_api", None) is not None:
+        normalize_compact_setting(app._api)
