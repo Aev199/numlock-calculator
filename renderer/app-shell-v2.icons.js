@@ -7,7 +7,7 @@
 
   const utilityIcons = {
     theme: utilityIcon('<circle cx="8" cy="8" r="5.25"></circle><path d="M8 2.75a5.25 5.25 0 0 0 0 10.5V2.75Z"></path>'),
-    settings: utilityIcon('<circle cx="8" cy="8" r="2.25"></circle><path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.58 3.58l1.06 1.06M11.36 11.36l1.06 1.06M12.42 3.58l-1.06 1.06M4.64 11.36l-1.06 1.06"></path>'),
+    settings: utilityIcon('<path d="M6.55 2.2h2.9l.35 1.55c.35.13.68.31.98.53l1.5-.48 1.45 2.5-1.15 1.08c.03.2.05.41.05.62s-.02.42-.05.62l1.15 1.08-1.45 2.5-1.5-.48c-.3.22-.63.4-.98.53l-.35 1.55h-2.9l-.35-1.55a4.8 4.8 0 0 1-.98-.53l-1.5.48-1.45-2.5 1.15-1.08A4 4 0 0 1 3.37 8c0-.21.02-.42.05-.62L2.27 6.3l1.45-2.5 1.5.48c.3-.22.63-.4.98-.53l.35-1.55Z"></path><circle cx="8" cy="8" r="1.75"></circle>'),
     help: utilityIcon('<circle cx="8" cy="8" r="5.5"></circle><path d="M6.65 6.1a1.65 1.65 0 1 1 2.48 1.43C8.36 8 8 8.43 8 9.2"></path><circle class="ui-glyph-dot" cx="8" cy="11.45" r=".65"></circle>'),
     hide: utilityIcon('<path d="M3 8h10"></path>'),
     search: utilityIcon('<circle cx="6.75" cy="6.75" r="3.75"></circle><path d="m9.6 9.6 3.15 3.15"></path>'),
