@@ -24,7 +24,7 @@ class VisualHardeningTests(unittest.TestCase):
         self.assertIn("border-bottom: 1px solid var(--border);", core)
         self.assertNotIn("border-radius: 11px", product)
         self.assertLess(len(utility.splitlines()), 80)
-        self.assertIn("Cross-feature utility rules", utility)
+        self.assertIn("cross-feature rules", utility.lower())
 
     def test_formula_ui_avoids_success_toast_chatter_and_promotional_copy(self):
         source = (RENDERER / "app-shell-v2.formulas.js").read_text(encoding="utf-8")
