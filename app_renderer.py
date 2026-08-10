@@ -25,6 +25,7 @@ STYLE_PARTS = (
     "app-shell-onboarding.css",
     "app-shell-mode-transitions.css",
     "app-shell-icons.css",
+    "app-shell-compact.css",
     "app-shell-utility.css",
 )
 SCRIPT_PARTS = (
@@ -43,6 +44,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.onboarding.js",
     "app-shell-v2.mode-transitions.js",
     "app-shell-v2.icons.js",
+    "app-shell-v2.compact.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",
@@ -53,7 +55,7 @@ PRODUCT_NAME_PLACEHOLDER = "__NUMCALC_PRODUCT_NAME__"
 PRODUCT_VERSION_PLACEHOLDER = "__NUMCALC_PRODUCT_VERSION__"
 DEFAULT_WIDTH = 384
 DEFAULT_HEIGHT = 432
-MIN_SIZE = (360, 380)
+MIN_SIZE = (360, 200)
 
 
 def _inject_product_identity(source: str) -> str:
@@ -106,6 +108,13 @@ def render_document(renderer_dir: Path) -> str:
     if "app-shell-v2.icons.js" not in SCRIPT_PARTS or "ui-glyph" not in css:
         raise RuntimeError("Unified utility icon layer is incomplete")
     if (
+        "app-shell-v2.compact.js" not in SCRIPT_PARTS
+        or "app-shell-compact.css" not in STYLE_PARTS
+        or "data-compact-mode" not in css
+        or "set_compact_window" not in javascript
+    ):
+        raise RuntimeError("Compact calculator mode is incomplete")
+    if (
         "app-shell-v2.interpolation.js" not in SCRIPT_PARTS
         or "interpolationTab" not in template
         or "interpolationPanel" not in template
@@ -144,9 +153,18 @@ def install(app: Any) -> None:
         return render_document(Path(app.RENDERER_DIR))
 
     def create_window(*args: Any, **kwargs: Any) -> Any:
+        compact = bool(
+            getattr(app, "compact_mode_enabled", lambda: False)()
+        )
         kwargs["width"] = DEFAULT_WIDTH
-        kwargs["height"] = DEFAULT_HEIGHT
-        kwargs["min_size"] = MIN_SIZE
+        kwargs["height"] = (
+            int(getattr(app, "COMPACT_WINDOW_HEIGHT", 220))
+            if compact
+            else DEFAULT_HEIGHT
+        )
+        kwargs["min_size"] = tuple(
+            getattr(app, "COMPACT_MIN_SIZE", MIN_SIZE)
+        )
         return original_create_window(*args, **kwargs)
 
     app.build_html = build_html
