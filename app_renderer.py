@@ -75,7 +75,12 @@ def render_document(renderer_dir: Path) -> str:
         (renderer / TEMPLATE_NAME).read_text(encoding="utf-8")
     )
     if not STYLE_PARTS or STYLE_PARTS[-1] != "app-shell-utility.css":
-        raise RuntimeError("Visual hardening stylesheet must be last in the cascade")
+        raise RuntimeError("Cross-feature utility stylesheet must be last")
+    core_css = (renderer / "app-shell.css").read_text(encoding="utf-8")
+    if "linear-gradient(145deg" in core_css:
+        raise RuntimeError("Legacy decorative brand gradient returned to core CSS")
+    if "mode-workspace-old-forward" in core_css or "mode-panel-enter-forward" in core_css:
+        raise RuntimeError("Legacy directional mode animation returned to core CSS")
     css = "\n".join(
         (renderer / name).read_text(encoding="utf-8")
         for name in STYLE_PARTS
