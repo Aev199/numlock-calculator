@@ -17,10 +17,10 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
-import app_compact
 import app_renderer
+import app_window
 
-app_compact.install(app)
+app_window.install(app)
 
 
 class FakeResizableWindow:
@@ -64,7 +64,7 @@ class CompactModeTests(unittest.TestCase):
 
             compact = api.set_compact_window(True)
             self.assertTrue(compact['ok'])
-            self.assertEqual(window.resize_calls[-1], (420, app_compact.COMPACT_WINDOW_HEIGHT))
+            self.assertEqual(window.resize_calls[-1], (420, app_window.COMPACT_WINDOW_HEIGHT))
 
             full = api.set_compact_window(False)
             self.assertTrue(full['ok'])
