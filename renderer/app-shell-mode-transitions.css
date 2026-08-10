@@ -1,19 +1,8 @@
-/* Stable mode motion for WebView2.
-
-   Chromium View Transitions and the legacy directional keyframes are disabled
-   here. The renderer controller drives the indicator glide and panel fade via
-   the Web Animations API, which guarantees that the start and end frames are
-   painted even when the mode state changes in the same JavaScript task. */
-
-.workspace {
-  view-transition-name: none !important;
-}
-
-::view-transition-group(mode-workspace),
-::view-transition-old(mode-workspace),
-::view-transition-new(mode-workspace) {
-  animation: none !important;
-}
+/*
+ * Mode movement is owned exclusively by app-shell-v2.mode-transitions.js.
+ * Core CSS defines the static states; this layer prevents incidental CSS
+ * transitions from competing with the Web Animations indicator/fade sequence.
+ */
 
 .mode-indicator {
   transition: none !important;
@@ -24,12 +13,4 @@
   transition: none !important;
   transform: none !important;
   will-change: opacity;
-}
-
-.mode-stage.mode-transition-forward .mode-panel-entering,
-.mode-stage.mode-transition-forward .mode-panel-leaving,
-.mode-stage.mode-transition-backward .mode-panel-entering,
-.mode-stage.mode-transition-backward .mode-panel-leaving {
-  animation: none !important;
-  transform: none !important;
 }
