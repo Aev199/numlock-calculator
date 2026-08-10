@@ -62,10 +62,9 @@ class CompactModeTests(unittest.TestCase):
                 app.AppApi(storage).bootstrap()['ui_settings']['compact_mode']
             )
 
-    def test_native_window_uses_measured_compact_height_and_restores_full_height(self):
+    def test_native_window_uses_measured_compact_height_and_restores_canonical_full_height(self):
         saved_window = app._window
         saved_quitting = app._quitting
-        saved_full_height = getattr(app, '_full_window_height', 432)
         try:
             window = FakeResizableWindow(width=420, height=500)
             app._window = window
@@ -89,14 +88,44 @@ class CompactModeTests(unittest.TestCase):
             full = api.set_compact_window(False)
             self.assertTrue(full['ok'])
             self.assertEqual(window.min_size, app_window.FULL_MIN_SIZE)
-            self.assertEqual(window.resize_calls[-1], (420, 500))
+            self.assertEqual(full['height'], app_window.DEFAULT_WINDOW_HEIGHT)
+            self.assertEqual(
+                window.resize_calls[-1],
+                (420, app_window.DEFAULT_WINDOW_HEIGHT),
+            )
             if os.name == 'nt' and window.native.MinimumSize is not None:
                 self.assertEqual(window.native.MinimumSize.Width, app_window.FULL_MIN_SIZE[0])
                 self.assertEqual(window.native.MinimumSize.Height, app_window.FULL_MIN_SIZE[1])
         finally:
             app._window = saved_window
             app._quitting = saved_quitting
-            app._full_window_height = saved_full_height
+
+    def test_full_mode_ignores_pathological_runtime_monitor_height(self):
+        saved_window = app._window
+        saved_quitting = app._quitting
+        try:
+            # pywebview/WinForms may transiently expose a work-area-sized height
+            # during native state changes. It must never become the restored full
+            # calculator height.
+            window = FakeResizableWindow(width=384, height=1040)
+            app._window = window
+            app._quitting = False
+            api = app.AppApi(app.Storage(None))
+
+            api.set_compact_window(True, 178)
+            # Simulate a stale/native runtime height being observed again before
+            # the expand request.
+            window.height = 1040
+            full = api.set_compact_window(False)
+            self.assertTrue(full['ok'])
+            self.assertEqual(full['height'], app_window.DEFAULT_WINDOW_HEIGHT)
+            self.assertEqual(
+                window.resize_calls[-1],
+                (384, app_window.DEFAULT_WINDOW_HEIGHT),
+            )
+        finally:
+            app._window = saved_window
+            app._quitting = saved_quitting
 
     def test_compact_height_is_bounded(self):
         saved_window = app._window
@@ -132,6 +161,9 @@ class CompactModeTests(unittest.TestCase):
         self.assertIn('COMPACT_OVERLAY_HEIGHT = 340', html)
         self.assertIn('compact-history-search', html)
         self.assertIn('set_compact_window', html)
+        self.assertIn('.brand-title {', html)
+        self.assertIn('text-overflow: clip;', html)
+        self.assertIn('padding-right: 1px;', html)
 
 
 if __name__ == '__main__':
