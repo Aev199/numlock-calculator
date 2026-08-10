@@ -62,7 +62,7 @@ class CompactModeTests(unittest.TestCase):
                 app.AppApi(storage).bootstrap()['ui_settings']['compact_mode']
             )
 
-    def test_native_window_shrinks_and_restores_previous_full_height(self):
+    def test_native_window_uses_measured_compact_height_and_restores_full_height(self):
         saved_window = app._window
         saved_quitting = app._quitting
         saved_full_height = getattr(app, '_full_window_height', 432)
@@ -72,13 +72,19 @@ class CompactModeTests(unittest.TestCase):
             app._quitting = False
             api = app.AppApi(app.Storage(None))
 
-            compact = api.set_compact_window(True)
+            compact = api.set_compact_window(True, 176)
             self.assertTrue(compact['ok'])
-            self.assertEqual(window.min_size, app_window.COMPACT_MIN_SIZE)
-            self.assertEqual(window.resize_calls[-1], (420, app_window.COMPACT_WINDOW_HEIGHT))
+            self.assertEqual(compact['height'], 176)
+            self.assertEqual(window.min_size, (app_window.COMPACT_MIN_SIZE[0], 176))
+            self.assertEqual(window.resize_calls[-1], (420, 176))
             if os.name == 'nt' and window.native.MinimumSize is not None:
                 self.assertEqual(window.native.MinimumSize.Width, app_window.COMPACT_MIN_SIZE[0])
-                self.assertEqual(window.native.MinimumSize.Height, app_window.COMPACT_MIN_SIZE[1])
+                self.assertEqual(window.native.MinimumSize.Height, 176)
+
+            overlay = api.set_compact_window(True, 340)
+            self.assertTrue(overlay['ok'])
+            self.assertEqual(window.resize_calls[-1], (420, 340))
+            self.assertEqual(window.min_size, (app_window.COMPACT_MIN_SIZE[0], 340))
 
             full = api.set_compact_window(False)
             self.assertTrue(full['ok'])
@@ -92,12 +98,35 @@ class CompactModeTests(unittest.TestCase):
             app._quitting = saved_quitting
             app._full_window_height = saved_full_height
 
-    def test_renderer_contains_compact_only_layout_and_settings_control(self):
+    def test_compact_height_is_bounded(self):
+        saved_window = app._window
+        saved_quitting = app._quitting
+        try:
+            window = FakeResizableWindow(width=420, height=500)
+            app._window = window
+            app._quitting = False
+            api = app.AppApi(app.Storage(None))
+
+            too_small = api.set_compact_window(True, 20)
+            self.assertEqual(too_small['height'], app_window.COMPACT_MIN_SIZE[1])
+            too_large = api.set_compact_window(True, 9999)
+            self.assertEqual(too_large['height'], app_window.COMPACT_MAX_CONTENT_HEIGHT)
+        finally:
+            app._window = saved_window
+            app._quitting = saved_quitting
+
+    def test_renderer_contains_fitted_compact_layout_history_and_shortcuts(self):
         html = app_renderer.render_document(Path(app.RENDERER_DIR))
         self.assertIn('Компактный режим', html)
-        self.assertIn('Только калькулятор: без истории, единиц и интерполяции.', html)
+        self.assertIn('Ctrl+Shift+M — переключить, Ctrl+H — история.', html)
         self.assertIn('data-compact-mode="true"', html)
         self.assertIn("mode !== 'calculator'", html)
+        self.assertIn('compactVisibleContentHeight', html)
+        self.assertIn('openCompactHistory', html)
+        self.assertIn("event.code === 'KeyM'", html)
+        self.assertIn("event.code === 'KeyH'", html)
+        self.assertIn('COMPACT_OVERLAY_HEIGHT = 340', html)
+        self.assertIn('compact-history-search', html)
         self.assertIn('set_compact_window', html)
 
 
