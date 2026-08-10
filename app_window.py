@@ -29,7 +29,6 @@ def install(app: Any) -> None:
         return
     app._window_controller_installed = True
     app._renderer_focused = False
-    app._full_window_height = DEFAULT_WINDOW_HEIGHT
 
     original_api_init = app.AppApi.__init__
     original_set_ui_settings = app.AppApi.set_ui_settings
@@ -129,16 +128,19 @@ def install(app: Any) -> None:
         actual visible topbar + editor. This avoids a fixed blank strip at the
         bottom and remains stable across DPI/font/layout changes. A larger value
         may be supplied temporarily for compact overlays such as history.
+
+        Full mode intentionally returns to the product's canonical 384x432
+        height. Do not derive it from ``window.height``: on WinForms/pywebview
+        that runtime property can temporarily reflect the monitor/work-area
+        height during native state transitions, which made Alt+Down expand the
+        calculator to almost the full screen.
         """
 
         enabled = app._coerce_bool(compact, False)
         target_height = (
             compact_target_height(content_height)
             if enabled
-            else max(
-                FULL_MIN_SIZE[1],
-                int(getattr(app, "_full_window_height", DEFAULT_WINDOW_HEIGHT)),
-            )
+            else DEFAULT_WINDOW_HEIGHT
         )
         target_min_size = (
             (COMPACT_MIN_SIZE[0], max(COMPACT_MIN_SIZE[1], target_height))
@@ -156,11 +158,6 @@ def install(app: Any) -> None:
 
         try:
             width = int(getattr(window, "width", DEFAULT_WINDOW_WIDTH) or DEFAULT_WINDOW_WIDTH)
-            current_height = int(
-                getattr(window, "height", DEFAULT_WINDOW_HEIGHT) or DEFAULT_WINDOW_HEIGHT
-            )
-            if enabled and current_height >= FULL_MIN_SIZE[1]:
-                app._full_window_height = current_height
 
             # Keep the pywebview model and its backing WinForms Form aligned.
             # The native minimum must change first or WinForms clamps resize().
