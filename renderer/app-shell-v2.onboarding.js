@@ -13,7 +13,7 @@
   function renderOnboardingSlide() {
     dom.onboardingKicker.textContent = '';
     dom.onboardingTitle.textContent = 'Клавиши NumCalc';
-    dom.onboardingDescription.textContent = 'Основные команды. Полная настройка доступна через ⚙.';
+    dom.onboardingDescription.textContent = 'Основные команды.';
     dom.onboardingItems.replaceChildren();
     for (const [key, description] of ONBOARDING_SHORTCUTS) {
       const row = document.createElement('div');
