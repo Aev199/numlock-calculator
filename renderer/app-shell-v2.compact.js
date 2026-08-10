@@ -234,6 +234,13 @@
     renderCompactHistoryDrawer();
   }
 
+  function compactHistoryOpen() {
+    return (
+      !dom.drawerOverlay.classList.contains('hidden')
+      && dom.drawerOverlay.dataset.drawerKind === 'compact-history'
+    );
+  }
+
   const renderSettingsDrawerWithoutCompact = renderSettingsDrawer;
   renderSettingsDrawer = function () {
     renderSettingsDrawerWithoutCompact();
@@ -250,7 +257,7 @@
     `;
     const compactHelp = document.createElement('p');
     compactHelp.className = 'settings-compact-help';
-    compactHelp.textContent = 'Только калькулятор. Ctrl+Shift+M — переключить, Ctrl+H — история.';
+    compactHelp.textContent = 'Alt+↑ — компактный, Alt+↓ — полный, Ctrl+H — история.';
     section.append(compactLabel, compactHelp);
     content.prepend(section);
 
@@ -273,20 +280,34 @@
   };
 
   document.addEventListener('keydown', event => {
+    // Escape for compact history is handled at capture level so the textarea's
+    // normal Escape behavior cannot clear the expression or hide the app first.
+    if (event.key === 'Escape' && compactHistoryOpen()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeDrawer();
+      return;
+    }
+
     if (!dom.onboardingOverlay.classList.contains('hidden')) return;
 
     if (
-      (event.ctrlKey || event.metaKey)
-      && event.shiftKey
-      && !event.altKey
-      && event.code === 'KeyM'
+      event.altKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && !event.shiftKey
+      && (event.key === 'ArrowUp' || event.key === 'ArrowDown')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
       closeTransientUi();
-      void persistCompactMode(!compactModeEnabled())
-        .then(compact => showToast(compact ? 'Компактный режим' : 'Полный режим'))
-        .catch(() => showToast('Не удалось переключить режим'));
+      const enableCompact = event.key === 'ArrowUp';
+      if (compactModeEnabled() !== enableCompact) {
+        void persistCompactMode(enableCompact)
+          .catch(() => showToast('Не удалось переключить режим'));
+      } else if (enableCompact) {
+        scheduleCompactWindowFit();
+      }
       return;
     }
 
@@ -299,10 +320,7 @@
       event.preventDefault();
       event.stopImmediatePropagation();
       if (compactModeEnabled()) {
-        if (
-          !dom.drawerOverlay.classList.contains('hidden')
-          && dom.drawerOverlay.dataset.drawerKind === 'compact-history'
-        ) {
+        if (compactHistoryOpen()) {
           closeDrawer();
         } else {
           closeTransientUi();
