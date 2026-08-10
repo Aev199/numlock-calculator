@@ -56,7 +56,8 @@ PRODUCT_VERSION_PLACEHOLDER = "__NUMCALC_PRODUCT_VERSION__"
 DEFAULT_WIDTH = 384
 DEFAULT_HEIGHT = 432
 MIN_SIZE = (360, 380)
-COMPACT_MIN_SIZE = (360, 200)
+COMPACT_STARTUP_HEIGHT = 188
+COMPACT_MIN_SIZE = (360, 160)
 
 
 def _inject_product_identity(source: str) -> str:
@@ -113,6 +114,8 @@ def render_document(renderer_dir: Path) -> str:
         or "app-shell-compact.css" not in STYLE_PARTS
         or "data-compact-mode" not in css
         or "set_compact_window" not in javascript
+        or "compactVisibleContentHeight" not in javascript
+        or "openCompactHistory" not in javascript
     ):
         raise RuntimeError("Compact calculator mode is incomplete")
     if (
@@ -167,7 +170,7 @@ def install(app: Any) -> None:
         compact = compact_mode_enabled()
         kwargs["width"] = DEFAULT_WIDTH
         kwargs["height"] = (
-            int(getattr(app, "COMPACT_WINDOW_HEIGHT", 220))
+            int(getattr(app, "COMPACT_WINDOW_HEIGHT", COMPACT_STARTUP_HEIGHT))
             if compact
             else DEFAULT_HEIGHT
         )
