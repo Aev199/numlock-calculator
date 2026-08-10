@@ -19,7 +19,8 @@
     if (resize && state.api?.set_compact_window) {
       state.api.set_compact_window(compact).catch(() => {});
     }
-    if (focus && !drawerIsOpen?.() && !paletteIsOpen?.()) {
+    const drawerOpen = !dom.drawerOverlay.classList.contains('hidden');
+    if (focus && !drawerOpen && !paletteIsOpen()) {
       restoreEditorFocus(false);
     }
   }
