@@ -9,7 +9,6 @@ import app_native_dialogs
 from product_info import (
     APP_NAME,
     APP_VERSION,
-    DESCRIPTION,
     INSPIRATION_URL,
     LICENSE_NAME,
     REPOSITORY_URL,
@@ -28,15 +27,18 @@ def install(app: Any, tray_module: Any) -> None:
     app.REPOSITORY_URL = REPOSITORY_URL
     tray_module.TRAY_TITLE = APP_NAME
     tray_module.AUTOSTART_VALUE = APP_NAME
-    tray_module.HELP_TEXT = """Основные клавиши
+    tray_module.HELP_TEXT = """Клавиши
 NumLock — показать или скрыть NumCalc
 Enter — вычислить
 ↑ / ↓ — история и подсказки
 Tab — функции
-Alt+← / Alt+→ — сменить режим
+Alt+← / Alt+→ — режимы
+Alt+↑ — компактный режим
+Alt+↓ — полный режим
+Ctrl+H — история
 Ctrl+C — копировать
 Ctrl+Space — автодополнение
-Esc — закрыть подсказку или скрыть пустое окно
+Esc — закрыть текущее окно или подсказку
 
 Выражения
 +  −  *  /  ^  %  !  ( )
@@ -45,33 +47,30 @@ Esc — закрыть подсказку или скрыть пустое ок�
 Последний результат: ans.
 
 Режимы
-Калькулятор — вычисления, история, память, переменные и формулы.
-Единицы — преобразование величин; в исходном поле доступна простая арифметика.
-Интерполяция — линейная 1D-интерполяция по двум опорным точкам.
+Калькулятор — расчёт, история, память, переменные и формулы.
+Единицы — преобразование величин.
+Интерполяция — линейная интерполяция по двум точкам.
+Компактный режим показывает только калькулятор; история доступна по Ctrl+H.
 
-Настройки
-Глобальную клавишу, формат результата и число знаков после запятой можно изменить в настройках.
-История и настройки хранятся локально. NumCalc не содержит телеметрии.
-«Копировать диагностику» в меню tray копирует локальные сведения для разбора ошибок.
+Настройки и история хранятся локально. Телеметрии нет.
 """
     tray_module.ABOUT_LINKS = (
-        ("NumLock Calculator — сайт Владимира Потапова", INSPIRATION_URL),
-        ("Репозиторий NumCalc", REPOSITORY_URL),
+        ("NumLock Calculator — Владимир Потапов", INSPIRATION_URL),
+        ("GitHub", REPOSITORY_URL),
     )
     tray_module.ABOUT_TEXT = (
-        f"{APP_NAME}\n"
-        f"Версия {APP_VERSION}\n\n"
-        "Калькулятор для Windows с управлением с клавиатуры.\n\n"
-        "Продолжает идеи NumLock Calculator Владимира Потапова "
-        f"({INSPIRATION_URL}).\n\n"
-        f"GitHub: {REPOSITORY_URL}\n"
-        f"Лицензия: {LICENSE_NAME}"
+        f"{APP_NAME} {APP_VERSION}\n"
+        "Калькулятор для Windows\n"
+        f"Лицензия: {LICENSE_NAME}\n\n"
+        "NumLock Calculator — Владимир Потапов\n"
+        f"{INSPIRATION_URL}\n\n"
+        f"GitHub: {REPOSITORY_URL}"
     )
     tray_module.ABOUT_DIALOG_CONTENT = (
-        f"Версия {APP_VERSION}\n\n"
-        "Калькулятор для Windows с управлением с клавиатуры.\n\n"
-        "Продолжает идеи NumLock Calculator Владимира Потапова.\n\n"
-        f"Лицензия: {LICENSE_NAME}"
+        f"Версия {APP_VERSION}\n"
+        "Калькулятор для Windows\n"
+        f"Лицензия: {LICENSE_NAME}\n\n"
+        "NumLock Calculator — Владимир Потапов"
     )
 
     def open_product_link(self: Any, url: str) -> bool:
