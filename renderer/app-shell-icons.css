@@ -1,0 +1,34 @@
+.ui-glyph {
+  width: 14px;
+  height: 14px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.ui-glyph-dot {
+  fill: currentColor;
+  stroke: none;
+}
+
+.icon-button .ui-glyph,
+.swap-units-button .ui-glyph {
+  margin: auto;
+}
+
+.search-field > span,
+.palette-search-wrap > span {
+  display: grid;
+  place-items: center;
+  color: var(--subtle);
+}
+
+.search-field > span .ui-glyph,
+.palette-search-wrap > span .ui-glyph {
+  width: 13px;
+  height: 13px;
+}

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import app_native_dialogs
+from app_icon import create_icon_image
 
 
 TRAY_TITLE = "NumCalc"
@@ -40,7 +41,7 @@ HELP_TEXT = """NumCalc — компактный клавиатурный кал�
 Горячие клавиши:
 • По умолчанию NumLock показывает окно, возвращает ему фокус или скрывает его; комбинацию можно изменить в «Настройках».
 • Ctrl+C — копировать выражение и результат; для отдельного числа копируется только число.
-• Формат результата, точность и десятичный разделитель настраиваются в «Настройках».
+• Формат результата, количество знаков после запятой и десятичный разделитель настраиваются в «Настройках».
 • Alt+← / Alt+→ — циклически переключать «Калькулятор», «Единицы» и «Интерполяция».
 • Tab — открыть палитру функций.
 • Ctrl+Space — открыть автодополнение.
@@ -206,16 +207,7 @@ def install(app: Any) -> None:
         run_async(app.request_quit)
 
     def create_tray_image() -> Any:
-        from PIL import Image, ImageDraw
-
-        image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        draw.rounded_rectangle((3, 3, 61, 61), radius=15, fill=(82, 109, 255, 255))
-        line = (248, 250, 255, 255)
-        draw.line((18, 46, 18, 18), fill=line, width=7)
-        draw.line((18, 18, 46, 46), fill=line, width=7)
-        draw.line((46, 46, 46, 18), fill=line, width=7)
-        return image
+        return create_icon_image(64)
 
     def start_tray() -> bool:
         if os.name != "nt" or app._tray_icon is not None:

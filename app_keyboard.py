@@ -34,9 +34,10 @@ import app_variables
 import app_window
 
 # Product identity and storage are selected before backend layers inspect AppApi.
-# Native behavior is installed next; the renderer remains the sole owner of
-# HTML/CSS/JavaScript. Diagnostics wrap the final runtime, while the outer
-# process guard prevents duplicate hooks, trays and concurrent writes.
+# Native behavior (including compact sizing) is installed next; the renderer
+# remains the sole owner of HTML/CSS/JavaScript. Diagnostics wrap the final
+# runtime, while the outer process guard prevents duplicate hooks, trays and
+# concurrent writes.
 app_product.install(app, app_tray)
 app_storage.install(app)
 app_window.install(app)

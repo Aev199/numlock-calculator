@@ -78,7 +78,7 @@
     settings: {
       angle_mode: 'DEG',
       number_base: 'DEC',
-      precision: 12,
+      precision: 6,
       number_format: 'auto',
       decimal_separator: '.',
     },
@@ -145,6 +145,11 @@
 
   const normalize = value => String(value ?? '').trim();
   const isPlainNumber = value => PLAIN_NUMBER.test(normalize(value));
+  const normalizeDecimalPlacesInput = (value, fallback = 6) => {
+    const parsed = Number.parseInt(value, 10);
+    const selected = Number.isFinite(parsed) ? parsed : fallback;
+    return Math.max(0, Math.min(15, selected));
+  };
   const reducedMotion = () => {
     if (document.body?.dataset.motion === 'full') return false;
     return Boolean(

@@ -37,6 +37,8 @@ class PublicReleaseTests(unittest.TestCase):
         manifest = (ROOT / "NumCalc.manifest").read_text(encoding="utf-8")
         self.assertIn("Microsoft.Windows.Common-Controls", manifest)
         self.assertIn('version="6.0.0.0"', manifest)
+        expected_identity = ".".join(map(str, product_info.version_tuple()))
+        self.assertIn(f'version="{expected_identity}"', manifest)
         for relative in ("NumCalc.spec", "NumCalc-folder.spec"):
             spec = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn("manifest='NumCalc.manifest'", spec)
@@ -48,6 +50,27 @@ class PublicReleaseTests(unittest.TestCase):
             "https://github.com/Aev199/numlock-calculator",
         )
         self.assertEqual(product_info.INSPIRATION_URL, "https://nlcalc.narod.ru/")
+
+    def test_release_documents_match_product_version(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        notes = (ROOT / "RELEASE_NOTES.md").read_text(encoding="utf-8")
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        acceptance = (ROOT / "docs/WINDOWS_ACCEPTANCE.md").read_text(
+            encoding="utf-8"
+        )
+        checklist = (ROOT / "docs/RELEASE_CHECKLIST.md").read_text(
+            encoding="utf-8"
+        )
+        version_info = (ROOT / "version_info.txt").read_text(encoding="utf-8")
+        version = product_info.APP_VERSION
+
+        self.assertIn(f"**NumCalc {version}**", readme)
+        self.assertTrue(notes.startswith(f"# NumCalc {version}\n"))
+        self.assertIn(f"## {version} —", changelog)
+        self.assertIn(f"Версия для проверки: **{version}**", acceptance)
+        self.assertIn(f"# NumCalc {version} — чек-лист релиза", checklist)
+        self.assertIn(f"StringStruct('FileVersion', '{version}')", version_info)
+        self.assertIn(f"StringStruct('ProductVersion', '{version}')", version_info)
 
     def test_readme_contains_attribution_and_public_links(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -94,7 +117,7 @@ class PublicReleaseTests(unittest.TestCase):
             "BSD License",
         )
 
-    def test_release_workflow_publishes_only_on_tag(self):
+    def test_release_workflow_publishes_only_on_matching_tag(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
@@ -103,6 +126,8 @@ class PublicReleaseTests(unittest.TestCase):
         self.assertIn("tags:", workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("if: startsWith(github.ref, 'refs/tags/')", workflow)
+        self.assertIn("from product_info import APP_VERSION", workflow)
+        self.assertIn("does not match product version", workflow)
         self.assertIn("pystray==0.19.5", workflow)
         self.assertNotIn("--no-binary=:all:", workflow)
         self.assertIn("THIRD_PARTY_NOTICES.md", workflow)
@@ -110,4 +135,3 @@ class PublicReleaseTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

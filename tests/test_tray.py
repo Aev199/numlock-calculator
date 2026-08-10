@@ -82,40 +82,44 @@ class TrayShellTests(unittest.TestCase):
         self.assertTrue(callable(app.copy_diagnostics_from_tray))
         self.assertFalse(hasattr(app, "open_repository"))
 
-    def test_help_and_menu_document_public_product(self):
+    def test_tray_menu_documents_public_product(self):
         source = (ROOT / "app_tray.py").read_text(encoding="utf-8")
-        self.assertIn("Ctrl+C", app_tray.HELP_TEXT)
-        self.assertIn("Alt+← / Alt+→", app_tray.HELP_TEXT)
-        self.assertIn("не содержит телеметрии", app_tray.HELP_TEXT)
         self.assertNotIn('pystray.MenuItem("Репозиторий"', source)
         self.assertIn('pystray.MenuItem("Копировать диагностику"', source)
 
-    def test_product_metadata_adds_attribution_and_trusted_links(self):
+    def test_product_metadata_adds_compact_help_and_attribution(self):
         app, _, _ = self.make_app()
         tray_module = types.SimpleNamespace()
         app_product.install(app, tray_module)
 
-        self.assertIn(
-            "Калькулятор - идеологическое продолжение NumLock Calculator "
-            "от Владимира Потапова",
-            tray_module.ABOUT_TEXT,
-        )
+        self.assertTrue(tray_module.HELP_TEXT.startswith("Клавиши\n"))
+        self.assertIn("NumLock — показать или скрыть NumCalc", tray_module.HELP_TEXT)
+        self.assertIn("Ctrl+C — копировать", tray_module.HELP_TEXT)
+        self.assertIn("Alt+← / Alt+→ — режимы", tray_module.HELP_TEXT)
+        self.assertIn("Alt+↑ — компактный режим", tray_module.HELP_TEXT)
+        self.assertIn("Alt+↓ — полный режим", tray_module.HELP_TEXT)
+        self.assertIn("Ctrl+H — история", tray_module.HELP_TEXT)
+        self.assertIn("Телеметрии нет", tray_module.HELP_TEXT)
+        self.assertNotIn("Быстрый старт:", tray_module.HELP_TEXT)
+        self.assertIn("NumLock Calculator — Владимир Потапов", tray_module.ABOUT_TEXT)
+        self.assertNotIn("Продолжает идеи", tray_module.ABOUT_TEXT)
         self.assertIn("https://nlcalc.narod.ru/", tray_module.ABOUT_TEXT)
         self.assertIn("https://github.com/Aev199/numlock-calculator", tray_module.ABOUT_TEXT)
         self.assertEqual(
             tray_module.ABOUT_LINKS,
             (
                 (
-                    "NumLock Calculator — сайт Владимира Потапова",
+                    "NumLock Calculator — Владимир Потапов",
                     "https://nlcalc.narod.ru/",
                 ),
                 (
-                    "Репозиторий NumCalc",
+                    "GitHub",
                     "https://github.com/Aev199/numlock-calculator",
                 ),
             ),
         )
         self.assertNotIn("<A HREF=", tray_module.ABOUT_DIALOG_CONTENT)
+        self.assertNotIn("идеологическое продолжение", tray_module.ABOUT_DIALOG_CONTENT)
 
     def test_install_is_idempotent(self):
         app, _, _ = self.make_app()
@@ -127,4 +131,3 @@ class TrayShellTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

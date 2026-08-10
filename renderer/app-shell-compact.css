@@ -1,0 +1,175 @@
+/* Calculator-only compact mode. History is still recorded, only hidden. */
+
+/* Keep the product name intact in the crowded compact topbar. The base shell
+   allows the brand flex item to shrink and clips overflowing text; that can
+   shave the final glyph on some Segoe UI/DPI combinations even when there is
+   still enough room for the actions. */
+.brand-block,
+.brand-copy {
+  flex-shrink: 0;
+}
+
+.brand-title {
+  overflow: visible;
+  text-overflow: clip;
+  padding-right: 1px;
+}
+
+body[data-compact-mode="true"] .mode-switch,
+body[data-compact-mode="true"] .mode-stage {
+  display: none !important;
+}
+
+body[data-compact-mode="true"] .app-shell {
+  grid-template-rows: auto auto;
+  align-content: start;
+}
+
+body[data-compact-mode="true"] .workspace {
+  grid-template-rows: auto;
+  align-content: start;
+  overflow: visible;
+}
+
+body[data-compact-mode="true"] .editor-card {
+  border-bottom: 0;
+}
+
+body[data-compact-mode="true"] .result-block {
+  padding-bottom: 3px;
+}
+
+body[data-compact-mode="true"] .settings-compact-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+/* Compact overlays temporarily grow the native window, so use the available
+   viewport directly instead of preserving the full-mode 48 px top inset. */
+body[data-compact-mode="true"] .overlay,
+body[data-compact-mode="true"] .onboarding-overlay {
+  padding: 6px;
+}
+
+body[data-compact-mode="true"] .drawer,
+body[data-compact-mode="true"] .palette,
+body[data-compact-mode="true"] .onboarding-card {
+  max-height: calc(100vh - 12px);
+}
+
+#drawerOverlay[data-drawer-kind="compact-history"] {
+  place-items: center;
+  padding: 6px;
+}
+
+#drawerOverlay[data-drawer-kind="compact-history"] .drawer {
+  width: 100%;
+  max-height: calc(100vh - 12px);
+}
+
+#drawerOverlay[data-drawer-kind="compact-history"] .drawer-header {
+  padding: 8px 9px;
+}
+
+#drawerOverlay[data-drawer-kind="compact-history"] .drawer-content {
+  padding: 6px;
+}
+
+.compact-history-shell {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 5px;
+}
+
+.compact-history-search {
+  width: 100%;
+  height: 29px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  outline: 0;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.compact-history-search:focus {
+  border-color: var(--accent);
+}
+
+.compact-history-list {
+  min-height: 0;
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border);
+}
+
+.compact-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+
+.compact-history-load,
+.compact-history-copy {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.compact-history-load {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px;
+  text-align: left;
+}
+
+.compact-history-load:hover,
+.compact-history-load:focus-visible,
+.compact-history-copy:hover,
+.compact-history-copy:focus-visible {
+  background: var(--soft-strong);
+}
+
+.compact-history-expression {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 11px;
+}
+
+.compact-history-result {
+  overflow: hidden;
+  max-width: 125px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.compact-history-copy {
+  padding: 0 7px;
+  border-left: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.compact-history-empty {
+  min-height: 72px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 11px;
+}

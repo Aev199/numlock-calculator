@@ -5,20 +5,19 @@
   aboutOverlay.innerHTML = `
     <section class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
       <button class="about-close" type="button" aria-label="Закрыть">×</button>
-      <div class="about-mark" aria-hidden="true">N</div>
-      <h2 id="aboutTitle">NumCalc 1.0.0</h2>
-      <p class="about-description">Компактный keyboard-first калькулятор для Windows.</p>
-      <p>
-        Калькулятор — идеологическое продолжение
-        <a class="about-link" href="https://nlcalc.narod.ru/" data-product-link>
-          NumLock Calculator
-        </a>
-        от Владимира Потапова.
+      <h2 id="aboutTitle">
+        __NUMCALC_PRODUCT_NAME__
+        <span class="about-version">__NUMCALC_PRODUCT_VERSION__</span>
+      </h2>
+      <p class="about-purpose">Калькулятор для Windows</p>
+      <p class="about-license">MIT</p>
+      <p class="about-origin">
+        <a class="about-link" href="https://nlcalc.narod.ru/" data-product-link>NumLock Calculator</a>
+        — Владимир Потапов
       </p>
-      <a class="about-link about-repository" href="https://github.com/Aev199/numlock-calculator" data-product-link>
-        Репозиторий NumCalc
-      </a>
-      <p class="about-license">Лицензия исходного кода: MIT</p>
+      <div class="about-actions">
+        <a class="about-link" href="https://github.com/Aev199/numlock-calculator" data-product-link>GitHub</a>
+      </div>
     </section>
   `;
   document.body.appendChild(aboutOverlay);
