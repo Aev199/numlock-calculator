@@ -38,6 +38,7 @@ SCRIPT_PARTS = (
     # functions remain in the consolidated controller scope.
     "app-shell-v2.variables.js",
     "app-shell-v2.formulas.js",
+    "app-shell-v2.formula-guidance.js",
     "app-shell-v2.interpolation.js",
     "app-shell-v2.hotkey.js",
     "app-shell-v2.about.js",
@@ -110,6 +111,8 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Consolidated renderer variable layer is incomplete")
     if "app-shell-v2.formulas.js" not in SCRIPT_PARTS or "formulasButton" not in template:
         raise RuntimeError("Consolidated renderer formula layer is incomplete")
+    if "app-shell-v2.formula-guidance.js" not in SCRIPT_PARTS:
+        raise RuntimeError("Consolidated renderer formula guidance is incomplete")
     if "app-shell-v2.about.js" not in SCRIPT_PARTS or "about-overlay" not in css:
         raise RuntimeError("Consolidated renderer About dialog is incomplete")
     if "app-shell-v2.icons.js" not in SCRIPT_PARTS or "ui-glyph" not in css:
