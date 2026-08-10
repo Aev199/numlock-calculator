@@ -1,5 +1,20 @@
 /* Calculator-only compact mode. History is still recorded, only hidden. */
 
+/* Keep the product name intact in the crowded compact topbar. The base shell
+   allows the brand flex item to shrink and clips overflowing text; that can
+   shave the final glyph on some Segoe UI/DPI combinations even when there is
+   still enough room for the actions. */
+.brand-block,
+.brand-copy {
+  flex-shrink: 0;
+}
+
+.brand-title {
+  overflow: visible;
+  text-overflow: clip;
+  padding-right: 1px;
+}
+
 body[data-compact-mode="true"] .mode-switch,
 body[data-compact-mode="true"] .mode-stage {
   display: none !important;
