@@ -15,8 +15,11 @@ SW_RESTORE = 9
 DEFAULT_WINDOW_WIDTH = 384
 DEFAULT_WINDOW_HEIGHT = 432
 FULL_MIN_SIZE = (360, 380)
-COMPACT_WINDOW_HEIGHT = 220
-COMPACT_MIN_SIZE = (360, 200)
+# Startup fallback only. The renderer measures topbar + editor after layout and
+# sends the exact compact height through set_compact_window().
+COMPACT_WINDOW_HEIGHT = 188
+COMPACT_MIN_SIZE = (360, 160)
+COMPACT_MAX_CONTENT_HEIGHT = 360
 
 
 def install(app: Any) -> None:
@@ -105,16 +108,50 @@ def install(app: Any) -> None:
         except Exception:
             return False
 
-    def api_set_compact_window(_self: Any, compact: bool) -> dict[str, Any]:
+    def compact_target_height(value: Any = None) -> int:
+        try:
+            requested = int(round(float(value)))
+        except (TypeError, ValueError, OverflowError):
+            requested = COMPACT_WINDOW_HEIGHT
+        return max(
+            COMPACT_MIN_SIZE[1],
+            min(COMPACT_MAX_CONTENT_HEIGHT, requested),
+        )
+
+    def api_set_compact_window(
+        _self: Any,
+        compact: bool,
+        content_height: Any = None,
+    ) -> dict[str, Any]:
+        """Resize the window for compact/full UI.
+
+        In compact mode ``content_height`` is measured by the renderer from the
+        actual visible topbar + editor. This avoids a fixed blank strip at the
+        bottom and remains stable across DPI/font/layout changes. A larger value
+        may be supplied temporarily for compact overlays such as history.
+        """
+
         enabled = app._coerce_bool(compact, False)
+        target_height = (
+            compact_target_height(content_height)
+            if enabled
+            else max(
+                FULL_MIN_SIZE[1],
+                int(getattr(app, "_full_window_height", DEFAULT_WINDOW_HEIGHT)),
+            )
+        )
+        target_min_size = (
+            (COMPACT_MIN_SIZE[0], max(COMPACT_MIN_SIZE[1], target_height))
+            if enabled
+            else FULL_MIN_SIZE
+        )
         window = app._window
-        target_min_size = COMPACT_MIN_SIZE if enabled else FULL_MIN_SIZE
         if window is None or app._quitting:
             return {
                 "ok": True,
                 "compact_mode": enabled,
                 "width": DEFAULT_WINDOW_WIDTH,
-                "height": COMPACT_WINDOW_HEIGHT if enabled else DEFAULT_WINDOW_HEIGHT,
+                "height": target_height,
             }
 
         try:
@@ -122,15 +159,8 @@ def install(app: Any) -> None:
             current_height = int(
                 getattr(window, "height", DEFAULT_WINDOW_HEIGHT) or DEFAULT_WINDOW_HEIGHT
             )
-            if enabled:
-                if current_height > COMPACT_WINDOW_HEIGHT + 24:
-                    app._full_window_height = current_height
-                target_height = COMPACT_WINDOW_HEIGHT
-            else:
-                target_height = max(
-                    FULL_MIN_SIZE[1],
-                    int(getattr(app, "_full_window_height", DEFAULT_WINDOW_HEIGHT)),
-                )
+            if enabled and current_height >= FULL_MIN_SIZE[1]:
+                app._full_window_height = current_height
 
             # Keep the pywebview model and its backing WinForms Form aligned.
             # The native minimum must change first or WinForms clamps resize().
