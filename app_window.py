@@ -14,6 +14,7 @@ from typing import Any
 SW_RESTORE = 9
 DEFAULT_WINDOW_WIDTH = 384
 DEFAULT_WINDOW_HEIGHT = 432
+FULL_MIN_SIZE = (360, 380)
 COMPACT_WINDOW_HEIGHT = 220
 COMPACT_MIN_SIZE = (360, 200)
 
@@ -70,9 +71,44 @@ def install(app: Any) -> None:
         set_renderer_focused(bool(focused))
         return True
 
+    def set_native_minimum_size(width: int, height: int) -> bool:
+        """Update WinForms MinimumSize before a live compact/full resize.
+
+        pywebview exposes min_size only at window creation time. On Windows its
+        native object is the backing WinForms Form, so changing MinimumSize is
+        necessary before resize() can cross the original full-mode minimum.
+        """
+
+        window = app._window
+        if os.name != "nt" or window is None:
+            return False
+        native = getattr(window, "native", None)
+        if native is None or not hasattr(native, "MinimumSize"):
+            return False
+
+        try:
+            from System import Func, Type
+            from System.Drawing import Size
+
+            def apply() -> None:
+                scale = float(getattr(native, "_scale", 1.0) or 1.0)
+                native.MinimumSize = Size(
+                    max(1, int(width * scale)),
+                    max(1, int(height * scale)),
+                )
+
+            if bool(getattr(native, "InvokeRequired", False)):
+                native.Invoke(Func[Type](apply))
+            else:
+                apply()
+            return True
+        except Exception:
+            return False
+
     def api_set_compact_window(_self: Any, compact: bool) -> dict[str, Any]:
         enabled = app._coerce_bool(compact, False)
         window = app._window
+        target_min_size = COMPACT_MIN_SIZE if enabled else FULL_MIN_SIZE
         if window is None or app._quitting:
             return {
                 "ok": True,
@@ -92,9 +128,17 @@ def install(app: Any) -> None:
                 target_height = COMPACT_WINDOW_HEIGHT
             else:
                 target_height = max(
-                    COMPACT_WINDOW_HEIGHT + 24,
+                    FULL_MIN_SIZE[1],
                     int(getattr(app, "_full_window_height", DEFAULT_WINDOW_HEIGHT)),
                 )
+
+            # Keep the pywebview model and its backing WinForms Form aligned.
+            # The native minimum must change first or WinForms clamps resize().
+            try:
+                window.min_size = target_min_size
+            except Exception:
+                pass
+            set_native_minimum_size(*target_min_size)
             window.resize(width, target_height)
             return {
                 "ok": True,
@@ -230,6 +274,7 @@ def install(app: Any) -> None:
     app.AppApi.window_focus_changed = api_window_focus_changed
     app.AppApi.set_compact_window = api_set_compact_window
     app.compact_mode_enabled = compact_mode_enabled
+    app.set_native_minimum_size = set_native_minimum_size
     app.COMPACT_WINDOW_HEIGHT = COMPACT_WINDOW_HEIGHT
     app.COMPACT_MIN_SIZE = COMPACT_MIN_SIZE
     app.set_renderer_focused = set_renderer_focused
