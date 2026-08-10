@@ -5,21 +5,15 @@
   aboutOverlay.innerHTML = `
     <section class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
       <button class="about-close" type="button" aria-label="Закрыть">×</button>
-      <div class="about-heading">
-        <div class="about-mark" aria-hidden="true">N</div>
-        <div>
-          <h2 id="aboutTitle">__NUMCALC_PRODUCT_NAME__</h2>
-          <div class="about-version">Версия __NUMCALC_PRODUCT_VERSION__</div>
-        </div>
-      </div>
-      <dl class="about-details">
-        <div><dt>Назначение</dt><dd>Калькулятор для Windows с управлением с клавиатуры</dd></div>
-        <div><dt>Лицензия</dt><dd>MIT</dd></div>
-      </dl>
+      <h2 id="aboutTitle">
+        __NUMCALC_PRODUCT_NAME__
+        <span class="about-version">__NUMCALC_PRODUCT_VERSION__</span>
+      </h2>
+      <p class="about-purpose">Калькулятор для Windows</p>
+      <p class="about-license">MIT</p>
       <p class="about-origin">
-        Продолжает идеи
         <a class="about-link" href="https://nlcalc.narod.ru/" data-product-link>NumLock Calculator</a>
-        Владимира Потапова.
+        — Владимир Потапов
       </p>
       <div class="about-actions">
         <a class="about-link" href="https://github.com/Aev199/numlock-calculator" data-product-link>GitHub</a>
