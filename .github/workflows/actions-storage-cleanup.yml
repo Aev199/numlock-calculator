@@ -1,5 +1,6 @@
 name: Actions storage cleanup
 
+# Delete storage-bearing objects first so space is released quickly even when run history is large.
 on:
   push:
     paths:
@@ -13,32 +14,14 @@ permissions:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - name: Remove old workflow runs, artifacts and caches
+      - name: Remove artifacts, caches and old workflow runs
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-
-          KEEP_RUNS=3
-          mapfile -t RUN_IDS < <(
-            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
-              --jq '.workflow_runs[].id'
-          )
-
-          TOTAL_RUNS=${#RUN_IDS[@]}
-          echo "Found ${TOTAL_RUNS} workflow runs; keeping newest ${KEEP_RUNS}."
-          if (( TOTAL_RUNS > KEEP_RUNS )); then
-            for ((i=KEEP_RUNS; i<TOTAL_RUNS; i++)); do
-              RUN_ID="${RUN_IDS[$i]}"
-              echo "Deleting workflow run ${RUN_ID}"
-              gh api --method DELETE \
-                "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" >/dev/null || \
-                echo "Warning: could not delete run ${RUN_ID}"
-            done
-          fi
 
           mapfile -t ARTIFACT_IDS < <(
             gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
@@ -61,5 +44,23 @@ jobs:
               "repos/${GITHUB_REPOSITORY}/actions/caches/${CACHE_ID}" >/dev/null || \
               echo "Warning: could not delete cache ${CACHE_ID}"
           done
+
+          KEEP_RUNS=3
+          mapfile -t RUN_IDS < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+              --jq '.workflow_runs[].id'
+          )
+
+          TOTAL_RUNS=${#RUN_IDS[@]}
+          echo "Found ${TOTAL_RUNS} workflow runs; keeping newest ${KEEP_RUNS}."
+          if (( TOTAL_RUNS > KEEP_RUNS )); then
+            for ((i=KEEP_RUNS; i<TOTAL_RUNS; i++)); do
+              RUN_ID="${RUN_IDS[$i]}"
+              echo "Deleting workflow run ${RUN_ID}"
+              gh api --method DELETE \
+                "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" >/dev/null || \
+                echo "Warning: could not delete run ${RUN_ID}"
+            done
+          fi
 
           echo "Actions storage cleanup completed."
