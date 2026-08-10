@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: 12px;
-  background: rgba(0, 0, 0, .46);
+  background: rgba(0, 0, 0, .40);
 }
 
 .about-overlay.hidden {
@@ -14,95 +14,61 @@
 
 .about-card {
   position: relative;
-  width: min(322px, calc(100vw - 24px));
+  width: min(286px, calc(100vw - 24px));
   max-height: calc(100vh - 24px);
   overflow: auto;
   padding: 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--panel-raised);
   box-shadow: var(--shadow);
   color: var(--text);
   text-align: left;
 }
 
-.about-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 30px 12px 0;
-}
-
-.about-mark {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 auto;
-  border-radius: 5px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .about-card h2 {
-  margin: 0;
-  font-size: 15px;
+  margin: 0 30px 3px 0;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .about-version {
-  margin-top: 2px;
+  margin-left: 5px;
   color: var(--muted);
   font-size: 11px;
+  font-weight: 400;
 }
 
-.about-details {
-  margin: 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.about-details > div {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 8px;
-  padding: 7px 0;
-}
-
-.about-details > div + div {
-  border-top: 1px solid var(--border);
-}
-
-.about-details dt,
-.about-details dd {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.about-details dt {
-  color: var(--muted);
-}
-
-.about-details dd {
-  color: var(--text);
-}
-
+.about-purpose,
+.about-license,
 .about-origin {
-  margin: 10px 0 8px;
-  color: var(--muted);
+  margin: 0;
   font-size: 11px;
   line-height: 1.45;
 }
 
+.about-purpose {
+  color: var(--text);
+}
+
+.about-license {
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.about-origin {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+
 .about-actions {
   display: flex;
-  gap: 10px;
-  min-height: 24px;
   align-items: center;
+  min-height: 22px;
+  margin-top: 5px;
 }
 
 .about-link {
@@ -120,12 +86,12 @@
 
 .about-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 7px;
+  right: 7px;
   width: 24px;
   height: 24px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 3px;
   background: transparent;
   color: var(--muted);
   font-size: 16px;
