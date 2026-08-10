@@ -1,0 +1,65 @@
+name: Actions storage cleanup
+
+on:
+  push:
+    paths:
+      - ".github/workflows/actions-storage-cleanup.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Remove old workflow runs, artifacts and caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          KEEP_RUNS=3
+          mapfile -t RUN_IDS < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+              --jq '.workflow_runs[].id'
+          )
+
+          TOTAL_RUNS=${#RUN_IDS[@]}
+          echo "Found ${TOTAL_RUNS} workflow runs; keeping newest ${KEEP_RUNS}."
+          if (( TOTAL_RUNS > KEEP_RUNS )); then
+            for ((i=KEEP_RUNS; i<TOTAL_RUNS; i++)); do
+              RUN_ID="${RUN_IDS[$i]}"
+              echo "Deleting workflow run ${RUN_ID}"
+              gh api --method DELETE \
+                "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" >/dev/null || \
+                echo "Warning: could not delete run ${RUN_ID}"
+            done
+          fi
+
+          mapfile -t ARTIFACT_IDS < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+              --jq '.artifacts[].id'
+          )
+          echo "Found ${#ARTIFACT_IDS[@]} Actions artifacts; deleting all stored artifacts."
+          for ARTIFACT_ID in "${ARTIFACT_IDS[@]}"; do
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}" >/dev/null || \
+              echo "Warning: could not delete artifact ${ARTIFACT_ID}"
+          done
+
+          mapfile -t CACHE_IDS < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100" \
+              --jq '.actions_caches[].id'
+          )
+          echo "Found ${#CACHE_IDS[@]} Actions caches; deleting all."
+          for CACHE_ID in "${CACHE_IDS[@]}"; do
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/actions/caches/${CACHE_ID}" >/dev/null || \
+              echo "Warning: could not delete cache ${CACHE_ID}"
+          done
+
+          echo "Actions storage cleanup completed."
