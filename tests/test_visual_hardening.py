@@ -26,6 +26,15 @@ class VisualHardeningTests(unittest.TestCase):
         self.assertLess(len(utility.splitlines()), 80)
         self.assertIn("cross-feature rules", utility.lower())
 
+    def test_brand_title_keeps_intrinsic_trailing_glyph_buffer(self):
+        utility = (RENDERER / "app-shell-utility.css").read_text(encoding="utf-8")
+
+        self.assertIn(".brand-title::after", utility)
+        self.assertIn('content: "";', utility)
+        self.assertIn("width: 4px;", utility)
+        self.assertIn("display: inline-block;", utility)
+        self.assertIn("overflow: visible;", utility)
+
     def test_formula_ui_avoids_success_toast_chatter_and_promotional_copy(self):
         source = (RENDERER / "app-shell-v2.formulas.js").read_text(encoding="utf-8")
 
