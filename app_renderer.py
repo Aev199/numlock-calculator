@@ -149,13 +149,21 @@ def install(app: Any) -> None:
     app._consolidated_renderer_installed = True
     original_create_window = app.webview.create_window
 
+    def compact_mode_enabled() -> bool:
+        return bool(getattr(app, "compact_mode_enabled", lambda: False)())
+
     def build_html() -> str:
-        return render_document(Path(app.RENDERER_DIR))
+        document = render_document(Path(app.RENDERER_DIR))
+        if compact_mode_enabled():
+            document = document.replace(
+                'data-motion="full"',
+                'data-motion="full" data-compact-mode="true"',
+                1,
+            )
+        return document
 
     def create_window(*args: Any, **kwargs: Any) -> Any:
-        compact = bool(
-            getattr(app, "compact_mode_enabled", lambda: False)()
-        )
+        compact = compact_mode_enabled()
         kwargs["width"] = DEFAULT_WIDTH
         kwargs["height"] = (
             int(getattr(app, "COMPACT_WINDOW_HEIGHT", 220))
