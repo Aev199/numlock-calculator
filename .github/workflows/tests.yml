@@ -4,7 +4,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".github/workflows/actions-storage-cleanup.yml"
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -53,16 +56,17 @@ jobs:
         continue-on-error: true
         run: python tools/audit_public_history.py > history-audit.log 2>&1
       - name: Capture tracked release tree
-        if: always()
+        if: steps.history_audit.outcome == 'failure' || github.event_name == 'workflow_dispatch'
         run: git ls-files | sort | tee tracked-files.log
       - name: Upload public audit reports
-        if: always()
+        if: steps.history_audit.outcome == 'failure' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: public-repository-audit
           path: |
             history-audit.log
             tracked-files.log
+          retention-days: 3
       - name: Report history audit failure
         if: steps.history_audit.outcome == 'failure'
         run: |
@@ -79,11 +83,12 @@ jobs:
         continue-on-error: true
         run: python -m unittest tests.test_renderer -v > renderer-test.log 2>&1
       - name: Upload renderer test log
-        if: always()
+        if: steps.renderer_tests.outcome == 'failure' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: renderer-test-log
           path: renderer-test.log
+          retention-days: 3
       - name: Report renderer test failure
         if: steps.renderer_tests.outcome == 'failure'
         run: |
@@ -98,11 +103,12 @@ jobs:
         continue-on-error: true
         run: python -m unittest discover -s tests -v > discover.log 2>&1
       - name: Upload full build test log
-        if: always()
+        if: steps.discover.outcome == 'failure' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: discover-log-linux
           path: discover.log
+          retention-days: 3
       - name: Report full build test failure
         if: steps.discover.outcome == 'failure'
         run: |
@@ -191,7 +197,8 @@ jobs:
           }
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
           Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
-      - name: Upload Windows release artifact
+      - name: Upload Windows release artifact on demand
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: NumCalc-windows-release
@@ -203,3 +210,4 @@ jobs:
             THIRD_PARTY_NOTICES.md
             release/licenses
           if-no-files-found: error
+          retention-days: 7
