@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 import types
@@ -23,10 +24,19 @@ import app_window
 app_window.install(app)
 
 
+class FakeNativeWindow:
+    def __init__(self):
+        self.MinimumSize = None
+        self.InvokeRequired = False
+        self._scale = 1.0
+
+
 class FakeResizableWindow:
     def __init__(self, width=420, height=500):
         self.width = width
         self.height = height
+        self.min_size = app_window.FULL_MIN_SIZE
+        self.native = FakeNativeWindow()
         self.resize_calls = []
 
     def resize(self, width, height):
@@ -64,11 +74,19 @@ class CompactModeTests(unittest.TestCase):
 
             compact = api.set_compact_window(True)
             self.assertTrue(compact['ok'])
+            self.assertEqual(window.min_size, app_window.COMPACT_MIN_SIZE)
             self.assertEqual(window.resize_calls[-1], (420, app_window.COMPACT_WINDOW_HEIGHT))
+            if os.name == 'nt' and window.native.MinimumSize is not None:
+                self.assertEqual(window.native.MinimumSize.Width, app_window.COMPACT_MIN_SIZE[0])
+                self.assertEqual(window.native.MinimumSize.Height, app_window.COMPACT_MIN_SIZE[1])
 
             full = api.set_compact_window(False)
             self.assertTrue(full['ok'])
+            self.assertEqual(window.min_size, app_window.FULL_MIN_SIZE)
             self.assertEqual(window.resize_calls[-1], (420, 500))
+            if os.name == 'nt' and window.native.MinimumSize is not None:
+                self.assertEqual(window.native.MinimumSize.Width, app_window.FULL_MIN_SIZE[0])
+                self.assertEqual(window.native.MinimumSize.Height, app_window.FULL_MIN_SIZE[1])
         finally:
             app._window = saved_window
             app._quitting = saved_quitting
