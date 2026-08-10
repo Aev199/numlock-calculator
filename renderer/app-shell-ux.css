@@ -13,7 +13,7 @@
   /* Base-size fallback. JavaScript copies the live textarea metrics after every
      responsive or DPI layout change so the two text runs remain pixel-aligned. */
   padding: 5px 72px 6px 6px;
-  border-radius: 8px;
+  border-radius: 4px;
   pointer-events: none;
   white-space: pre-wrap;
   overflow-wrap: break-word;
