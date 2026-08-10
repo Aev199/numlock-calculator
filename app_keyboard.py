@@ -21,6 +21,7 @@ from calc_engine_runtime import CalculatorSession
 calc_engine.CalculatorSession = CalculatorSession
 
 import app
+import app_compact
 import app_diagnostics
 import app_formulas
 import app_numlock_compat
@@ -34,11 +35,14 @@ import app_variables
 import app_window
 
 # Product identity and storage are selected before backend layers inspect AppApi.
+# Compact-mode persistence is installed after storage and before window/renderer
+# layers so a saved compact session can start at the correct native height.
 # Native behavior is installed next; the renderer remains the sole owner of
 # HTML/CSS/JavaScript. Diagnostics wrap the final runtime, while the outer
 # process guard prevents duplicate hooks, trays and concurrent writes.
 app_product.install(app, app_tray)
 app_storage.install(app)
+app_compact.install(app)
 app_window.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
