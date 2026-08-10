@@ -92,27 +92,28 @@ class TrayShellTests(unittest.TestCase):
         tray_module = types.SimpleNamespace()
         app_product.install(app, tray_module)
 
-        self.assertIn("Основные клавиши", tray_module.HELP_TEXT)
+        self.assertTrue(tray_module.HELP_TEXT.startswith("Клавиши\n"))
         self.assertIn("NumLock — показать или скрыть NumCalc", tray_module.HELP_TEXT)
-        self.assertIn("Ctrl+C", tray_module.HELP_TEXT)
-        self.assertIn("Alt+← / Alt+→", tray_module.HELP_TEXT)
-        self.assertIn("не содержит телеметрии", tray_module.HELP_TEXT)
+        self.assertIn("Ctrl+C — копировать", tray_module.HELP_TEXT)
+        self.assertIn("Alt+← / Alt+→ — режимы", tray_module.HELP_TEXT)
+        self.assertIn("Alt+↑ — компактный режим", tray_module.HELP_TEXT)
+        self.assertIn("Alt+↓ — полный режим", tray_module.HELP_TEXT)
+        self.assertIn("Ctrl+H — история", tray_module.HELP_TEXT)
+        self.assertIn("Телеметрии нет", tray_module.HELP_TEXT)
         self.assertNotIn("Быстрый старт:", tray_module.HELP_TEXT)
-        self.assertIn(
-            "Продолжает идеи NumLock Calculator Владимира Потапова",
-            tray_module.ABOUT_TEXT,
-        )
+        self.assertIn("NumLock Calculator — Владимир Потапов", tray_module.ABOUT_TEXT)
+        self.assertNotIn("Продолжает идеи", tray_module.ABOUT_TEXT)
         self.assertIn("https://nlcalc.narod.ru/", tray_module.ABOUT_TEXT)
         self.assertIn("https://github.com/Aev199/numlock-calculator", tray_module.ABOUT_TEXT)
         self.assertEqual(
             tray_module.ABOUT_LINKS,
             (
                 (
-                    "NumLock Calculator — сайт Владимира Потапова",
+                    "NumLock Calculator — Владимир Потапов",
                     "https://nlcalc.narod.ru/",
                 ),
                 (
-                    "Репозиторий NumCalc",
+                    "GitHub",
                     "https://github.com/Aev199/numlock-calculator",
                 ),
             ),
