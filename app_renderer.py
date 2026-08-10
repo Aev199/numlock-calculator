@@ -55,7 +55,8 @@ PRODUCT_NAME_PLACEHOLDER = "__NUMCALC_PRODUCT_NAME__"
 PRODUCT_VERSION_PLACEHOLDER = "__NUMCALC_PRODUCT_VERSION__"
 DEFAULT_WIDTH = 384
 DEFAULT_HEIGHT = 432
-MIN_SIZE = (360, 200)
+MIN_SIZE = (360, 380)
+COMPACT_MIN_SIZE = (360, 200)
 
 
 def _inject_product_identity(source: str) -> str:
@@ -170,8 +171,10 @@ def install(app: Any) -> None:
             if compact
             else DEFAULT_HEIGHT
         )
-        kwargs["min_size"] = tuple(
-            getattr(app, "COMPACT_MIN_SIZE", MIN_SIZE)
+        kwargs["min_size"] = (
+            tuple(getattr(app, "COMPACT_MIN_SIZE", COMPACT_MIN_SIZE))
+            if compact
+            else MIN_SIZE
         )
         return original_create_window(*args, **kwargs)
 
