@@ -66,14 +66,17 @@ class AboutModalTests(unittest.TestCase):
             ),
         )
 
-    def test_renderer_contains_release_identity_and_real_links(self):
+    def test_renderer_contains_terse_release_identity_and_real_links(self):
         html = app_renderer.render_document(ROOT / "renderer")
 
         self.assertIn("window.__nlcalcShowAbout = showAbout", html)
-        self.assertIn(f'id="aboutTitle">{product_info.APP_NAME}</h2>', html)
-        self.assertIn(f"Версия {product_info.APP_VERSION}", html)
-        self.assertIn('class="about-details"', html)
-        self.assertIn("Продолжает идеи", html)
+        self.assertIn(f'id="aboutTitle">\n        {product_info.APP_NAME}', html)
+        self.assertIn(product_info.APP_VERSION, html)
+        self.assertIn("Калькулятор для Windows", html)
+        self.assertIn('class="about-license">MIT</p>', html)
+        self.assertNotIn('class="about-mark"', html)
+        self.assertNotIn('class="about-details"', html)
+        self.assertNotIn("Продолжает идеи", html)
         self.assertNotIn(app_renderer.PRODUCT_NAME_PLACEHOLDER, html)
         self.assertNotIn(app_renderer.PRODUCT_VERSION_PLACEHOLDER, html)
         self.assertIn('href="https://nlcalc.narod.ru/"', html)
