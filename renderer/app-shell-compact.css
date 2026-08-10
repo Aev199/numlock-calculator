@@ -1,0 +1,31 @@
+/* Calculator-only compact mode. History is still recorded, only hidden. */
+
+body[data-compact-mode="true"] .mode-switch,
+body[data-compact-mode="true"] .mode-stage {
+  display: none !important;
+}
+
+body[data-compact-mode="true"] .app-shell {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+body[data-compact-mode="true"] .workspace {
+  grid-template-rows: auto;
+  align-content: start;
+  overflow: visible;
+}
+
+body[data-compact-mode="true"] .editor-card {
+  border-bottom: 0;
+}
+
+body[data-compact-mode="true"] .result-block {
+  padding-bottom: 4px;
+}
+
+body[data-compact-mode="true"] .settings-compact-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
