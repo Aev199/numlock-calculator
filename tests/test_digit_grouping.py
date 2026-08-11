@@ -44,6 +44,14 @@ class DigitGroupingTests(unittest.TestCase):
         self.assertIn("CLIPBOARD_DIGIT_GROUPING", copy_source)
         self.assertIn("replace(CLIPBOARD_DIGIT_GROUPING, '')", copy_source)
 
+    def test_clipboard_uses_the_same_grouping_as_visible_numbers(self):
+        html = app_renderer.render_document(RENDERER)
+        self.assertIn("copyTextWithDigitGrouping", html)
+        self.assertIn("copyCurrentCalculationWithDigitGrouping", html)
+        self.assertIn("groupExpressionDigits(text)", html)
+        self.assertIn("await copyText(text, 'Вычисление скопировано')", html)
+        self.assertIn("text = `${copyExpression(expression)} = ${response.result}`;", html)
+
     def test_editor_and_result_share_windows_ui_typeface(self):
         utility = (RENDERER / "app-shell-utility.css").read_text(encoding="utf-8")
         self.assertIn(".expression-input,\n.bracket-color-overlay", utility)
