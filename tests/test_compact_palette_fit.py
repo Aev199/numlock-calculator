@@ -15,11 +15,14 @@ class CompactPaletteFitTests(unittest.TestCase):
         fit_index = scripts.index("app-shell-v2.compact-palette-fit.js")
         self.assertEqual(fit_index, compact_index + 1)
 
-    def test_compact_palette_fits_native_window_to_rendered_content(self):
+    def test_compact_palette_uses_natural_content_height_not_current_viewport(self):
         html = app_renderer.render_document(RENDERER)
         self.assertIn("COMPACT_PALETTE_RESULTS_MAX_HEIGHT = 232", html)
         self.assertIn("compactPaletteContentHeight", html)
-        self.assertIn("palette.getBoundingClientRect().height", html)
+        self.assertIn("dom.paletteResults.scrollHeight", html)
+        self.assertIn("visibleElementHeight(search)", html)
+        self.assertIn("visibleElementHeight(groups)", html)
+        self.assertNotIn("palette.getBoundingClientRect().height", html)
         self.assertIn("scheduleCompactPaletteFit", html)
         self.assertIn("dom.paletteResults.style.maxHeight", html)
         self.assertIn("renderPaletteWithoutContentFit", html)
