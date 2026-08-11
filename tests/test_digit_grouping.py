@@ -37,6 +37,12 @@ class DigitGroupingTests(unittest.TestCase):
         self.assertIn("applyVisualDigitGroupingToEditor", html)
         self.assertIn("renderResultWithDigitGrouping", html)
         self.assertIn("setInputValueWithDigitGrouping", html)
+        self.assertIn("updateHistoryNodeWithDigitGrouping", html)
+
+    def test_grouped_standalone_number_keeps_concise_copy_path(self):
+        copy_source = (RENDERER / "app-shell-v2.copy.js").read_text(encoding="utf-8")
+        self.assertIn("CLIPBOARD_DIGIT_GROUPING", copy_source)
+        self.assertIn("replace(CLIPBOARD_DIGIT_GROUPING, '')", copy_source)
 
     def test_editor_and_result_share_windows_ui_typeface(self):
         utility = (RENDERER / "app-shell-utility.css").read_text(encoding="utf-8")
