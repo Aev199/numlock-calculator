@@ -33,6 +33,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.ux.js",
     "app-shell-v2.multiply.js",
     "app-shell-v2.copy.js",
+    "app-shell-v2.digit-grouping.js",
     # part06 starts the event binder and part07 continues it before opening
     # initialize(); keep feature layers before that boundary so their drawer
     # functions remain in the consolidated controller scope.
@@ -107,6 +108,12 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Consolidated renderer multiplication display is incomplete")
     if "app-shell-v2.copy.js" not in SCRIPT_PARTS:
         raise RuntimeError("Consolidated renderer clipboard behavior is incomplete")
+    if (
+        "app-shell-v2.digit-grouping.js" not in SCRIPT_PARTS
+        or "DIGIT_GROUP_SEPARATOR" not in javascript
+        or "applyVisualDigitGroupingToEditor" not in javascript
+    ):
+        raise RuntimeError("Consolidated renderer digit grouping is incomplete")
     if "app-shell-v2.variables.js" not in SCRIPT_PARTS:
         raise RuntimeError("Consolidated renderer variable layer is incomplete")
     if "app-shell-v2.formulas.js" not in SCRIPT_PARTS or "formulasButton" not in template:
