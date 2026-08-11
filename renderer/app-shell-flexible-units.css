@@ -1,0 +1,50 @@
+/* Composable unit selectors for derived engineering quantities. */
+
+.compound-unit-hidden {
+  display: none !important;
+}
+
+.compound-unit-picker {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.compound-unit-select {
+  width: 100%;
+  min-width: 0;
+  padding-left: 6px;
+  padding-right: 20px;
+}
+
+.compound-unit-operator {
+  min-width: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+.compound-unit-picker.is-preset {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.compound-unit-picker.is-preset .compound-unit-operator,
+.compound-unit-picker.is-preset .compound-unit-right {
+  display: none;
+}
+
+@media (max-width: 390px) {
+  .compound-unit-picker {
+    gap: 3px;
+  }
+
+  .compound-unit-select {
+    padding-left: 5px;
+    padding-right: 18px;
+    font-size: 10px;
+  }
+}
