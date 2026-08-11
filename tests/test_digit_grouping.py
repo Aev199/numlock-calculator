@@ -44,13 +44,15 @@ class DigitGroupingTests(unittest.TestCase):
         self.assertIn("CLIPBOARD_DIGIT_GROUPING", copy_source)
         self.assertIn("replace(CLIPBOARD_DIGIT_GROUPING, '')", copy_source)
 
-    def test_clipboard_uses_the_same_grouping_as_visible_numbers(self):
+    def test_clipboard_grouping_has_persisted_user_toggle(self):
         html = app_renderer.render_document(RENDERER)
-        self.assertIn("copyTextWithDigitGrouping", html)
-        self.assertIn("copyCurrentCalculationWithDigitGrouping", html)
-        self.assertIn("groupExpressionDigits(text)", html)
+        self.assertIn("copyTextWithDigitGroupingPreference", html)
+        self.assertIn("clipboardDigitText", html)
+        self.assertIn("state.ui.group_copied_digits === false", html)
+        self.assertIn("Группировать разряды при копировании", html)
+        self.assertIn("group_copied_digits: enabled", html)
         self.assertIn("await copyText(text, 'Вычисление скопировано')", html)
-        self.assertIn("text = `${copyExpression(expression)} = ${response.result}`;", html)
+        self.assertIn("await copyText(text, 'Результат скопирован')", html)
 
     def test_editor_and_result_share_windows_ui_typeface(self):
         utility = (RENDERER / "app-shell-utility.css").read_text(encoding="utf-8")
