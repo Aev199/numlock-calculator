@@ -29,7 +29,7 @@ jobs:
           app_storage.py app_formulas.py app_icon.py calculation_limits.py
           collect_third_party_licenses.py generate_version_info.py
           hotkey_config.py input_normalization.py interpolation.py
-          number_formatting.py product_info.py unit_conversion.py
+          number_formatting.py product_info.py unit_conversion.py flexible_units.py
           calc_engine.py calc_engine_runtime.py
           tools/audit_public_history.py tools/verify_windows_manifest.py
       - name: Verify generated product metadata
@@ -137,6 +137,8 @@ jobs:
           assert 'delete_variable' in source
           assert 'MODE_MOTION_ORDER' in source
           assert 'DIGIT_GROUP_SEPARATOR' in source
+          assert 'renderFlexibleUnitPickers' in source
+          assert 'composePickerSymbol' in source
           PY
           node --check renderer-check.js
 
