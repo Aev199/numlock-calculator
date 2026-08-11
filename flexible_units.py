@@ -165,6 +165,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "right": LENGTH_COMPONENTS,
         "presets": (),
         "defaults": ("kN/m", "N/m"),
+        "component_defaults": ("kN", "m"),
     },
     "moment": {
         "label": "Моменты сил",
@@ -175,6 +176,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "right": LENGTH_COMPONENTS,
         "presets": (),
         "defaults": ("kN*m", "N*m"),
+        "component_defaults": ("kN", "m"),
     },
     "speed": {
         "label": "Скорости",
@@ -185,6 +187,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "right": TIME_COMPONENTS,
         "presets": (),
         "defaults": ("m/s", "km/h"),
+        "component_defaults": ("m", "s"),
     },
     "acceleration": {
         "label": "Ускорения",
@@ -195,6 +198,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "right": TIME_SQUARED_COMPONENTS,
         "presets": (_preset("g0", "g"),),
         "defaults": ("m/s2", "g0"),
+        "component_defaults": ("m", "s2"),
     },
     "pressure": {
         "label": "Давления",
@@ -214,6 +218,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
             _preset("psi", "psi"),
         ),
         "defaults": ("kPa", "MPa"),
+        "component_defaults": ("kN", "m2"),
     },
     "specific_weight": {
         "label": "Удельный вес",
@@ -224,6 +229,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "right": VOLUME_COMPONENTS,
         "presets": (),
         "defaults": ("kN/m3", "N/m3"),
+        "component_defaults": ("kN", "m3"),
     },
     "density": {
         "label": "Плотность",
@@ -234,6 +240,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "right": VOLUME_COMPONENTS,
         "presets": (),
         "defaults": ("kg/m3", "g/cm3"),
+        "component_defaults": ("kg", "m3"),
     },
 }
 
@@ -279,10 +286,7 @@ def _schema_units(
             if symbol in by_symbol
         ]
         default_set = {symbol for symbol, _label in leading}
-        result = leading + [
-            item for item in result
-            if item[0] not in default_set
-        ]
+        result = leading + [item for item in result if item[0] not in default_set]
     return tuple(result)
 
 
@@ -292,39 +296,44 @@ _COMPOUND_UNITS = {
 }
 
 
-def _flat_categories() -> list[dict[str, Any]]:
-    return [
-        deepcopy(category)
-        for category in legacy.UNIT_CATEGORIES
-        if category["id"] not in COMPOUND_SCHEMAS
-    ]
+def _compound_category(category_id: str) -> dict[str, Any]:
+    schema = COMPOUND_SCHEMAS[category_id]
+    default_left, default_right = schema.get("component_defaults", ("", ""))
+    return {
+        "id": category_id,
+        "label": schema["label"],
+        "units": _COMPOUND_UNITS[category_id],
+        "picker": {
+            "kind": "compound",
+            "operator": schema["operator"],
+            "left_label": schema["left_label"],
+            "right_label": schema["right_label"],
+            "left": [_public_component(item) for item in schema["left"]],
+            "right": [_public_component(item) for item in schema["right"]],
+            "default_left": default_left,
+            "default_right": default_right,
+            "presets": [
+                {"symbol": item["unit"].symbol, "label": item["label"]}
+                for item in schema.get("presets", ())
+            ],
+        },
+    }
 
 
-UNIT_CATEGORIES: tuple[dict[str, Any], ...] = tuple(
-    [category for category in _flat_categories() if category["id"] != "time"]
-    + [
-        {
-            "id": category_id,
-            "label": schema["label"],
-            "units": _COMPOUND_UNITS[category_id],
-            "picker": {
-                "kind": "compound",
-                "operator": schema["operator"],
-                "left_label": schema["left_label"],
-                "right_label": schema["right_label"],
-                "left": [_public_component(item) for item in schema["left"]],
-                "right": [_public_component(item) for item in schema["right"]],
-                "presets": [
-                    {"symbol": item["unit"].symbol, "label": item["label"]}
-                    for item in schema.get("presets", ())
-                ],
-            },
-        }
-        for category_id, schema in COMPOUND_SCHEMAS.items()
-    ]
-    + [category for category in _flat_categories() if category["id"] == "time"]
-)
+def _build_categories() -> tuple[dict[str, Any], ...]:
+    result: list[dict[str, Any]] = []
+    for category in legacy.UNIT_CATEGORIES:
+        category_id = category["id"]
+        if category_id in COMPOUND_SCHEMAS:
+            result.append(_compound_category(category_id))
+        else:
+            result.append(deepcopy(category))
+        if category_id == "specific_weight":
+            result.append(_compound_category("density"))
+    return tuple(result)
 
+
+UNIT_CATEGORIES = _build_categories()
 CATEGORY_BY_ID = {item["id"]: item for item in UNIT_CATEGORIES}
 DEFAULT_STATE = dict(legacy.DEFAULT_STATE)
 
