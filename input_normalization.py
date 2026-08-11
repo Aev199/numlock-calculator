@@ -1,9 +1,9 @@
 """Shared forgiving normalization for keyboard-entered numeric expressions.
 
 The UI displays multiplication as U+22C5 (``⋅``), while the calculation
-backends use ``*``.  This layer also repairs the common Windows numeric-keypad
-sequence ``.,1`` / ``,.1`` into a leading decimal fraction instead of exposing
-a Python syntax error to the user.
+backends use ``*``. This layer also repairs the common Windows numeric-keypad
+sequence ``.,1`` / ``,.1`` and removes visual thousands separators inserted by
+the renderer before expressions reach the parsers.
 """
 
 from __future__ import annotations
@@ -15,22 +15,25 @@ from typing import Any, Callable
 _DECIMAL_AFTER_DIGIT = re.compile(r"(?<=\d)[.,]{1,2}(?=\d)")
 _DECIMAL_AFTER_BOUNDARY = re.compile(r"(?<!\d)[.,]{1,2}(?=\d)")
 _IMPLICIT_MULTIPLY_BEFORE_PAREN = re.compile(r"(?<=[\d)])\s*(?=\()")
+_DIGIT_GROUPING = re.compile(r"(?<=\d)[ \u00a0\u202f]+(?=\d)")
 
 
 def repair_numeric_input(expression: Any) -> str:
     """Return a parser-friendly form without changing valid arithmetic.
 
     Examples:
-        ``3100*.,1`` -> ``3100*0.1``
-        ``3100⋅,1``  -> ``3100*0.1``
-        ``,1``        -> ``0.1``
-        ``2,5``       -> ``2.5``
-        ``150(5)``    -> ``150*(5)``
-        ``(2)(3)``    -> ``(2)*(3)``
+        ``3100*.,1``     -> ``3100*0.1``
+        ``3100⋅,1``      -> ``3100*0.1``
+        ``,1``           -> ``0.1``
+        ``2,5``          -> ``2.5``
+        ``150(5)``       -> ``150*(5)``
+        ``(2)(3)``       -> ``(2)*(3)``
+        ``1 000 000``    -> ``1000000``
     """
 
     value = str(expression or "")
     value = value.replace("⋅", "*").replace("×", "*").replace("·", "*")
+    value = _DIGIT_GROUPING.sub("", value)
     value = _DECIMAL_AFTER_DIGIT.sub(".", value)
     value = _DECIMAL_AFTER_BOUNDARY.sub("0.", value)
     value = _IMPLICIT_MULTIPLY_BEFORE_PAREN.sub("*", value)
@@ -73,4 +76,3 @@ def install_unit_normalization(unit_conversion: Any) -> None:
         "normalize_simple_expression",
         "_numcalc_numeric_normalization_installed",
     )
-
