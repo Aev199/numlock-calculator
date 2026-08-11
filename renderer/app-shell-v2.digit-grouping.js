@@ -72,6 +72,12 @@
     );
   }
 
+  function clipboardDigitText(value) {
+    return state.ui.group_copied_digits === false
+      ? stripDigitGrouping(value)
+      : groupExpressionDigits(value);
+  }
+
   function logicalCaretOffset(value, domOffset) {
     const text = String(value ?? '');
     const masked = groupingSpaceMask(text);
@@ -137,16 +143,16 @@
     if (result) result.textContent = groupExpressionDigits(result.textContent);
   };
 
-  // Keep clipboard text identical to the visible number formatting. copyText is
-  // declared by the later event-binding part, but function declarations are
-  // available throughout the consolidated controller scope.
+  // Clipboard formatting is independent from the visible editor/result format.
+  // The screen always groups decimal digits, while this preference controls
+  // whether digit separators survive copy operations.
   const copyTextWithoutDigitGrouping = copyText;
-  copyText = async function copyTextWithDigitGrouping(
+  copyText = async function copyTextWithDigitGroupingPreference(
     text,
     successMessage = 'Результат скопирован',
   ) {
     return copyTextWithoutDigitGrouping(
-      groupExpressionDigits(text),
+      clipboardDigitText(text),
       successMessage,
     );
   };
@@ -214,4 +220,50 @@
     } catch (_) {
       showToast('Не удалось скопировать вычисление');
     }
+  };
+
+  const renderSettingsDrawerWithoutClipboardGrouping = renderSettingsDrawer;
+  renderSettingsDrawer = function renderSettingsDrawerWithClipboardGrouping() {
+    renderSettingsDrawerWithoutClipboardGrouping();
+    const formatSection = dom.drawerContent.querySelector(
+      '.settings-content .settings-section',
+    );
+    const formatStatus = formatSection?.querySelector('#formatStatus');
+    if (!formatSection || !formatStatus) return;
+
+    const row = document.createElement('label');
+    row.className = 'settings-checkbox';
+    row.innerHTML = `
+      <input id="groupCopiedDigits" type="checkbox">
+      <span>Группировать разряды при копировании</span>
+    `;
+    const help = document.createElement('p');
+    help.className = 'settings-help';
+    help.textContent = 'Включено: 150 000 000. Выключено: 150000000.';
+    formatSection.insertBefore(row, formatStatus);
+    formatSection.insertBefore(help, formatStatus);
+
+    const input = row.querySelector('#groupCopiedDigits');
+    input.checked = state.ui.group_copied_digits !== false;
+    input.addEventListener('change', async () => {
+      const enabled = input.checked;
+      input.disabled = true;
+      formatStatus.textContent = 'Сохранение…';
+      formatStatus.className = 'hotkey-status';
+      try {
+        const response = await state.api.set_ui_settings({
+          group_copied_digits: enabled,
+        });
+        state.ui = { ...state.ui, ...(response || {}) };
+        input.checked = state.ui.group_copied_digits !== false;
+        formatStatus.textContent = 'Настройка сохранена';
+        formatStatus.className = 'hotkey-status success';
+      } catch (_) {
+        input.checked = state.ui.group_copied_digits !== false;
+        formatStatus.textContent = 'Не удалось сохранить настройку';
+        formatStatus.className = 'hotkey-status error';
+      } finally {
+        input.disabled = false;
+      }
+    });
   };
