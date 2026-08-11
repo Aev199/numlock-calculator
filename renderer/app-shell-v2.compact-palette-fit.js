@@ -1,13 +1,37 @@
 
   const COMPACT_PALETTE_RESULTS_MAX_HEIGHT = 232;
   const COMPACT_PALETTE_VERTICAL_PADDING = 12;
+  const COMPACT_PALETTE_BORDER_HEIGHT = 2;
   let compactPaletteFitFrame = null;
+
+  function visibleElementHeight(element) {
+    if (!element || window.getComputedStyle(element).display === 'none') return 0;
+    return Math.ceil(element.getBoundingClientRect().height);
+  }
 
   function compactPaletteContentHeight() {
     const palette = dom.paletteOverlay.querySelector('.palette');
     if (!palette) return COMPACT_OVERLAY_HEIGHT;
+
+    const search = palette.querySelector('.palette-search-wrap');
+    const groups = palette.querySelector('.palette-groups');
+    const footer = palette.querySelector('.palette-footer');
+
+    // Do not measure the palette box itself here. In compact mode its max-height
+    // is constrained by the *current* 100vh, which creates a feedback loop: the
+    // short calculator viewport makes the palette report the same short height.
+    // scrollHeight gives us the natural result-list height even while its parent
+    // is clipped, so the native window can grow first and only then display it.
+    const resultsHeight = Math.min(
+      COMPACT_PALETTE_RESULTS_MAX_HEIGHT,
+      Math.ceil(dom.paletteResults.scrollHeight || 0),
+    );
     return Math.ceil(
-      palette.getBoundingClientRect().height
+      visibleElementHeight(search)
+      + visibleElementHeight(groups)
+      + resultsHeight
+      + visibleElementHeight(footer)
+      + COMPACT_PALETTE_BORDER_HEIGHT
       + COMPACT_PALETTE_VERTICAL_PADDING,
     );
   }
@@ -26,9 +50,9 @@
   }
 
   // The generic compact overlay height is intentionally large enough for
-  // settings/history. The function palette is usually much shorter, so give its
-  // results a stable internal scroll ceiling and fit the native window around
-  // the actual rendered palette instead of leaving a blank strip underneath.
+  // settings/history. The function palette instead computes its natural height
+  // from search + groups + visible results, independently of the current compact
+  // viewport. Long lists stop at the result-list ceiling and scroll internally.
   const openPaletteWithoutContentFit = openPalette;
   openPalette = function () {
     dom.paletteResults.style.maxHeight = compactModeEnabled()
