@@ -60,6 +60,7 @@ jobs:
         run: git ls-files | sort | tee tracked-files.log
       - name: Upload public audit reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: public-repository-audit
@@ -83,6 +84,7 @@ jobs:
         run: python -m unittest tests.test_renderer tests.test_mode_transitions -v > renderer-test.log 2>&1
       - name: Upload renderer test log
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: renderer-test-log
@@ -102,6 +104,7 @@ jobs:
         run: python -m unittest discover -s tests -v > discover.log 2>&1
       - name: Upload full build test log
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: discover-log-linux
@@ -133,6 +136,7 @@ jobs:
           assert 'reportRendererDiagnostic' in source
           assert 'delete_variable' in source
           assert 'MODE_MOTION_ORDER' in source
+          assert 'DIGIT_GROUP_SEPARATOR' in source
           PY
           node --check renderer-check.js
 
