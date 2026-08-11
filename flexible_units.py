@@ -1,12 +1,13 @@
 """Composable unit catalog for the unit-conversion workspace.
 
-The calculator keeps a compact canonical unit registry.  The converter can
+The calculator keeps a compact canonical unit registry. The converter can
 compose compatible numerator/denominator choices on demand so the UI does not
 need a huge flat list (for example g/cm3, kg/dm3, kN/cm2, ...).
 """
 
 from __future__ import annotations
 
+import math
 from copy import deepcopy
 from fractions import Fraction
 from typing import Any
@@ -24,7 +25,12 @@ CATEGORY_DIMENSIONS = dict(legacy.CATEGORY_DIMENSIONS)
 CATEGORY_DIMENSIONS["density"] = DENSITY
 
 
-def _unit(symbol: str, label: str, scale: float, dimensions: quantity_engine.Dim) -> dict[str, Any]:
+def _unit(
+    symbol: str,
+    label: str,
+    scale: float,
+    dimensions: quantity_engine.Dim,
+) -> dict[str, Any]:
     return {
         "symbol": symbol,
         "label": label,
@@ -47,12 +53,17 @@ def _length(symbol: str, label: str, scale: float) -> dict[str, Any]:
     return _unit(symbol, label, scale, quantity_engine.LENGTH)
 
 
-def _power(base: dict[str, Any], exponent: int, symbol: str, label: str) -> dict[str, Any]:
+def _power(
+    base: dict[str, Any],
+    exponent: int,
+    symbol: str,
+    label: str,
+) -> dict[str, Any]:
     unit = base["unit"]
     return _unit(
         symbol,
         label,
-        unit.scale ** exponent,
+        unit.scale**exponent,
         quantity_engine._dim_mul(unit.dimensions, Fraction(exponent)),
     )
 
@@ -75,9 +86,7 @@ VOLUME_COMPONENTS = tuple(
     _power(item, 3, f"{item['symbol']}3", f"{item['label']}³")
     for item in LENGTH_COMPONENTS
     if item["symbol"] not in {"km", "in"}
-) + (
-    _registered("L", "л"),
-)
+) + (_registered("L", "л"),)
 MASS_COMPONENTS = (
     _registered("g", "г"),
     _registered("kg", "кг"),
@@ -110,7 +119,11 @@ def _public_component(item: dict[str, Any]) -> dict[str, str]:
     return {"symbol": item["symbol"], "label": item["label"]}
 
 
-def _compose(left: dict[str, Any], right: dict[str, Any], operator: str) -> quantity_engine.UnitDef:
+def _compose(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    operator: str,
+) -> quantity_engine.UnitDef:
     lhs = left["unit"]
     rhs = right["unit"]
     if operator == "/":
@@ -222,7 +235,10 @@ _DYNAMIC_UNITS: dict[tuple[str, str], quantity_engine.UnitDef] = {}
 _DYNAMIC_LABELS: dict[tuple[str, str], str] = {}
 
 
-def _schema_units(category_id: str, schema: dict[str, Any]) -> tuple[tuple[str, str], ...]:
+def _schema_units(
+    category_id: str,
+    schema: dict[str, Any],
+) -> tuple[tuple[str, str], ...]:
     expected = CATEGORY_DIMENSIONS[category_id]
     result: list[tuple[str, str]] = []
     seen: set[str] = set()
@@ -264,11 +280,7 @@ def _flat_categories() -> list[dict[str, Any]]:
 
 
 UNIT_CATEGORIES: tuple[dict[str, Any], ...] = tuple(
-    [
-        category
-        for category in _flat_categories()
-        if category["id"] != "time"
-    ]
+    [category for category in _flat_categories() if category["id"] != "time"]
     + [
         {
             "id": category_id,
@@ -289,11 +301,7 @@ UNIT_CATEGORIES: tuple[dict[str, Any], ...] = tuple(
         }
         for category_id, schema in COMPOUND_SCHEMAS.items()
     ]
-    + [
-        category
-        for category in _flat_categories()
-        if category["id"] == "time"
-    ]
+    + [category for category in _flat_categories() if category["id"] == "time"]
 )
 
 CATEGORY_BY_ID = {item["id"]: item for item in UNIT_CATEGORIES}
@@ -319,8 +327,9 @@ def unit_payload() -> list[dict[str, Any]]:
         item = {
             "id": category["id"],
             "label": category["label"],
+            # Preserve the established public shape for all unit entries.
             "units": [
-                {"symbol": symbol, "label": label, "display": label}
+                {"symbol": symbol, "label": label}
                 for symbol, label in category["units"]
             ],
         }
@@ -331,7 +340,10 @@ def unit_payload() -> list[dict[str, Any]]:
 
 
 def category_symbols(category_id: str) -> tuple[str, ...]:
-    category = CATEGORY_BY_ID.get(category_id) or CATEGORY_BY_ID[DEFAULT_STATE["category"]]
+    category = (
+        CATEGORY_BY_ID.get(category_id)
+        or CATEGORY_BY_ID[DEFAULT_STATE["category"]]
+    )
     return tuple(symbol for symbol, _label in category["units"])
 
 
@@ -373,12 +385,17 @@ def ensure_state(api: Any) -> None:
         )
 
 
-def convert_value(value: float, category: str, from_unit: str, to_unit: str) -> float:
+def convert_value(
+    value: float,
+    category: str,
+    from_unit: str,
+    to_unit: str,
+) -> float:
     source = resolve_unit(category, from_unit)
     target = resolve_unit(category, to_unit)
     base_value = source.to_base(float(value))
     converted = target.from_base(base_value)
-    if not __import__("math").isfinite(converted):
+    if not math.isfinite(converted):
         raise ValueError("Результат не является конечным числом")
     return converted
 
