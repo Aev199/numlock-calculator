@@ -164,6 +164,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "left": FORCE_COMPONENTS,
         "right": LENGTH_COMPONENTS,
         "presets": (),
+        "defaults": ("kN/m", "N/m"),
     },
     "moment": {
         "label": "Моменты сил",
@@ -173,6 +174,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "left": FORCE_COMPONENTS,
         "right": LENGTH_COMPONENTS,
         "presets": (),
+        "defaults": ("kN*m", "N*m"),
     },
     "speed": {
         "label": "Скорости",
@@ -182,6 +184,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "left": LENGTH_COMPONENTS,
         "right": TIME_COMPONENTS,
         "presets": (),
+        "defaults": ("m/s", "km/h"),
     },
     "acceleration": {
         "label": "Ускорения",
@@ -191,6 +194,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "left": LENGTH_COMPONENTS,
         "right": TIME_SQUARED_COMPONENTS,
         "presets": (_preset("g0", "g"),),
+        "defaults": ("m/s2", "g0"),
     },
     "pressure": {
         "label": "Давления",
@@ -209,6 +213,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
             _preset("mmHg", "мм рт. ст."),
             _preset("psi", "psi"),
         ),
+        "defaults": ("kPa", "MPa"),
     },
     "specific_weight": {
         "label": "Удельный вес",
@@ -218,6 +223,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "left": FORCE_COMPONENTS,
         "right": VOLUME_COMPONENTS,
         "presets": (),
+        "defaults": ("kN/m3", "N/m3"),
     },
     "density": {
         "label": "Плотность",
@@ -227,6 +233,7 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
         "left": MASS_COMPONENTS,
         "right": VOLUME_COMPONENTS,
         "presets": (),
+        "defaults": ("kg/m3", "g/cm3"),
     },
 }
 
@@ -262,6 +269,20 @@ def _schema_units(
         if unit.symbol not in seen:
             seen.add(unit.symbol)
             result.append((unit.symbol, preset["label"]))
+
+    defaults = tuple(schema.get("defaults", ()))
+    if defaults:
+        by_symbol = dict(result)
+        leading = [
+            (symbol, by_symbol[symbol])
+            for symbol in defaults
+            if symbol in by_symbol
+        ]
+        default_set = {symbol for symbol, _label in leading}
+        result = leading + [
+            item for item in result
+            if item[0] not in default_set
+        ]
     return tuple(result)
 
 
