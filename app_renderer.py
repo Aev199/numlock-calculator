@@ -26,6 +26,7 @@ STYLE_PARTS = (
     "app-shell-mode-transitions.css",
     "app-shell-icons.css",
     "app-shell-compact.css",
+    "app-shell-flexible-units.css",
     "app-shell-utility.css",
 )
 SCRIPT_PARTS = (
@@ -34,6 +35,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.multiply.js",
     "app-shell-v2.copy.js",
     "app-shell-v2.digit-grouping.js",
+    "app-shell-v2.flexible-units.js",
     # part06 starts the event binder and part07 continues it before opening
     # initialize(); keep feature layers before that boundary so their drawer
     # functions remain in the consolidated controller scope.
@@ -115,6 +117,13 @@ def render_document(renderer_dir: Path) -> str:
         or "applyVisualDigitGroupingToEditor" not in javascript
     ):
         raise RuntimeError("Consolidated renderer digit grouping is incomplete")
+    if (
+        "app-shell-v2.flexible-units.js" not in SCRIPT_PARTS
+        or "app-shell-flexible-units.css" not in STYLE_PARTS
+        or "renderFlexibleUnitPickers" not in javascript
+        or "compound-unit-picker" not in css
+    ):
+        raise RuntimeError("Composable unit selector layer is incomplete")
     if "app-shell-v2.variables.js" not in SCRIPT_PARTS:
         raise RuntimeError("Consolidated renderer variable layer is incomplete")
     if "app-shell-v2.formulas.js" not in SCRIPT_PARTS or "formulasButton" not in template:
