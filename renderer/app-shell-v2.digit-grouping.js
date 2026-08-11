@@ -127,3 +127,12 @@
     if (dom.resultValue.classList.contains('muted')) return;
     dom.resultValue.textContent = groupExpressionDigits(dom.resultValue.textContent);
   };
+
+  const updateHistoryNodeWithoutDigitGrouping = updateHistoryNode;
+  updateHistoryNode = function updateHistoryNodeWithDigitGrouping(slot, entry) {
+    updateHistoryNodeWithoutDigitGrouping(slot, entry);
+    const expression = slot.querySelector('.history-expression');
+    const result = slot.querySelector('.history-result');
+    if (expression) expression.textContent = groupExpressionDigits(expression.textContent);
+    if (result) result.textContent = groupExpressionDigits(result.textContent);
+  };
