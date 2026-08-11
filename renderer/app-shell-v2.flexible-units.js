@@ -28,7 +28,7 @@
       return {
         preset: true,
         left: `preset:${preset.symbol}`,
-        right: '',
+        right: picker.default_right || picker.right?.[0]?.symbol || '',
       };
     }
     const separator = picker.operator;
@@ -43,10 +43,12 @@
 
   function defaultCompoundParts(category) {
     const picker = category?.picker || {};
+    const left = picker.default_left || picker.left?.[0]?.symbol || '';
+    const right = picker.default_right || picker.right?.[0]?.symbol || '';
     return {
       preset: false,
-      left: `component:${picker.left?.[0]?.symbol || ''}`,
-      right: picker.right?.[0]?.symbol || '',
+      left: `component:${left}`,
+      right,
     };
   }
 
@@ -122,7 +124,7 @@
         updatePresetState();
         const payload = unitPayloadBySymbol(category, symbol);
         const badge = hiddenSelect === dom.sourceUnit ? dom.sourceBadge : dom.targetBadge;
-        badge.textContent = payload?.display || payload?.label || symbol;
+        badge.textContent = payload?.label || symbol;
         return;
       }
       hiddenSelect.value = symbol;
@@ -155,7 +157,7 @@
       const builder = buildCompoundPicker(category, select, selected);
       card.appendChild(builder);
       const payload = unitPayloadBySymbol(category, selected);
-      badge.textContent = payload?.display || payload?.label || selected;
+      badge.textContent = payload?.label || selected;
     }
   }
 
