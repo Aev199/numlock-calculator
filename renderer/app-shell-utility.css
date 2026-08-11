@@ -26,6 +26,14 @@
   height: 1px;
 }
 
+/* The editor and result use the same Windows UI typeface. The bracket overlay
+   must match the textarea exactly or coloured brackets drift at non-100% DPI. */
+.expression-input,
+.bracket-color-overlay {
+  font-family: inherit;
+  font-weight: 500;
+}
+
 .settings-compact-help {
   margin: 0;
   color: var(--muted);
