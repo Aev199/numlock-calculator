@@ -47,6 +47,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.mode-transitions.js",
     "app-shell-v2.icons.js",
     "app-shell-v2.compact.js",
+    "app-shell-v2.compact-palette-fit.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",
@@ -126,10 +127,12 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Unified utility icon layer is incomplete")
     if (
         "app-shell-v2.compact.js" not in SCRIPT_PARTS
+        or "app-shell-v2.compact-palette-fit.js" not in SCRIPT_PARTS
         or "app-shell-compact.css" not in STYLE_PARTS
         or "data-compact-mode" not in css
         or "set_compact_window" not in javascript
         or "compactVisibleContentHeight" not in javascript
+        or "compactPaletteContentHeight" not in javascript
         or "openCompactHistory" not in javascript
     ):
         raise RuntimeError("Compact calculator mode is incomplete")
