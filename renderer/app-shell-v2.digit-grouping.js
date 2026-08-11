@@ -136,3 +136,82 @@
     if (expression) expression.textContent = groupExpressionDigits(expression.textContent);
     if (result) result.textContent = groupExpressionDigits(result.textContent);
   };
+
+  // Keep clipboard text identical to the visible number formatting. copyText is
+  // declared by the later event-binding part, but function declarations are
+  // available throughout the consolidated controller scope.
+  const copyTextWithoutDigitGrouping = copyText;
+  copyText = async function copyTextWithDigitGrouping(
+    text,
+    successMessage = 'Результат скопирован',
+  ) {
+    return copyTextWithoutDigitGrouping(
+      groupExpressionDigits(text),
+      successMessage,
+    );
+  };
+
+  // Replace the earlier clipboard wrapper so both sides of "expression = result"
+  // use the same grouping rules. This also preserves the concise copy behavior
+  // for a standalone calculator number.
+  copyCurrentCalculation = async function copyCurrentCalculationWithDigitGrouping() {
+    if (state.mode === 'interpolation') {
+      await copyInterpolationResult();
+      return;
+    }
+
+    const expression = normalize(dom.input.value);
+    if (!expression) {
+      showToast('Нет выражения для копирования');
+      return;
+    }
+
+    try {
+      if (
+        state.mode === 'calculator'
+        && isStandaloneClipboardNumber(expression)
+      ) {
+        await copyText(
+          displayExpression(expression),
+          'Значение скопировано',
+        );
+        return;
+      }
+
+      let response;
+      let text;
+      if (state.mode === 'calculator') {
+        response = (
+          state.calculator.previewExpression === state.calculator.expression
+          && state.calculator.preview?.ok
+        ) ? state.calculator.preview : await state.api.preview(expression);
+        if (!response?.ok) {
+          showToast(response?.error || 'Нет результата для копирования');
+          return;
+        }
+        text = `${copyExpression(expression)} = ${response.result}`;
+      } else {
+        response = (
+          state.units.previewExpression === state.units.expression
+          && state.units.previewContext === unitContext()
+          && state.units.preview?.ok
+        ) ? state.units.preview : await state.api.convert_units(
+          expression,
+          state.units.category,
+          state.units.from_unit,
+          state.units.to_unit,
+          false,
+          state.units.imported_revision,
+        );
+        if (!response?.ok) {
+          showToast(response?.error || 'Нет результата для копирования');
+          return;
+        }
+        text = `${copyExpression(expression)} ${state.units.from_unit} = ${response.result} ${state.units.to_unit}`;
+      }
+
+      await copyText(text, 'Вычисление скопировано');
+    } catch (_) {
+      showToast('Не удалось скопировать вычисление');
+    }
+  };
