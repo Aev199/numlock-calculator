@@ -6,18 +6,21 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
-from unit_conversion import (
+from flexible_units import (
     CATEGORY_BY_ID,
     category_symbols,
     convert_value,
     conversion_quantity,
     ensure_state,
+    sanitize_state,
+    unit_display,
+    unit_payload,
+)
+from unit_conversion import (
     evaluate_simple,
     filter_suggestions,
     format_number,
     plain_result,
-    sanitize_state,
-    unit_payload,
 )
 
 
@@ -154,6 +157,8 @@ def install(app: Any) -> None:
                 "result": result_text,
                 "from_unit": source_symbol,
                 "to_unit": target_symbol,
+                "from_unit_display": unit_display(category_id, source_symbol),
+                "to_unit_display": unit_display(category_id, target_symbol),
                 "category": category_id,
             }
             quantity = conversion_quantity(
