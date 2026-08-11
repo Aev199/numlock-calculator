@@ -18,11 +18,18 @@ class FlexibleUnitTests(unittest.TestCase):
         self.assertEqual(density["picker"]["operator"], "/")
         self.assertEqual(density["picker"]["left_label"], "Масса")
         self.assertEqual(density["picker"]["right_label"], "Объём")
-        symbols = {item["symbol"] for item in density["units"]}
-        self.assertIn("g/cm3", symbols)
-        self.assertIn("kg/m3", symbols)
+        self.assertEqual(density["picker"]["default_left"], "kg")
+        self.assertEqual(density["picker"]["default_right"], "m3")
+        symbols = [item["symbol"] for item in density["units"]]
+        self.assertEqual(symbols[:2], ["kg/m3", "g/cm3"])
         self.assertIn("t/m3", symbols)
         self.assertIn("kg/dm3", symbols)
+
+    def test_density_follows_specific_weight_in_category_order(self):
+        ids = [item["id"] for item in flexible_units.unit_payload()]
+        index = ids.index("specific_weight")
+        self.assertEqual(ids[index + 1], "density")
+        self.assertLess(ids.index("density"), ids.index("time"))
 
     def test_gram_per_cubic_centimeter_converts_to_kg_per_cubic_meter(self):
         value = flexible_units.convert_value(
@@ -45,6 +52,12 @@ class FlexibleUnitTests(unittest.TestCase):
             item for item in flexible_units.unit_payload()
             if item["id"] == "pressure"
         )
+        self.assertEqual(
+            [item["symbol"] for item in pressure["units"][:2]],
+            ["kPa", "MPa"],
+        )
+        self.assertEqual(pressure["picker"]["default_left"], "kN")
+        self.assertEqual(pressure["picker"]["default_right"], "m2")
         presets = {item["symbol"] for item in pressure["picker"]["presets"]}
         self.assertTrue({"Pa", "kPa", "MPa", "bar", "atm", "psi"} <= presets)
 
@@ -77,6 +90,7 @@ class FlexibleUnitTests(unittest.TestCase):
         self.assertIn("compound-unit-picker", html)
         self.assertIn("Готовые единицы", html)
         self.assertIn("composePickerSymbol", html)
+        self.assertIn("picker.default_right", html)
         self.assertIn("compound-unit-hidden", html)
 
 
