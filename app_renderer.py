@@ -44,6 +44,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.formula-guidance.js",
     "app-shell-v2.interpolation.js",
     "app-shell-v2.hotkey.js",
+    "app-shell-v2.restore-behavior.js",
     "app-shell-v2.about.js",
     "app-shell-v2.onboarding.js",
     "app-shell-v2.mode-transitions.js",
@@ -134,6 +135,12 @@ def render_document(renderer_dir: Path) -> str:
         raise RuntimeError("Consolidated renderer About dialog is incomplete")
     if "app-shell-v2.icons.js" not in SCRIPT_PARTS or "ui-glyph" not in css:
         raise RuntimeError("Unified utility icon layer is incomplete")
+    if (
+        "app-shell-v2.restore-behavior.js" not in SCRIPT_PARTS
+        or "__nlcalcRestoreEditorFocusFromHidden" not in javascript
+        or "При открытии скрытого окна переходить в калькулятор" not in javascript
+    ):
+        raise RuntimeError("Hidden-window restore behavior is incomplete")
     if (
         "app-shell-v2.compact.js" not in SCRIPT_PARTS
         or "app-shell-v2.compact-palette-fit.js" not in SCRIPT_PARTS
