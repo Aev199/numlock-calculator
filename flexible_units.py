@@ -16,13 +16,11 @@ import calc_engine as quantity_engine
 import unit_conversion as legacy
 
 
-DENSITY = quantity_engine._dim_sub(
+MASS_PER_VOLUME = quantity_engine._dim_sub(
     quantity_engine.MASS,
     quantity_engine._dim_mul(quantity_engine.LENGTH, Fraction(3)),
 )
-
 CATEGORY_DIMENSIONS = dict(legacy.CATEGORY_DIMENSIONS)
-CATEGORY_DIMENSIONS["density"] = DENSITY
 
 
 def _unit(
@@ -30,23 +28,36 @@ def _unit(
     label: str,
     scale: float,
     dimensions: quantity_engine.Dim,
+    *,
+    group: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    item: dict[str, Any] = {
         "symbol": symbol,
         "label": label,
         "unit": quantity_engine.UnitDef(symbol, float(scale), dimensions),
     }
+    if group:
+        item["group"] = group
+    return item
 
 
-def _registered(symbol: str, label: str | None = None) -> dict[str, Any]:
+def _registered(
+    symbol: str,
+    label: str | None = None,
+    *,
+    group: str | None = None,
+) -> dict[str, Any]:
     resolved = quantity_engine.get_unit(symbol)
     if resolved is None:
         raise RuntimeError(f"Missing base unit: {symbol}")
-    return {
+    item: dict[str, Any] = {
         "symbol": symbol,
         "label": label or symbol,
         "unit": resolved,
     }
+    if group:
+        item["group"] = group
+    return item
 
 
 def _length(symbol: str, label: str, scale: float) -> dict[str, Any]:
@@ -66,6 +77,13 @@ def _power(
         unit.scale**exponent,
         quantity_engine._dim_mul(unit.dimensions, Fraction(exponent)),
     )
+
+
+def _grouped(
+    items: tuple[dict[str, Any], ...],
+    group: str,
+) -> tuple[dict[str, Any], ...]:
+    return tuple({**item, "group": group} for item in items)
 
 
 LENGTH_COMPONENTS = (
@@ -116,7 +134,10 @@ TIME_SQUARED_COMPONENTS = tuple(
 
 
 def _public_component(item: dict[str, Any]) -> dict[str, str]:
-    return {"symbol": item["symbol"], "label": item["label"]}
+    result = {"symbol": item["symbol"], "label": item["label"]}
+    if item.get("group"):
+        result["group"] = item["group"]
+    return result
 
 
 def _compose(
@@ -137,6 +158,27 @@ def _compose(
     else:
         raise ValueError("Unsupported compound unit operator")
     return quantity_engine.UnitDef(symbol, scale, dimensions)
+
+
+def _compose_for_category(
+    category_id: str,
+    left: dict[str, Any],
+    right: dict[str, Any],
+    operator: str,
+) -> quantity_engine.UnitDef:
+    unit = _compose(left, right, operator)
+    if category_id == "specific_weight" and unit.dimensions == MASS_PER_VOLUME:
+        # Engineers commonly need to move directly between density notation
+        # (kg/m3, g/cm3, t/m3) and unit weight notation (N/m3, kN/m3).
+        # This is not a pure unit conversion: gamma = rho * g0. Treat the mass
+        # forms as gravity-equivalent representations of SPECIFIC_WEIGHT while
+        # keeping the displayed symbols users expect.
+        return quantity_engine.UnitDef(
+            unit.symbol,
+            unit.scale * quantity_engine.STANDARD_GRAVITY,
+            quantity_engine.SPECIFIC_WEIGHT,
+        )
+    return unit
 
 
 def _display(left: dict[str, Any], right: dict[str, Any], operator: str) -> str:
@@ -223,24 +265,17 @@ COMPOUND_SCHEMAS: dict[str, dict[str, Any]] = {
     "specific_weight": {
         "label": "Удельный вес",
         "operator": "/",
-        "left_label": "Сила",
+        "left_label": "Сила / масса",
         "right_label": "Объём",
-        "left": FORCE_COMPONENTS,
+        "left": (
+            _grouped(FORCE_COMPONENTS, "Сила")
+            + _grouped(MASS_COMPONENTS, "Масса (через g₀)")
+        ),
         "right": VOLUME_COMPONENTS,
         "presets": (),
-        "defaults": ("kN/m3", "N/m3"),
+        "defaults": ("kN/m3", "t/m3"),
         "component_defaults": ("kN", "m3"),
-    },
-    "density": {
-        "label": "Плотность",
-        "operator": "/",
-        "left_label": "Масса",
-        "right_label": "Объём",
-        "left": MASS_COMPONENTS,
-        "right": VOLUME_COMPONENTS,
-        "presets": (),
-        "defaults": ("kg/m3", "g/cm3"),
-        "component_defaults": ("kg", "m3"),
+        "gravity_bridge": quantity_engine.STANDARD_GRAVITY,
     },
 }
 
@@ -258,7 +293,12 @@ def _schema_units(
     seen: set[str] = set()
     for left in schema["left"]:
         for right in schema["right"]:
-            unit = _compose(left, right, schema["operator"])
+            unit = _compose_for_category(
+                category_id,
+                left,
+                right,
+                schema["operator"],
+            )
             if unit.dimensions != expected:
                 continue
             display = _display(left, right, schema["operator"])
@@ -299,24 +339,27 @@ _COMPOUND_UNITS = {
 def _compound_category(category_id: str) -> dict[str, Any]:
     schema = COMPOUND_SCHEMAS[category_id]
     default_left, default_right = schema.get("component_defaults", ("", ""))
+    picker: dict[str, Any] = {
+        "kind": "compound",
+        "operator": schema["operator"],
+        "left_label": schema["left_label"],
+        "right_label": schema["right_label"],
+        "left": [_public_component(item) for item in schema["left"]],
+        "right": [_public_component(item) for item in schema["right"]],
+        "default_left": default_left,
+        "default_right": default_right,
+        "presets": [
+            {"symbol": item["unit"].symbol, "label": item["label"]}
+            for item in schema.get("presets", ())
+        ],
+    }
+    if "gravity_bridge" in schema:
+        picker["gravity_bridge"] = schema["gravity_bridge"]
     return {
         "id": category_id,
         "label": schema["label"],
         "units": _COMPOUND_UNITS[category_id],
-        "picker": {
-            "kind": "compound",
-            "operator": schema["operator"],
-            "left_label": schema["left_label"],
-            "right_label": schema["right_label"],
-            "left": [_public_component(item) for item in schema["left"]],
-            "right": [_public_component(item) for item in schema["right"]],
-            "default_left": default_left,
-            "default_right": default_right,
-            "presets": [
-                {"symbol": item["unit"].symbol, "label": item["label"]}
-                for item in schema.get("presets", ())
-            ],
-        },
+        "picker": picker,
     }
 
 
@@ -328,8 +371,6 @@ def _build_categories() -> tuple[dict[str, Any], ...]:
             result.append(_compound_category(category_id))
         else:
             result.append(deepcopy(category))
-        if category_id == "specific_weight":
-            result.append(_compound_category("density"))
     return tuple(result)
 
 
@@ -370,6 +411,8 @@ def unit_payload() -> list[dict[str, Any]]:
 
 
 def category_symbols(category_id: str) -> tuple[str, ...]:
+    if category_id == "density":
+        category_id = "specific_weight"
     category = (
         CATEGORY_BY_ID.get(category_id)
         or CATEGORY_BY_ID[DEFAULT_STATE["category"]]
@@ -380,6 +423,10 @@ def category_symbols(category_id: str) -> tuple[str, ...]:
 def sanitize_state(value: Any) -> dict[str, Any]:
     raw = value if isinstance(value, dict) else {}
     category = str(raw.get("category", DEFAULT_STATE["category"]))
+    if category == "density":
+        # Migrate the short-lived standalone density category into the single
+        # engineering unit-weight workspace without losing the selected units.
+        category = "specific_weight"
     if category not in CATEGORY_BY_ID:
         category = DEFAULT_STATE["category"]
     symbols = category_symbols(category)
@@ -421,6 +468,8 @@ def convert_value(
     from_unit: str,
     to_unit: str,
 ) -> float:
+    if category == "density":
+        category = "specific_weight"
     source = resolve_unit(category, from_unit)
     target = resolve_unit(category, to_unit)
     base_value = source.to_base(float(value))
@@ -436,6 +485,8 @@ def conversion_quantity(
     from_unit: str,
     to_unit: str,
 ) -> dict[str, Any]:
+    if category == "density":
+        category = "specific_weight"
     source = resolve_unit(category, from_unit)
     target = resolve_unit(category, to_unit)
     base_value = source.to_base(float(value))
