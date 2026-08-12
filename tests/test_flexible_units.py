@@ -132,7 +132,7 @@ class FlexibleUnitTests(unittest.TestCase):
         self.assertIn("compound-unit-picker", html)
         self.assertIn("Готовые единицы", html)
         self.assertIn("appendGroupedComponentOptions", html)
-        self.assertIn("Масса (через g₀)", html)
+        self.assertIn("item.group", html)
         self.assertIn("composePickerSymbol", html)
         self.assertIn("picker.default_right", html)
         self.assertIn("compound-unit-hidden", html)
