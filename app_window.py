@@ -219,7 +219,11 @@ def install(app: Any) -> None:
         except Exception:
             pass
 
-    def request_editor_focus(select_all: bool = True) -> None:
+    def request_editor_focus(
+        select_all: bool = True,
+        *,
+        opening_from_hidden: bool = False,
+    ) -> None:
         if app._window is None or app._quitting:
             return
 
@@ -228,9 +232,14 @@ def install(app: Any) -> None:
             time.sleep(0.02)
             try:
                 argument = "true" if select_all else "false"
+                function_name = (
+                    "__nlcalcRestoreEditorFocusFromHidden"
+                    if opening_from_hidden
+                    else "__nlcalcRestoreEditorFocus"
+                )
                 app._window.evaluate_js(
-                    "window.__nlcalcRestoreEditorFocus && "
-                    f"window.__nlcalcRestoreEditorFocus({argument});"
+                    f"window.{function_name} && "
+                    f"window.{function_name}({argument});"
                 )
             except Exception:
                 pass
@@ -250,7 +259,9 @@ def install(app: Any) -> None:
             app._window.restore()
             with app._state_lock:
                 app._visible = True
-            request_editor_focus(True)
+            # Only a transition from hidden -> shown may reset the active tab.
+            # The renderer applies the user's persisted preference there.
+            request_editor_focus(True, opening_from_hidden=True)
         except Exception:
             pass
 
@@ -263,6 +274,7 @@ def install(app: Any) -> None:
             app._window.restore()
         except Exception:
             pass
+        # A visible-but-inactive window keeps its current tab unconditionally.
         request_editor_focus(True)
 
     def hide_window() -> None:
@@ -291,6 +303,8 @@ def install(app: Any) -> None:
     def on_shown() -> None:
         with app._state_lock:
             app._visible = True
+        # show_window() owns hidden-state restore semantics. The native shown
+        # event itself only restores focus, so it cannot reset a visible tab.
         request_editor_focus(True)
 
     def on_loaded() -> None:
