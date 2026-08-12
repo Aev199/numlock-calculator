@@ -20,6 +20,29 @@
     select.appendChild(fragment);
   }
 
+  function appendGroupedComponentOptions(select, picker) {
+    const items = picker.left || [];
+    const grouped = new Map();
+    for (const item of items) {
+      const group = item.group || (
+        picker.operator === '*' ? 'Составная единица' : 'Числитель'
+      );
+      if (!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group).push(item);
+    }
+    for (const [group, groupItems] of grouped) {
+      const options = document.createElement('optgroup');
+      options.label = group;
+      for (const item of groupItems) {
+        const option = document.createElement('option');
+        option.value = `component:${item.symbol}`;
+        option.textContent = item.label || item.symbol;
+        options.appendChild(option);
+      }
+      select.appendChild(options);
+    }
+  }
+
   function compoundParts(category, symbol) {
     const picker = category?.picker;
     if (!picker) return null;
@@ -74,16 +97,7 @@
     const left = document.createElement('select');
     left.className = 'converter-select compound-unit-select compound-unit-left';
     left.setAttribute('aria-label', picker.left_label || 'Числитель единицы');
-
-    const components = document.createElement('optgroup');
-    components.label = picker.operator === '*' ? 'Составная единица' : 'Числитель';
-    for (const item of picker.left || []) {
-      const option = document.createElement('option');
-      option.value = `component:${item.symbol}`;
-      option.textContent = item.label || item.symbol;
-      components.appendChild(option);
-    }
-    left.appendChild(components);
+    appendGroupedComponentOptions(left, picker);
 
     if ((picker.presets || []).length) {
       const presets = document.createElement('optgroup');
