@@ -24,6 +24,7 @@ import app
 import app_clipboard_settings
 import app_diagnostics
 import app_formulas
+import app_native_titlebar
 import app_numlock_compat
 import app_product
 import app_renderer
@@ -36,13 +37,14 @@ import app_window
 
 # Product identity and API preference extensions are installed before storage
 # creates the production AppApi instance. Native behavior (including compact
-# sizing) is installed next; the renderer remains the sole owner of HTML/CSS/
-# JavaScript. Diagnostics wrap the final runtime, while the outer process guard
-# prevents duplicate hooks, trays and concurrent writes.
+# sizing and DPI-safe titlebar dragging) is installed next; the renderer remains
+# the sole owner of HTML/CSS/JavaScript. Diagnostics wrap the final runtime,
+# while the outer process guard prevents duplicate hooks, trays and writes.
 app_product.install(app, app_tray)
 app_clipboard_settings.install(app)
 app_storage.install(app)
 app_window.install(app)
+app_native_titlebar.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
 app_units_backend.install(app)
