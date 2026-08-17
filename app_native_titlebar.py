@@ -1,72 +1,92 @@
-"""DPI-safe native titlebar dragging for the frameless Windows window."""
+"""Enable WebView2 native non-client regions for the frameless titlebar."""
 
 from __future__ import annotations
 
-import ctypes
+import logging
 import os
 from typing import Any
 
-WM_NCLBUTTONDOWN = 0x00A1
-HTCAPTION = 2
+
+logger = logging.getLogger("numcalc.native_titlebar")
+_PATCH_MARKER = "_numcalc_non_client_regions_patch"
 
 
-class _Point(ctypes.Structure):
-    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+def enable_non_client_region_support(settings: Any) -> bool:
+    """Enable WebView2's native ``app-region`` handling on a settings object."""
 
-
-def _mouse_lparam(x: int, y: int) -> int:
-    """Pack signed screen coordinates into the LPARAM shape Windows expects."""
-
-    return ((int(y) & 0xFFFF) << 16) | (int(x) & 0xFFFF)
-
-
-def begin_windows_caption_drag(user32: Any, hwnd: int | None) -> bool:
-    """Enter Windows' native move loop from the current cursor position.
-
-    The move message must be sent synchronously while the physical left button
-    is still held. Posting it to the queue is too late for WebView-hosted
-    frameless windows and can result in no drag at all. All coordinates come
-    directly from Win32, so no CSS/client/screen or DPI conversion is involved.
-    """
-
-    if not hwnd:
+    if settings is None:
         return False
 
-    point = _Point()
     try:
-        if not user32.GetCursorPos(ctypes.byref(point)):
-            return False
-        user32.ReleaseCapture()
-        # WM_NCLBUTTONDOWN normally returns zero, so its LRESULT is not a
-        # success flag. Reaching this call without an exception means Windows
-        # accepted the synchronous request and owns the move loop until mouse-up.
-        user32.SendMessageW(
-            int(hwnd),
-            WM_NCLBUTTONDOWN,
-            HTCAPTION,
-            _mouse_lparam(point.x, point.y),
-        )
+        # pythonnet normally exposes .NET properties directly. Keep the explicit
+        # setter fallback because pywebview itself uses both access styles.
+        settings.IsNonClientRegionSupportEnabled = True
         return True
     except Exception:
+        try:
+            setter = getattr(settings, "set_IsNonClientRegionSupportEnabled", None)
+            if not callable(setter):
+                return False
+            setter(True)
+            return True
+        except Exception:
+            return False
+
+
+def patch_edgechromium(edgechromium: Any) -> bool:
+    """Enable native titlebar regions before pywebview's first navigation.
+
+    pywebview registers ``EdgeChrome.on_webview_ready`` as the WebView2
+    initialization callback. Its original callback performs the first
+    NavigateToString/Source navigation, so wrapping that callback lets NumCalc
+    enable non-client regions at exactly the point required by WebView2: after
+    CoreWebView2 exists, but before the page is navigated.
+    """
+
+    edge_class = getattr(edgechromium, "EdgeChrome", None)
+    original = getattr(edge_class, "on_webview_ready", None)
+    if edge_class is None or not callable(original):
         return False
+    if getattr(original, _PATCH_MARKER, False):
+        return True
+
+    def on_webview_ready(self: Any, sender: Any, args: Any) -> Any:
+        if bool(getattr(args, "IsSuccess", False)):
+            try:
+                core = getattr(sender, "CoreWebView2", None)
+                settings = getattr(core, "Settings", None)
+                if not enable_non_client_region_support(settings):
+                    logger.warning(
+                        "WebView2 non-client region support is unavailable; "
+                        "titlebar dragging will remain disabled"
+                    )
+            except Exception:
+                logger.exception("Failed to enable WebView2 non-client regions")
+        return original(self, sender, args)
+
+    setattr(on_webview_ready, _PATCH_MARKER, True)
+    setattr(on_webview_ready, "_numcalc_original", original)
+    edge_class.on_webview_ready = on_webview_ready
+    return True
 
 
 def install(app: Any) -> None:
-    """Expose native titlebar dragging through the existing pywebview API."""
+    """Install WebView2 native titlebar support before the desktop loop starts."""
 
     if getattr(app, "_native_titlebar_installed", False):
         return
     app._native_titlebar_installed = True
+    app._native_titlebar_mode = "webview2-non-client-regions"
 
-    def api_begin_window_drag(_self: Any) -> bool:
-        if os.name != "nt" or getattr(app, "_quitting", False):
-            return False
-        handle_getter = getattr(app, "window_handle", None)
-        if not callable(handle_getter):
-            return False
-        handle = handle_getter()
-        if not handle:
-            return False
-        return begin_windows_caption_drag(app._user32(), handle)
+    if os.name != "nt":
+        return
 
-    app.AppApi.begin_window_drag = api_begin_window_drag
+    try:
+        from webview.platforms import edgechromium
+
+        if not patch_edgechromium(edgechromium):
+            logger.warning("Could not patch pywebview EdgeChromium titlebar support")
+    except Exception:
+        # Do not prevent NumCalc from starting if a machine cannot initialize
+        # Edge/WebView2. The normal pywebview startup path owns that diagnostic.
+        logger.exception("Could not install WebView2 native titlebar support")

@@ -41,6 +41,20 @@
   line-height: 1.35;
 }
 
+/* WebView2 owns titlebar hit-testing. Unlike pywebview's JavaScript drag helper,
+   these non-client regions never convert CSS mouse coordinates into native
+   screen coordinates, so Windows DPI/text scaling cannot shift the window. */
+.topbar {
+  app-region: drag;
+  -webkit-app-region: drag;
+}
+
+.topbar-actions,
+.topbar-actions * {
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
+}
+
 @media (max-width: 410px), (max-height: 460px) {
   .palette,
   .drawer,
