@@ -21,10 +21,12 @@ def _mouse_lparam(x: int, y: int) -> int:
 
 
 def begin_windows_caption_drag(user32: Any, hwnd: int | None) -> bool:
-    """Ask Windows to move a frameless window from the current cursor position.
+    """Enter Windows' native move loop from the current cursor position.
 
-    All coordinates come from Win32. No CSS/client/screen coordinate conversion
-    is involved, so Windows owns DPI and text/display scaling behavior.
+    The move message must be sent synchronously while the physical left button
+    is still held. Posting it to the queue is too late for WebView-hosted
+    frameless windows and can result in no drag at all. All coordinates come
+    directly from Win32, so no CSS/client/screen or DPI conversion is involved.
     """
 
     if not hwnd:
@@ -35,14 +37,16 @@ def begin_windows_caption_drag(user32: Any, hwnd: int | None) -> bool:
         if not user32.GetCursorPos(ctypes.byref(point)):
             return False
         user32.ReleaseCapture()
-        return bool(
-            user32.PostMessageW(
-                int(hwnd),
-                WM_NCLBUTTONDOWN,
-                HTCAPTION,
-                _mouse_lparam(point.x, point.y),
-            )
+        # WM_NCLBUTTONDOWN normally returns zero, so its LRESULT is not a
+        # success flag. Reaching this call without an exception means Windows
+        # accepted the synchronous request and owns the move loop until mouse-up.
+        user32.SendMessageW(
+            int(hwnd),
+            WM_NCLBUTTONDOWN,
+            HTCAPTION,
+            _mouse_lparam(point.x, point.y),
         )
+        return True
     except Exception:
         return False
 

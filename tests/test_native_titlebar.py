@@ -11,9 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FakeUser32:
-    def __init__(self, *, cursor=(640, 480), post_result=1):
+    def __init__(self, *, cursor=(640, 480), send_result=0):
         self.cursor = cursor
-        self.post_result = post_result
+        self.send_result = send_result
         self.release_calls = 0
         self.messages = []
 
@@ -25,14 +25,14 @@ class FakeUser32:
         self.release_calls += 1
         return 1
 
-    def PostMessageW(self, hwnd, message, wparam, lparam):
+    def SendMessageW(self, hwnd, message, wparam, lparam):
         self.messages.append((hwnd, message, wparam, lparam))
-        return self.post_result
+        return self.send_result
 
 
 class NativeTitlebarTests(unittest.TestCase):
-    def test_caption_drag_uses_current_native_cursor_coordinates(self):
-        user32 = FakeUser32(cursor=(640, 480))
+    def test_caption_drag_sends_synchronous_native_move_message(self):
+        user32 = FakeUser32(cursor=(640, 480), send_result=0)
         self.assertTrue(app_native_titlebar.begin_windows_caption_drag(user32, 321))
         self.assertEqual(user32.release_calls, 1)
         self.assertEqual(
@@ -44,6 +44,11 @@ class NativeTitlebarTests(unittest.TestCase):
                 app_native_titlebar._mouse_lparam(640, 480),
             )],
         )
+
+    def test_zero_sendmessage_lresult_is_not_treated_as_drag_failure(self):
+        user32 = FakeUser32(send_result=0)
+        self.assertTrue(app_native_titlebar.begin_windows_caption_drag(user32, 321))
+        self.assertEqual(len(user32.messages), 1)
 
     def test_signed_multi_monitor_coordinates_are_packed_without_css_scaling(self):
         self.assertEqual(
