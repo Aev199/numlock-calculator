@@ -1,6 +1,7 @@
 import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import app_native_titlebar
 import app_renderer
@@ -63,7 +64,8 @@ class NativeTitlebarTests(unittest.TestCase):
             _user32=lambda: user32,
         )
         app_native_titlebar.install(fake_app)
-        self.assertTrue(Api().begin_window_drag())
+        with patch.object(app_native_titlebar.os, 'name', 'nt'):
+            self.assertTrue(Api().begin_window_drag())
         self.assertEqual(user32.messages[0][:3], (777, 0x00A1, 2))
 
     def test_renderer_disables_pywebview_drag_and_excludes_titlebar_controls(self):
