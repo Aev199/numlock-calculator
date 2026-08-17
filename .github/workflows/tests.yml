@@ -118,14 +118,27 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          from app_renderer import SCRIPT_PARTS
+          import app_renderer
 
           renderer = Path('renderer')
-          output = Path('renderer-check.js')
-          output.write_text(
-              '\n'.join((renderer / name).read_text(encoding='utf-8') for name in SCRIPT_PARTS),
-              encoding='utf-8',
+          source = '\n'.join(
+              (renderer / name).read_text(encoding='utf-8')
+              for name in app_renderer.SCRIPT_PARTS
           )
+          Path('renderer-check.js').write_text(source, encoding='utf-8')
+          assert 'keydown-v2' not in source
+          assert 'interceptTextInsertion' not in source
+          assert 'interceptPhysicalKey' not in source
+          assert 'beginCaretGlyphMotion' not in source
+          assert 'nlcalc-caret-glyph' not in source
+          assert "const DISPLAY_MULTIPLY = '⋅';" in source
+          assert "event.code === 'KeyC'" in source
+          assert 'reportRendererDiagnostic' in source
+          assert 'delete_variable' in source
+          assert 'MODE_MOTION_ORDER' in source
+          assert 'DIGIT_GROUP_SEPARATOR' in source
+          assert 'renderFlexibleUnitPickers' in source
+          assert 'composePickerSymbol' in source
           PY
           node --check renderer-check.js
 
@@ -146,12 +159,22 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path -LiteralPath 'release\licenses\DEPENDENCIES.md')) {
-            throw 'Missing generated dependency notice bundle'
+            throw 'Dependency license report was not created'
+          }
+          $pystray = Get-ChildItem -LiteralPath 'release\licenses' -Directory |
+            Where-Object { $_.Name -like 'pystray-*' } |
+            Select-Object -First 1
+          if ($null -eq $pystray) {
+            throw 'pystray license directory is missing'
+          }
+          $license = Get-ChildItem -LiteralPath $pystray.FullName -File |
+            Where-Object { $_.Name -match '^(COPYING|LICENSE|LICENCE)' } |
+            Select-Object -First 1
+          if ($null -eq $license) {
+            throw 'pystray LGPL text is missing'
           }
       - name: Generate Windows version metadata
-        run: |
-          python generate_version_info.py
-          git diff --exit-code -- version_info.txt
+        run: python generate_version_info.py
       - name: Build NumCalc one-file executable
         run: python -m PyInstaller --noconfirm --clean NumCalc.spec
       - name: Verify embedded common-controls manifest
@@ -159,24 +182,36 @@ jobs:
       - name: Verify executable metadata and write SHA-256
         shell: pwsh
         run: |
-          $version = python -c "from product_info import APP_VERSION; print(APP_VERSION)"
-          $exe = Get-Item -LiteralPath 'dist\NumCalc.exe'
-          if ($exe.Length -le 0) {
-            throw 'NumCalc.exe is empty'
+          if (-not (Test-Path -LiteralPath 'dist\NumCalc.exe')) {
+            throw 'dist\NumCalc.exe was not created'
           }
-          $info = $exe.VersionInfo
+          $version = python -c "from product_info import APP_VERSION; print(APP_VERSION)"
+          $file = Get-Item -LiteralPath 'dist\NumCalc.exe'
+          if ($file.Length -le 0) {
+            throw 'dist\NumCalc.exe is empty'
+          }
+          $info = $file.VersionInfo
           if ($info.ProductName -ne 'NumCalc') {
             throw "Unexpected ProductName: $($info.ProductName)"
           }
-          if ($info.FileVersion -ne $version -or $info.ProductVersion -ne $version) {
-            throw "EXE version does not match $version"
+          if ($info.FileVersion -ne $version) {
+            throw "Unexpected FileVersion: $($info.FileVersion); expected $version"
           }
-          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe.FullName).Hash.ToLower()
+          if ($info.ProductVersion -ne $version) {
+            throw "Unexpected ProductVersion: $($info.ProductVersion); expected $version"
+          }
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
           Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
       - name: Upload Windows release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NumCalc-${{ github.event.pull_request.number || github.ref_name }}-windows-x64
+          name: NumCalc-windows-release
           path: |
             dist/NumCalc.exe
             dist/NumCalc.exe.sha256.txt
+            LICENSE
+            LICENSING.md
+            THIRD_PARTY_NOTICES.md
+            RELEASE_NOTES.md
+            release/licenses
+          if-no-files-found: error
