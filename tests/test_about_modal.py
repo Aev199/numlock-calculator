@@ -6,6 +6,7 @@ from unittest.mock import patch
 import app_native_dialogs
 import app_product
 import app_renderer
+import product_info
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,10 +66,19 @@ class AboutModalTests(unittest.TestCase):
             ),
         )
 
-    def test_renderer_contains_real_about_anchors_and_bridge_calls(self):
+    def test_renderer_contains_terse_release_identity_and_real_links(self):
         html = app_renderer.render_document(ROOT / "renderer")
 
         self.assertIn("window.__nlcalcShowAbout = showAbout", html)
+        self.assertIn(f'id="aboutTitle">\n        {product_info.APP_NAME}', html)
+        self.assertIn(product_info.APP_VERSION, html)
+        self.assertIn("Калькулятор для Windows", html)
+        self.assertIn('class="about-license">MIT</p>', html)
+        self.assertNotIn('class="about-mark"', html)
+        self.assertNotIn('class="about-details"', html)
+        self.assertNotIn("Продолжает идеи", html)
+        self.assertNotIn(app_renderer.PRODUCT_NAME_PLACEHOLDER, html)
+        self.assertNotIn(app_renderer.PRODUCT_VERSION_PLACEHOLDER, html)
         self.assertIn('href="https://nlcalc.narod.ru/"', html)
         self.assertIn(
             'href="https://github.com/Aev199/numlock-calculator"',
@@ -76,8 +86,9 @@ class AboutModalTests(unittest.TestCase):
         )
         self.assertIn("state.api.open_product_link(url)", html)
         self.assertIn("about-overlay", html)
+        self.assertNotIn("keyboard-first инженерный", html)
+        self.assertNotIn("идеологическое продолжение", html)
 
 
 if __name__ == "__main__":
     unittest.main()
-

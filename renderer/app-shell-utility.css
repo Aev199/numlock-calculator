@@ -1,0 +1,64 @@
+/*
+ * Small cross-feature rules only.
+ * Core and feature styles carry the canonical NumCalc visual language.
+ */
+
+/*
+ * WebView2/Segoe UI Variable can round the intrinsic width of the final glyph
+ * down by a fraction of a CSS pixel at some DPI scales. A real inline spacer
+ * participates in max-content sizing, unlike a cosmetic overflow allowance,
+ * so the trailing "c" always has room to render fully.
+ */
+.brand-copy,
+.brand-title {
+  overflow: visible;
+}
+
+.brand-title {
+  display: inline-block;
+  padding-right: 0;
+}
+
+.brand-title::after {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 1px;
+}
+
+/* The editor and result use the same Windows UI typeface. The bracket overlay
+   must match the textarea exactly or coloured brackets drift at non-100% DPI. */
+.expression-input,
+.bracket-color-overlay {
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.settings-compact-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+/* WebView2 owns titlebar hit-testing. Unlike pywebview's JavaScript drag helper,
+   these non-client regions never convert CSS mouse coordinates into native
+   screen coordinates, so Windows DPI/text scaling cannot shift the window. */
+.topbar {
+  app-region: drag;
+  -webkit-app-region: drag;
+}
+
+.topbar-actions,
+.topbar-actions * {
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
+}
+
+@media (max-width: 410px), (max-height: 460px) {
+  .palette,
+  .drawer,
+  .onboarding-card {
+    border-radius: 5px;
+  }
+}

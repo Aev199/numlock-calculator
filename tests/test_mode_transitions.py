@@ -26,11 +26,16 @@ def test_mode_motion_uses_explicit_indicator_and_panel_animations():
     assert "Promise.allSettled" in source
 
 
-def test_conflicting_css_transitions_are_disabled():
-    source = (RENDERER / "app-shell-mode-transitions.css").read_text(
-        encoding="utf-8"
-    )
-    assert "view-transition-name: none !important" in source
-    assert ".mode-indicator" in source
-    assert "transition: none !important" in source
-    assert "animation: none !important" in source
+def test_legacy_view_transition_path_is_removed():
+    core = (RENDERER / "app-shell-v2.part04.js").read_text(encoding="utf-8")
+    css = (RENDERER / "app-shell-mode-transitions.css").read_text(encoding="utf-8")
+
+    assert "document.startViewTransition" not in core
+    assert "modeTransitionDirection" not in core
+    assert "playModeTransition" not in core
+    assert "mode-swipe-forward" not in core
+    assert "view-transition-name" not in css
+    assert "::view-transition" not in css
+    assert ".mode-indicator" in css
+    assert ".mode-panel" in css
+    assert "transition: none !important" in css

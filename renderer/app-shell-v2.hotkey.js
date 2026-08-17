@@ -32,6 +32,15 @@
     PrintScreen: 'PrintScreen',
   };
 
+  const KEYPAD_NAVIGATION_ALIASES = new Set([
+    'Insert', 'Delete', 'Home', 'End', 'PageUp', 'PageDown',
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+  ]);
+
+  function isKeypadNavigationAlias(event) {
+    return Number(event.location) === 3 && KEYPAD_NAVIGATION_ALIASES.has(String(event.key || ''));
+  }
+
   function browserHotkeyKey(event) {
     const key = String(event.key || '');
     if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return '';
@@ -102,8 +111,8 @@
             </select>
           </label>
           <label class="format-setting">
-            <span>Значащих знаков</span>
-            <input id="precisionInput" class="settings-number" type="number" min="3" max="17" step="1">
+            <span>Знаков после запятой</span>
+            <input id="precisionInput" class="settings-number" type="number" min="0" max="15" step="1">
           </label>
           <label class="format-setting">
             <span>Разделитель</span>
@@ -162,7 +171,7 @@
     let pending = state.ui.global_hotkey || 'num lock';
     capture.value = hotkeyDisplay(pending);
     formatSelect.value = state.settings.number_format || 'auto';
-    precisionInput.value = String(state.settings.precision || 12);
+    precisionInput.value = String(state.settings.precision ?? 6);
     separatorSelect.value = state.settings.decimal_separator || '.';
     selectResultOnEnter.checked = state.ui.select_result_on_enter !== false;
     focusCalculatorOnRestore.checked = state.ui.focus_calculator_on_restore !== false;
@@ -183,9 +192,9 @@
     };
 
     async function saveFormatSettings() {
-      const precision = Math.max(
-        3,
-        Math.min(17, Number.parseInt(precisionInput.value, 10) || 12),
+      const precision = normalizeDecimalPlacesInput(
+        precisionInput.value,
+        state.settings.precision ?? 6,
       );
       precisionInput.value = String(precision);
       setFormatStatus('Сохранение…');
@@ -195,7 +204,7 @@
           precision,
           decimal_separator: separatorSelect.value,
         });
-        if (!response?.precision) {
+        if (!response || !Number.isInteger(response.precision)) {
           setFormatStatus(response?.error || 'Не удалось сохранить формат', 'error');
           return;
         }
@@ -270,6 +279,10 @@
       if (event.key === 'Escape') {
         capture.blur();
         setStatus('Изменение отменено');
+        return;
+      }
+      if (isKeypadNavigationAlias(event)) {
+        setStatus('Клавиша цифрового блока не может заменять отдельную навигационную клавишу', 'error');
         return;
       }
       const next = hotkeyFromEvent(event);

@@ -93,7 +93,7 @@ class StabilityTests(unittest.TestCase):
         time.sleep(0.03)
         self.assertEqual(app._window.hide_calls, 1)
 
-    def test_visible_unfocused_window_is_refocused(self):
+    def test_visible_unfocused_window_is_refocused_without_mode_reset(self):
         app._renderer_focused = False
         app.on_numlock_press(was_on_before=True)
         time.sleep(0.08)
@@ -102,6 +102,21 @@ class StabilityTests(unittest.TestCase):
         self.assertEqual(app._window.restore_calls, 1)
         self.assertEqual(app._window.evaluate_calls, 1)
         self.assertIn("__nlcalcRestoreEditorFocus(true)", app._window.last_script)
+        self.assertNotIn("__nlcalcRestoreEditorFocusFromHidden", app._window.last_script)
+
+    def test_hidden_window_uses_configurable_restore_path(self):
+        app._visible = False
+        app._renderer_focused = False
+        app.on_numlock_press(was_on_before=True)
+        time.sleep(0.08)
+        self.assertEqual(app._window.hide_calls, 0)
+        self.assertEqual(app._window.show_calls, 1)
+        self.assertEqual(app._window.restore_calls, 1)
+        self.assertEqual(app._window.evaluate_calls, 1)
+        self.assertIn(
+            "__nlcalcRestoreEditorFocusFromHidden(true)",
+            app._window.last_script,
+        )
 
     def test_focus_state_is_exposed_through_api(self):
         app._api.window_focus_changed(False)
@@ -128,9 +143,11 @@ class StabilityTests(unittest.TestCase):
         self.assertIn('id="paletteGroups"', html)
         self.assertIn("event.code === 'KeyK'", html)
         self.assertIn("__nlcalcRestoreEditorFocus", html)
+        self.assertIn("__nlcalcRestoreEditorFocusFromHidden", html)
+        self.assertIn("При открытии скрытого окна переходить в калькулятор", html)
+        self.assertIn("Если окно уже открыто и только неактивно", html)
         self.assertIn("nlcalc-consolidated", html)
 
 
 if __name__ == "__main__":
     unittest.main()
-

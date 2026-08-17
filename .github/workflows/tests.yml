@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - 'release/**'
   pull_request:
 
 permissions:
@@ -22,12 +23,14 @@ jobs:
       - name: Compile Python sources
         run: >-
           python -m py_compile
-          app.py app_keyboard.py app_window.py app_numlock_compat.py
+          app.py app_keyboard.py app_window.py app_native_titlebar.py app_numlock_compat.py
           app_tray.py app_native_dialogs.py app_units_backend.py app_variables.py
           app_renderer.py app_diagnostics.py app_product.py app_single_instance.py
-          app_storage.py calculation_limits.py collect_third_party_licenses.py
-          generate_version_info.py input_normalization.py product_info.py
-          unit_conversion.py calc_engine.py calc_engine_runtime.py
+          app_storage.py app_formulas.py app_icon.py calculation_limits.py
+          collect_third_party_licenses.py generate_version_info.py
+          hotkey_config.py input_normalization.py interpolation.py
+          number_formatting.py product_info.py unit_conversion.py flexible_units.py
+          calc_engine.py calc_engine_runtime.py
           tools/audit_public_history.py tools/verify_windows_manifest.py
       - name: Verify generated product metadata
         run: |
@@ -57,6 +60,7 @@ jobs:
         run: git ls-files | sort | tee tracked-files.log
       - name: Upload public audit reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: public-repository-audit
@@ -77,9 +81,10 @@ jobs:
       - name: Test consolidated renderer
         id: renderer_tests
         continue-on-error: true
-        run: python -m unittest tests.test_renderer -v > renderer-test.log 2>&1
+        run: python -m unittest tests.test_renderer tests.test_mode_transitions -v > renderer-test.log 2>&1
       - name: Upload renderer test log
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: renderer-test-log
@@ -99,6 +104,7 @@ jobs:
         run: python -m unittest discover -s tests -v > discover.log 2>&1
       - name: Upload full build test log
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: discover-log-linux
@@ -129,6 +135,10 @@ jobs:
           assert "event.code === 'KeyC'" in source
           assert 'reportRendererDiagnostic' in source
           assert 'delete_variable' in source
+          assert 'MODE_MOTION_ORDER' in source
+          assert 'DIGIT_GROUP_SEPARATOR' in source
+          assert 'renderFlexibleUnitPickers' in source
+          assert 'composePickerSymbol' in source
           PY
           node --check renderer-check.js
 
@@ -175,6 +185,7 @@ jobs:
           if (-not (Test-Path -LiteralPath 'dist\NumCalc.exe')) {
             throw 'dist\NumCalc.exe was not created'
           }
+          $version = python -c "from product_info import APP_VERSION; print(APP_VERSION)"
           $file = Get-Item -LiteralPath 'dist\NumCalc.exe'
           if ($file.Length -le 0) {
             throw 'dist\NumCalc.exe is empty'
@@ -183,11 +194,11 @@ jobs:
           if ($info.ProductName -ne 'NumCalc') {
             throw "Unexpected ProductName: $($info.ProductName)"
           }
-          if ($info.FileVersion -ne '1.0.0') {
-            throw "Unexpected FileVersion: $($info.FileVersion)"
+          if ($info.FileVersion -ne $version) {
+            throw "Unexpected FileVersion: $($info.FileVersion); expected $version"
           }
-          if ($info.ProductVersion -ne '1.0.0') {
-            throw "Unexpected ProductVersion: $($info.ProductVersion)"
+          if ($info.ProductVersion -ne $version) {
+            throw "Unexpected ProductVersion: $($info.ProductVersion); expected $version"
           }
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
           Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
@@ -201,6 +212,6 @@ jobs:
             LICENSE
             LICENSING.md
             THIRD_PARTY_NOTICES.md
+            RELEASE_NOTES.md
             release/licenses
           if-no-files-found: error
-

@@ -112,8 +112,7 @@
     const values = interpolationValues();
     const text = `y(${values.x}) = ${response.result}`;
     try {
-      const copied = await state.api.copy_text(text);
-      showToast(copied ? 'Результат скопирован' : 'Не удалось открыть буфер обмена');
+      await copyText(text, 'Результат скопирован');
     } catch (_) {
       showToast('Не удалось скопировать результат');
     }

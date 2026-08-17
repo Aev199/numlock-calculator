@@ -57,6 +57,9 @@
     if (options.id) input.id = options.id;
     if (options.name) input.name = options.name;
     if (options.type) input.type = options.type;
+    if (options.min !== undefined) input.min = String(options.min);
+    if (options.max !== undefined) input.max = String(options.max);
+    if (options.step !== undefined) input.step = String(options.step);
     label.append(caption, input);
     return label;
   }
@@ -141,7 +144,6 @@
           applySettings(response.settings);
           scheduleCalculatorPreview(0);
         }
-        showToast(state.activeProfileId ? 'Профиль активирован' : 'Профиль отключён');
         renderFormulasDrawer();
       } catch (_) {
         showToast('Не удалось выбрать профиль');
@@ -155,7 +157,7 @@
 
   function renderFormulaEditor(formula = null) {
     dom.drawerTitle.textContent = formula ? 'Изменить формулу' : 'Новая формула';
-    dom.drawerSubtitle.textContent = 'Шаблон с именованными параметрами';
+    dom.drawerSubtitle.textContent = '';
     dom.drawerContent.replaceChildren();
     const content = document.createElement('div');
     content.className = 'formula-content';
@@ -187,13 +189,13 @@
     const formulaSettings = formula?.settings || {};
     settingsGrid.append(
       drawerField('Вид', formulaSettings.number_format || state.settings.number_format, { id: 'formulaFormat' }),
-      drawerField('Знаков', formulaSettings.precision || state.settings.precision, { id: 'formulaPrecision', type: 'number' }),
+      drawerField('Знаков после запятой', formulaSettings.precision ?? state.settings.precision, { id: 'formulaPrecision', type: 'number', min: 0, max: 15, step: 1 }),
       drawerField('Разделитель', formulaSettings.decimal_separator || state.settings.decimal_separator, { id: 'formulaSeparator' }),
     );
     form.append(settingsTitle, settingsGrid);
     const help = document.createElement('p');
     help.className = 'formula-help';
-    help.textContent = 'Один параметр на строку: имя = значение по умолчанию. Единицы можно указывать прямо в значении.';
+    help.textContent = 'Параметры: одна строка — имя = значение. Единицы допустимы.';
     form.appendChild(help);
     const status = document.createElement('div');
     status.className = 'formula-status';
@@ -214,7 +216,7 @@
         parameters: parseFormulaParameters(form.querySelector('#formulaParameters').value),
         settings: {
           number_format: form.querySelector('#formulaFormat input').value.trim(),
-          precision: Number.parseInt(form.querySelector('#formulaPrecision input').value, 10) || state.settings.precision,
+          precision: normalizeDecimalPlacesInput(form.querySelector('#formulaPrecision input').value, state.settings.precision ?? 6),
           decimal_separator: form.querySelector('#formulaSeparator input').value.trim(),
         },
       };
@@ -230,7 +232,6 @@
         state.formulas = response.formulas || state.formulas;
         editingFormulaId = null;
         await refreshFormulaData();
-        showToast('Формула сохранена');
         renderFormulasDrawer();
       } catch (_) {
         status.textContent = 'Не удалось сохранить формулу';
@@ -304,7 +305,6 @@
         renderResult(state.calculator.preview);
         runningFormulaId = null;
         closeDrawer();
-        showToast('Формула вычислена');
       } catch (_) {
         status.textContent = 'Не удалось вычислить формулу';
         run.disabled = false;
@@ -317,22 +317,19 @@
 
   function renderFormulaList() {
     dom.drawerTitle.textContent = 'Формулы и профили';
-    dom.drawerSubtitle.textContent = 'Сохраняемые шаблоны инженерных расчётов';
+    dom.drawerSubtitle.textContent = '';
     dom.drawerContent.replaceChildren();
     const content = document.createElement('div');
     content.className = 'formula-content';
     content.append(formulaTabs('formulas'), activeProfileSelector());
     const toolbar = document.createElement('div');
     toolbar.className = 'formula-toolbar';
-    const hint = document.createElement('span');
-    hint.className = 'formula-help';
-    hint.textContent = 'Формулы не меняют обычные переменные калькулятора.';
     const add = drawerButton('+ Новая', 'row-button primary');
     add.addEventListener('click', () => {
       editingFormulaId = '';
       renderFormulasDrawer();
     });
-    toolbar.append(hint, add);
+    toolbar.append(add);
     content.appendChild(toolbar);
 
     const list = document.createElement('div');
@@ -342,8 +339,8 @@
       const empty = document.createElement('div');
       empty.className = 'history-empty formula-empty';
       empty.innerHTML = state.activeProfileId
-        ? '<div><strong>В активном профиле нет формул</strong>Добавьте формулы в настройках профиля</div>'
-        : '<div><strong>Формул пока нет</strong>Сохраните шаблон N / A или создайте его вручную</div>';
+        ? '<div><strong>В профиле нет формул</strong></div>'
+        : '<div><strong>Формул нет</strong></div>';
       list.appendChild(empty);
     }
     for (const formula of visibleFormulas) {
@@ -386,7 +383,6 @@
           return;
         }
         await refreshFormulaData();
-        showToast('Формула удалена');
         renderFormulasDrawer();
       });
       actions.append(run, insert, edit, remove);
@@ -407,7 +403,7 @@
     if (!state.formulas.length) {
       const empty = document.createElement('p');
       empty.className = 'formula-help';
-      empty.textContent = 'Сначала создайте хотя бы одну формулу.';
+      empty.textContent = 'Сначала создайте формулу.';
       section.appendChild(empty);
       return section;
     }
@@ -429,7 +425,7 @@
 
   function renderProfileEditor(profile = null) {
     dom.drawerTitle.textContent = profile ? 'Изменить профиль' : 'Новый профиль';
-    dom.drawerSubtitle.textContent = 'Формулы, константы и настройки инженера';
+    dom.drawerSubtitle.textContent = '';
     dom.drawerContent.replaceChildren();
     const content = document.createElement('div');
     content.className = 'formula-content';
@@ -468,14 +464,10 @@
     const angle = drawerField('Углы', profileSettings.angle_mode || state.settings.angle_mode, { id: 'profileAngle' });
     angle.querySelector('input').setAttribute('list', 'profile-angle-options');
     const format = drawerField('Формат', profileSettings.number_format || state.settings.number_format, { id: 'profileFormat' });
-    const precision = drawerField('Знаков', profileSettings.precision || state.settings.precision, { id: 'profilePrecision', type: 'number' });
+    const precision = drawerField('Знаков после запятой', profileSettings.precision ?? state.settings.precision, { id: 'profilePrecision', type: 'number', min: 0, max: 15, step: 1 });
     const separator = drawerField('Разделитель', profileSettings.decimal_separator || state.settings.decimal_separator, { id: 'profileSeparator' });
     settingsGrid.append(angle, format, precision, separator);
     form.appendChild(settingsGrid);
-    const help = document.createElement('p');
-    help.className = 'formula-help';
-    help.textContent = 'Профиль не удаляет пользовательские переменные. Его константы доступны при запуске формулы.';
-    form.appendChild(help);
     const status = document.createElement('div');
     status.className = 'formula-status';
     const actions = document.createElement('div');
@@ -505,7 +497,7 @@
         settings: {
           angle_mode: form.querySelector('#profileAngle input').value.trim(),
           number_format: form.querySelector('#profileFormat input').value.trim(),
-          precision: Number.parseInt(form.querySelector('#profilePrecision input').value, 10) || state.settings.precision,
+          precision: normalizeDecimalPlacesInput(form.querySelector('#profilePrecision input').value, state.settings.precision ?? 6),
           decimal_separator: form.querySelector('#profileSeparator input').value.trim(),
         },
       };
@@ -520,7 +512,6 @@
         }
         await refreshFormulaData();
         editingProfileId = null;
-        showToast('Профиль сохранён');
         renderFormulasDrawer();
       } catch (_) {
         status.textContent = 'Не удалось сохранить профиль';
@@ -536,29 +527,26 @@
 
   function renderProfileList() {
     dom.drawerTitle.textContent = 'Формулы и профили';
-    dom.drawerSubtitle.textContent = 'Сохраняемые инженерные настройки';
+    dom.drawerSubtitle.textContent = '';
     dom.drawerContent.replaceChildren();
     const content = document.createElement('div');
     content.className = 'formula-content';
     content.append(formulaTabs('profiles'), activeProfileSelector());
     const toolbar = document.createElement('div');
     toolbar.className = 'formula-toolbar';
-    const hint = document.createElement('span');
-    hint.className = 'formula-help';
-    hint.textContent = 'Профиль задаёт константы, набор формул, единицы и формат, но не стирает переменные.';
     const add = drawerButton('+ Новый', 'row-button primary');
     add.addEventListener('click', () => {
       editingProfileId = '';
       renderFormulasDrawer();
     });
-    toolbar.append(hint, add);
+    toolbar.append(add);
     content.appendChild(toolbar);
     const list = document.createElement('div');
     list.className = 'formula-list';
     if (!state.profiles.length) {
       const empty = document.createElement('div');
       empty.className = 'history-empty formula-empty';
-      empty.innerHTML = '<div><strong>Профилей пока нет</strong>Создайте профиль с константами и часто используемыми единицами</div>';
+      empty.innerHTML = '<div><strong>Профилей нет</strong></div>';
       list.appendChild(empty);
     }
     for (const profile of state.profiles) {
@@ -592,7 +580,6 @@
         }
         if (response.suggestions) setCatalog(response.suggestions);
         if (response.settings) applySettings(response.settings);
-        showToast(state.activeProfileId ? 'Профиль активирован' : 'Профиль отключён');
         renderFormulasDrawer();
       });
       edit.addEventListener('click', () => {
@@ -607,7 +594,6 @@
           return;
         }
         await refreshFormulaData();
-        showToast('Профиль удалён');
         renderFormulasDrawer();
       });
       actions.append(activate, edit, remove);

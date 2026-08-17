@@ -32,6 +32,44 @@ INPUT_KEYBOARD = 1
 NUMLOCK_BLINK_SECONDS = 0.055
 NUMLOCK_INJECTION_TAG = 0x4E4C4341
 
+# The navigation cluster and the numeric keypad share logical Windows key
+# names when NumLock is off.  keyboard.add_hotkey therefore cannot distinguish
+# dedicated PageDown from NumPad 3, Home from NumPad 7, and so on.
+KEYPAD_NAVIGATION_ALIASES = frozenset(
+    {
+        "insert",
+        "delete",
+        "home",
+        "end",
+        "page up",
+        "page down",
+        "left",
+        "right",
+        "up",
+        "down",
+    }
+)
+MODIFIER_EVENT_NAMES = {
+    "ctrl": "ctrl",
+    "control": "ctrl",
+    "left ctrl": "ctrl",
+    "right ctrl": "ctrl",
+    "left control": "ctrl",
+    "right control": "ctrl",
+    "alt": "alt",
+    "left alt": "alt",
+    "right alt": "alt",
+    "shift": "shift",
+    "left shift": "shift",
+    "right shift": "shift",
+    "windows": "windows",
+    "win": "windows",
+    "left windows": "windows",
+    "right windows": "windows",
+    "left win": "windows",
+    "right win": "windows",
+}
+
 _hook_thread: threading.Thread | None = None
 _hook_thread_id: int | None = None
 _hook_handle: int | None = None
@@ -184,6 +222,73 @@ def install(app: Any) -> None:
             name="NumCalcGlobalHotkey",
             daemon=True,
         ).start()
+
+    def canonical_hotkey_event_name(event: Any) -> str:
+        """Normalize a keyboard event without losing its keypad identity."""
+
+        name = " ".join(
+            str(getattr(event, "name", "") or "")
+            .strip()
+            .lower()
+            .replace("_", " ")
+            .split()
+        )
+        aliases = {
+            "pageup": "page up",
+            "pagedown": "page down",
+            "arrow left": "left",
+            "arrow right": "right",
+            "arrow up": "up",
+            "arrow down": "down",
+        }
+        return aliases.get(name, name)
+
+    def register_physical_navigation_hotkey(
+        keyboard_module: Any,
+        hotkey: str,
+    ) -> Any:
+        """Register a navigation hotkey while excluding keypad aliases."""
+
+        parts = tuple(part.strip() for part in hotkey.split("+") if part.strip())
+        required_modifiers = frozenset(parts[:-1])
+        main_key = parts[-1]
+        pressed_modifiers: set[str] = set()
+        active = False
+
+        def handle_event(event: Any) -> bool:
+            nonlocal active
+
+            event_type = str(getattr(event, "event_type", "") or "").lower()
+            name = canonical_hotkey_event_name(event)
+            modifier = MODIFIER_EVENT_NAMES.get(name)
+            if modifier:
+                if event_type == "down":
+                    pressed_modifiers.add(modifier)
+                elif event_type == "up":
+                    pressed_modifiers.discard(modifier)
+                return True
+
+            if name != main_key:
+                return True
+
+            # This is the essential distinction: NumPad 3 can be reported as
+            # PageDown, but keyboard marks it as a keypad event.
+            if bool(getattr(event, "is_keypad", False)):
+                return True
+
+            if event_type == "down":
+                if pressed_modifiers == required_modifiers:
+                    active = True
+                    return False
+                return True
+
+            if event_type == "up" and active:
+                active = False
+                on_global_hotkey()
+                return False
+            return True
+
+        return keyboard_module.hook(handle_event, suppress=True)
 
     def restore_numlock_after_toggle(_delay: float = 0.0) -> None:
         """Compatibility entry point retained for existing tests/callers."""
@@ -420,12 +525,19 @@ def install(app: Any) -> None:
                     )
         else:
             try:
-                app._global_hotkey_handle = keyboard.add_hotkey(
-                    validation.hotkey,
-                    on_global_hotkey,
-                    suppress=True,
-                    trigger_on_release=True,
-                )
+                main_key = validation.hotkey.rsplit("+", 1)[-1]
+                if os.name == "nt" and main_key in KEYPAD_NAVIGATION_ALIASES:
+                    app._global_hotkey_handle = register_physical_navigation_hotkey(
+                        keyboard,
+                        validation.hotkey,
+                    )
+                else:
+                    app._global_hotkey_handle = keyboard.add_hotkey(
+                        validation.hotkey,
+                        on_global_hotkey,
+                        suppress=True,
+                        trigger_on_release=True,
+                    )
                 registered = True
             except Exception as error:
                 app._hotkey_registration_error = (
@@ -526,6 +638,8 @@ def install(app: Any) -> None:
     app.on_numlock_event = on_numlock_event
     app.register_numlock_hook = register_native_hook
     app.stop_numlock_hook = stop_native_hook
+    app.canonical_hotkey_event_name = canonical_hotkey_event_name
+    app.register_physical_navigation_hotkey = register_physical_navigation_hotkey
     app.register_hotkeys = register_hotkeys
     app.unregister_hotkeys = unregister_hotkeys
     app.configure_global_hotkey = configure_global_hotkey

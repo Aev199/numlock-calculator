@@ -1,5 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
+
+from app_icon import write_windows_icon
+
+
+APP_ICON = write_windows_icon(Path('build') / 'NumCalc.ico')
+
 
 a = Analysis(
     ['app_keyboard.py'],
@@ -33,6 +40,7 @@ exe = EXE(
     upx=False,
     console=False,
     disable_windowed_traceback=False,
+    icon=str(APP_ICON),
     version='version_info.txt',
     manifest='NumCalc.manifest',
 )

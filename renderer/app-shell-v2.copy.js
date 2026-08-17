@@ -2,10 +2,14 @@
   // A lone numeric value is already its own result. Keep Ctrl+C concise for
   // values produced by Enter as well as numbers typed directly in the editor.
   const STANDALONE_CLIPBOARD_NUMBER = /^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:e[+-]?\d+)?$/i;
+  const CLIPBOARD_DIGIT_GROUPING = /(?<=\d)[ \u00a0\u202f]+(?=\d)/g;
 
   function isStandaloneClipboardNumber(value) {
     return STANDALONE_CLIPBOARD_NUMBER.test(
-      String(value ?? '').trim().replace(',', '.'),
+      String(value ?? '')
+        .trim()
+        .replace(CLIPBOARD_DIGIT_GROUPING, '')
+        .replace(',', '.'),
     );
   }
 

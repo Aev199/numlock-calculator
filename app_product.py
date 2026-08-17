@@ -9,7 +9,6 @@ import app_native_dialogs
 from product_info import (
     APP_NAME,
     APP_VERSION,
-    DESCRIPTION,
     INSPIRATION_URL,
     LICENSE_NAME,
     REPOSITORY_URL,
@@ -28,22 +27,55 @@ def install(app: Any, tray_module: Any) -> None:
     app.REPOSITORY_URL = REPOSITORY_URL
     tray_module.TRAY_TITLE = APP_NAME
     tray_module.AUTOSTART_VALUE = APP_NAME
+    tray_module.HELP_TEXT = """Клавиши
+NumLock — показать или скрыть NumCalc
+Enter — вычислить
+↑ / ↓ — история и подсказки
+Tab — функции
+Alt+← / Alt+→ — режимы
+Alt+↑ — компактный режим
+Alt+↓ — полный режим
+Ctrl+H — история
+Ctrl+C — копировать
+Ctrl+Space — автодополнение
+Esc — закрыть текущее окно или подсказку
+
+Выражения
++  −  *  /  ^  %  !  ( )
+Точка и запятая принимаются как десятичный разделитель.
+Переменные: имя = выражение или имя := выражение.
+Последний результат: ans.
+
+Режимы
+Калькулятор — расчёт, история, память, переменные и формулы.
+Единицы — преобразование величин.
+Интерполяция — линейная интерполяция по двум точкам.
+Компактный режим показывает только калькулятор; история доступна по Ctrl+H.
+
+Формулы и профили
+Σ — библиотека повторяемых расчётов.
+Формула хранит выражение и изменяемые параметры. Например: N / A с параметрами N и A. «Запуск» просит значения, выполняет расчёт и добавляет результат в историю; «Вставить» переносит само выражение в калькулятор.
+Профиль объединяет нужные формулы, общие константы, предпочтительные единицы и формат результата. Активный профиль ограничивает список формул, автоматически использует его константы при запуске формул и временно применяет единицы и формат. После отключения прежние настройки возвращаются.
+
+Настройки и история хранятся локально. Телеметрии нет.
+"""
     tray_module.ABOUT_LINKS = (
-        ("NumLock Calculator — сайт Владимира Потапова", INSPIRATION_URL),
-        ("Репозиторий NumCalc", REPOSITORY_URL),
+        ("NumLock Calculator — Владимир Потапов", INSPIRATION_URL),
+        ("GitHub", REPOSITORY_URL),
     )
     tray_module.ABOUT_TEXT = (
         f"{APP_NAME} {APP_VERSION}\n"
-        f"{DESCRIPTION}.\n\n"
-        "Калькулятор - идеологическое продолжение NumLock Calculator "
-        f"от Владимира Потапова ({INSPIRATION_URL}).\n\n"
-        f"Репозиторий: {REPOSITORY_URL}\n"
-        f"Лицензия: {LICENSE_NAME}"
+        "Калькулятор для Windows\n"
+        f"Лицензия: {LICENSE_NAME}\n\n"
+        "NumLock Calculator — Владимир Потапов\n"
+        f"{INSPIRATION_URL}\n\n"
+        f"GitHub: {REPOSITORY_URL}"
     )
     tray_module.ABOUT_DIALOG_CONTENT = (
-        "Калькулятор - идеологическое продолжение NumLock Calculator "
-        "от Владимира Потапова.\n\n"
-        f"Лицензия исходного кода NumCalc: {LICENSE_NAME}"
+        f"Версия {APP_VERSION}\n"
+        "Калькулятор для Windows\n"
+        f"Лицензия: {LICENSE_NAME}\n\n"
+        "NumLock Calculator — Владимир Потапов"
     )
 
     def open_product_link(self: Any, url: str) -> bool:
@@ -85,4 +117,3 @@ def install(app: Any, tray_module: Any) -> None:
     dialogs = getattr(tray_module, "app_native_dialogs", None)
     if dialogs is not None:
         dialogs.show_link_dialog = show_about_in_renderer
-

@@ -182,7 +182,7 @@ class SavedFormulaApiTests(unittest.TestCase):
         api = self.make_api()
         profile = api.save_profile({"name": "Профиль", "settings": {"precision": 5}})["profile"]
         self.assertEqual(api.set_active_profile(profile["id"])["settings"]["precision"], 5)
-        self.assertEqual(api.set_active_profile(None)["settings"]["precision"], 12)
+        self.assertEqual(api.set_active_profile(None)["settings"]["precision"], 6)
         formula = api.save_formula(
             {
                 "name": "Длина",
