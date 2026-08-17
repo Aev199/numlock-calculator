@@ -31,6 +31,36 @@
     restoreEditorFocus(Boolean(selectAll));
   };
 
+  const NATIVE_TITLEBAR_INTERACTIVE_SELECTOR = [
+    'button',
+    'input',
+    'select',
+    'textarea',
+    'a',
+    'label',
+    '[role="button"]',
+    '[contenteditable="true"]',
+    '.pywebview-no-drag',
+  ].join(', ');
+  const nativeTitlebar = document.querySelector('.topbar');
+
+  // pywebview's built-in drag region walks up the DOM tree and moves the window
+  // from browser screen/client coordinates. Disable it here: Windows handles the
+  // frameless caption move below using only native screen coordinates.
+  nativeTitlebar?.classList.remove('pywebview-drag-region');
+  nativeTitlebar?.addEventListener('mousedown', event => {
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest(NATIVE_TITLEBAR_INTERACTIVE_SELECTOR)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    const beginDrag = state.api?.begin_window_drag;
+    if (typeof beginDrag !== 'function') return;
+    Promise.resolve(beginDrag.call(state.api)).catch(() => {});
+  });
+
   const renderSettingsDrawerWithoutRestoreScope = renderSettingsDrawer;
   renderSettingsDrawer = function renderSettingsDrawerWithRestoreScope() {
     renderSettingsDrawerWithoutRestoreScope();
