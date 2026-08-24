@@ -34,6 +34,17 @@
   font-weight: 500;
 }
 
+/* Long expressions stay on one physical line. In particular a long numeric
+   token must never be split across rows; the editor scrolls horizontally
+   instead. The bracket mirror inherits these metrics from the textarea. */
+.expression-input {
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .settings-compact-help {
   margin: 0;
   color: var(--muted);
