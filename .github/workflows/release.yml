@@ -2,18 +2,27 @@ name: release
 
 on:
   workflow_dispatch:
-  pull_request:
+    inputs:
+      upload_artifact:
+        description: Upload a 1-day release candidate artifact
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
 
 jobs:
   windows-release:
-    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'release/')
     runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -114,6 +123,7 @@ jobs:
 
           "PACKAGE_NAME=$packageName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Upload release candidate artifact
+        if: github.event_name == 'workflow_dispatch' && inputs.upload_artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PACKAGE_NAME }}
@@ -121,7 +131,7 @@ jobs:
             release/${{ env.PACKAGE_NAME }}.zip
             release/${{ env.PACKAGE_NAME }}.zip.sha256.txt
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 1
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
