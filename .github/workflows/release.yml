@@ -121,6 +121,7 @@ jobs:
             release/${{ env.PACKAGE_NAME }}.zip
             release/${{ env.PACKAGE_NAME }}.zip.sha256.txt
           if-no-files-found: error
+          retention-days: 3
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
@@ -133,4 +134,3 @@ jobs:
             --verify-tag `
             --title "NumCalc $env:GITHUB_REF_NAME" `
             --notes-file RELEASE_NOTES.md
-
