@@ -19,8 +19,8 @@ _IMPLICIT_MULTIPLY_BEFORE_PAREN = re.compile(r"(?<=[\d)])\s*(?=\()")
 _DIGIT_GROUPING = re.compile(r"(?<=\d)[ \u00a0\u202f]+(?=\d)")
 _REINFORCEMENT_TERM = re.compile(
     r"\s*(?:(?P<count>\d+)\s*)?[dD]\s*"
-    r"(?P<diameter>\d+(?:\.\d+)?)\s*[sS]\s*"
-    r"(?P<spacing>\d+(?:\.\d+)?)\s*"
+    r"(?P<diameter>\d+(?:\.\d+)?)\s*"
+    r"(?:[sS]\s*(?P<spacing>\d+(?:\.\d+)?)\s*)?"
 )
 
 
@@ -47,12 +47,21 @@ def repair_numeric_input(expression: Any) -> str:
 
 
 def rewrite_reinforcement_area(expression: Any) -> str:
-    """Expand ``4d20s200+d16s150`` into a dimensional area expression.
+    """Expand compact reinforcement notation into dimensional expressions.
 
-    ``d`` means bar diameter in millimetres, ``s`` means spacing in
-    millimetres, and the optional leading integer is the number of identical
-    layers/sets. Each term is evaluated for a one-metre strip and the final
-    result is explicitly converted to square centimetres.
+    Two intentionally separate forms are supported:
+
+    ``d16`` / ``2d20``
+        Bar area without spacing. The optional leading integer is the number
+        of bars. The result is displayed in ``cm2``.
+
+    ``d16s150`` / ``4d20s200+d16s150``
+        Reinforcement area per metre. Diameters and spacings are millimetres;
+        the result is displayed in ``cm2/m``.
+
+    Terms joined by ``+`` must use the same form. Mixing terms with and without
+    spacing is deliberately not rewritten because those values have different
+    physical meanings.
 
     The shorthand is activated only when the complete expression consists of
     valid reinforcement terms joined by ``+``. Ordinary variables and
@@ -64,18 +73,32 @@ def rewrite_reinforcement_area(expression: Any) -> str:
     if not parts or any(not part.strip() for part in parts):
         return value
 
-    expanded: list[str] = []
+    matches = []
     for part in parts:
         match = _REINFORCEMENT_TERM.fullmatch(part)
         if match is None:
             return value
+        matches.append(match)
+
+    spacing_flags = [match.group("spacing") is not None for match in matches]
+    if any(spacing_flags) and not all(spacing_flags):
+        return value
+
+    expanded: list[str] = []
+    if all(spacing_flags):
+        for match in matches:
+            count = match.group("count") or "1"
+            diameter = match.group("diameter")
+            spacing = match.group("spacing")
+            expanded.append(
+                f"({count}*pi*({diameter} mm)^2/4/({spacing} mm))"
+            )
+        return f"({' + '.join(expanded)}) to cm2/m"
+
+    for match in matches:
         count = match.group("count") or "1"
         diameter = match.group("diameter")
-        spacing = match.group("spacing")
-        expanded.append(
-            f"({count}*pi*({diameter} mm)^2/4*(1000 mm)/({spacing} mm))"
-        )
-
+        expanded.append(f"({count}*pi*({diameter} mm)^2/4)")
     return f"({' + '.join(expanded)}) to cm2"
 
 
