@@ -35,24 +35,17 @@ class VisualHardeningTests(unittest.TestCase):
         self.assertIn("display: inline-block;", utility)
         self.assertIn("overflow: visible;", utility)
 
-    def test_formula_ui_avoids_success_toast_chatter_and_promotional_copy(self):
+    def test_saved_formula_and_profile_ui_is_removed(self):
         source = (RENDERER / "app-shell-v2.formulas.js").read_text(encoding="utf-8")
+        css = (RENDERER / "app-shell-formulas.css").read_text(encoding="utf-8")
 
-        for text in (
-            "Профиль активирован",
-            "Профиль отключён",
-            "Формула сохранена",
-            "Формула вычислена",
-            "Профиль сохранён",
-            "Сохраняемые шаблоны инженерных расчётов",
-            "Сохраняемые инженерные настройки",
-            "Шаблон с именованными параметрами",
-            "Формулы не меняют обычные переменные калькулятора.",
-        ):
-            self.assertNotIn(text, source)
-        self.assertIn("Не удалось выбрать профиль", source)
-        self.assertIn("Не удалось сохранить формулу", source)
-        self.assertIn("Параметры: одна строка — имя = значение.", source)
+        self.assertIn("Saved formulas and engineering profiles were removed", source)
+        self.assertIn("function renderFormulasDrawer()", source)
+        self.assertNotIn("state.api.save_formula(", source)
+        self.assertNotIn("state.api.evaluate_formula(", source)
+        self.assertNotIn("state.api.set_active_profile(", source)
+        self.assertIn("#formulasButton", css)
+        self.assertIn("display: none !important", css)
 
     def test_help_matches_current_compact_shortcuts(self):
         class Api:
@@ -68,6 +61,7 @@ class VisualHardeningTests(unittest.TestCase):
         self.assertIn("Ctrl+H — история", help_text)
         self.assertIn("Alt+← / Alt+→ — режимы", help_text)
         self.assertIn("Телеметрии нет", help_text)
+        self.assertIn("Старые отдельные «Формулы» и «Профили» удалены", help_text)
 
     def test_about_has_no_duplicate_logo_or_marketing_sentence(self):
         source = (RENDERER / "app-shell-v2.about.js").read_text(encoding="utf-8")
