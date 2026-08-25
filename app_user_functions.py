@@ -319,6 +319,10 @@ def install(app: Any) -> None:
                 expression=original,
                 normalized=normalized,
                 result=f"{signature} := {definition['expression']}",
+                # The existing renderer refreshes dynamic calculator symbols
+                # after assignments via this field. A function definition is
+                # the same kind of symbol-table change, so reuse that signal.
+                assigned_variable=key,
             )
 
         prepared = _protect_user_function_separators(self, original)
