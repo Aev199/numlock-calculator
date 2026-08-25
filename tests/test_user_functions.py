@@ -100,11 +100,11 @@ class UserFunctionTests(unittest.TestCase):
         self.assertEqual(result.unit, "mm2")
 
     def test_function_uses_current_variables_and_restores_parameter_shadowing(self):
-        assigned = self.engine.evaluate("k:=2", commit=True)
+        assigned = self.engine.evaluate("coef:=2", commit=True)
         self.assertTrue(assigned.ok, assigned.error)
         original = self.engine.evaluate("x:=100", commit=True)
         self.assertTrue(original.ok, original.error)
-        self.define("f(x)=k*x+1")
+        self.define("f(x)=coef*x+1")
 
         self.assertEqual(self.evaluate("f(3)").result, "7")
         self.assertEqual(self.evaluate("x").result, "100")
