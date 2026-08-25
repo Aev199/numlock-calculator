@@ -122,7 +122,7 @@ class PublicReleaseTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("workflow_dispatch", workflow)
-        self.assertIn("pull_request", workflow)
+        self.assertNotIn("pull_request", workflow)
         self.assertIn("tags:", workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("if: startsWith(github.ref, 'refs/tags/')", workflow)
