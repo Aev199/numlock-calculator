@@ -36,10 +36,14 @@ class VerticalResizeTests(unittest.TestCase):
         )
         return app, calls
 
-    def test_full_mode_is_fixed_width_and_unbounded_vertically(self):
+    def test_full_mode_is_fixed_width_and_practically_unbounded_vertically(self):
         minimum, maximum = app_vertical_resize.resize_bounds(False)
         self.assertEqual(minimum, (384, 432))
-        self.assertEqual(maximum, (384, 0))
+        self.assertEqual(
+            maximum,
+            (384, app_vertical_resize.FULL_WINDOW_MAX_HEIGHT),
+        )
+        self.assertGreater(app_vertical_resize.FULL_WINDOW_MAX_HEIGHT, 10_000)
 
     def test_compact_mode_remains_locked_to_measured_size(self):
         minimum, maximum = app_vertical_resize.resize_bounds(True, 188)
