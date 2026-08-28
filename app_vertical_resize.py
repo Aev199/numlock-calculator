@@ -13,21 +13,18 @@ from typing import Any
 
 FULL_WINDOW_WIDTH = 384
 FULL_WINDOW_MIN_HEIGHT = 432
+# WinForms treats a zero component of a non-zero MaximumSize literally, so use
+# a deliberately large practical ceiling instead of ``(width, 0)``.
+FULL_WINDOW_MAX_HEIGHT = 100_000
 
 
 def resize_bounds(compact: bool, height: Any = None) -> tuple[tuple[int, int], tuple[int, int]]:
-    """Return native minimum/maximum bounds for the current window mode.
-
-    A zero WinForms MaximumSize dimension means "unbounded". Therefore the
-    full-mode maximum ``(384, 0)`` fixes width while leaving height unlimited.
-    Compact mode is locked to the exact measured height supplied by its
-    existing renderer/controller.
-    """
+    """Return native minimum/maximum bounds for the current window mode."""
 
     if not compact:
         return (
             (FULL_WINDOW_WIDTH, FULL_WINDOW_MIN_HEIGHT),
-            (FULL_WINDOW_WIDTH, 0),
+            (FULL_WINDOW_WIDTH, FULL_WINDOW_MAX_HEIGHT),
         )
 
     try:
@@ -83,8 +80,8 @@ def install(app: Any) -> None:
                     max(1, int(round(minimum[1] * scale))),
                 )
                 native.MaximumSize = Size(
-                    max(0, int(round(maximum[0] * scale))),
-                    max(0, int(round(maximum[1] * scale))),
+                    max(1, int(round(maximum[0] * scale))),
+                    max(1, int(round(maximum[1] * scale))),
                 )
 
             if bool(getattr(native, "InvokeRequired", False)):
