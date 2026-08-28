@@ -34,21 +34,23 @@ import app_tray
 import app_units_backend
 import app_user_functions
 import app_variables
+import app_vertical_resize
 import app_window
 
 # Product identity and API preference extensions are installed before storage
 # creates the production AppApi instance. Lightweight user functions also patch
 # the session/API before that production instance is built so they persist in
 # the same engine_state object as variables and memories. Native behavior
-# (including compact sizing and DPI-safe titlebar dragging) is installed next;
-# the renderer remains the sole owner of HTML/CSS/JavaScript. Diagnostics wrap
-# the final runtime, while the outer process guard prevents duplicate hooks,
-# trays and writes.
+# (including compact sizing, vertical-only full-window resizing and DPI-safe
+# titlebar dragging) is installed next; the renderer remains the sole owner of
+# HTML/CSS/JavaScript. Diagnostics wrap the final runtime, while the outer
+# process guard prevents duplicate hooks, trays and writes.
 app_product.install(app, app_tray)
 app_clipboard_settings.install(app)
 app_user_functions.install(app)
 app_storage.install(app)
 app_window.install(app)
+app_vertical_resize.install(app)
 app_native_titlebar.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
