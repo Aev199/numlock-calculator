@@ -135,7 +135,7 @@ def install(app: Any) -> None:
             import System.Windows.Forms as WinForms
 
             def apply() -> None:
-                control.BorderStyle = WinForms.BorderStyle.None
+                control.BorderStyle = getattr(WinForms.BorderStyle, "None")
                 control.Margin = WinForms.Padding(0)
                 control.Padding = WinForms.Padding(0)
                 control.BackColor = ColorTranslator.FromHtml(colour)
@@ -195,12 +195,13 @@ def install(app: Any) -> None:
 
             scale = float(getattr(native, "_scale", 1.0) or 1.0)
             grip_height = grip_height_for_scale(scale)
+            borderless = getattr(WinForms.BorderStyle, "None")
             existing = getattr(app, "_vertical_resize_grip", None)
             if isinstance(existing, dict) and existing.get("native") is native:
                 control = existing.get("control")
                 if control is not None and not bool(getattr(control, "IsDisposed", False)):
                     control.Height = grip_height
-                    control.BorderStyle = WinForms.BorderStyle.None
+                    control.BorderStyle = borderless
                     control.Margin = WinForms.Padding(0)
                     control.Padding = WinForms.Padding(0)
                     control.Visible = not compact
@@ -218,7 +219,7 @@ def install(app: Any) -> None:
             grip.Cursor = WinForms.Cursors.SizeNS
             grip.Dock = WinForms.DockStyle.Bottom
             grip.Height = grip_height
-            grip.BorderStyle = WinForms.BorderStyle.None
+            grip.BorderStyle = borderless
             grip.Margin = WinForms.Padding(0)
             grip.Padding = WinForms.Padding(0)
             grip.BackColor = ColorTranslator.FromHtml(idle)
