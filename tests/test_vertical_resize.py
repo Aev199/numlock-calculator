@@ -50,51 +50,11 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertEqual(minimum, (384, 188))
         self.assertEqual(maximum, (384, 188))
 
-    def test_bottom_hit_zone_is_vertical_only_and_full_mode_only(self):
-        rect = (100, 200, 484, 632)
-        border = 7
-
-        self.assertTrue(
-            app_vertical_resize.bottom_resize_hit_test(
-                300,
-                631,
-                rect,
-                border,
-            )
-        )
-        self.assertTrue(
-            app_vertical_resize.bottom_resize_hit_test(
-                100,
-                626,
-                rect,
-                border,
-            )
-        )
-        self.assertFalse(
-            app_vertical_resize.bottom_resize_hit_test(
-                300,
-                624,
-                rect,
-                border,
-            )
-        )
-        self.assertFalse(
-            app_vertical_resize.bottom_resize_hit_test(
-                99,
-                631,
-                rect,
-                border,
-            )
-        )
-        self.assertFalse(
-            app_vertical_resize.bottom_resize_hit_test(
-                300,
-                631,
-                rect,
-                border,
-                compact=True,
-            )
-        )
+    def test_resize_grip_height_is_dpi_aware(self):
+        self.assertEqual(app_vertical_resize.grip_height_for_scale(1.0), 7)
+        self.assertEqual(app_vertical_resize.grip_height_for_scale(1.5), 10)
+        self.assertEqual(app_vertical_resize.grip_height_for_scale(2.0), 14)
+        self.assertEqual(app_vertical_resize.grip_height_for_scale(0), 7)
 
     def test_full_window_creation_enables_only_useful_resize_axis(self):
         app, calls = self.make_app(compact=False)
@@ -126,14 +86,19 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertEqual(kwargs["width"], 384)
         self.assertEqual(kwargs["min_size"], (384, 160))
 
-    def test_frameless_resize_uses_native_bottom_hit_test_hook(self):
+    def test_frameless_resize_uses_real_winforms_bottom_grip(self):
         source = (ROOT / "app_vertical_resize.py").read_text(encoding="utf-8")
-        self.assertIn("WM_NCHITTEST = 0x0084", source)
+        self.assertIn("WM_NCLBUTTONDOWN = 0x00A1", source)
         self.assertIn("HTBOTTOM = 15", source)
-        self.assertIn("SetWindowLongPtrW", source)
-        self.assertIn("CallWindowProcW", source)
-        self.assertIn("ensure_native_bottom_resize_hook", source)
-        self.assertIn("return HTBOTTOM", source)
+        self.assertIn("WinForms.Panel()", source)
+        self.assertIn("WinForms.DockStyle.Bottom", source)
+        self.assertIn("WinForms.Cursors.SizeNS", source)
+        self.assertIn("WinForms.MouseButtons.Left", source)
+        self.assertIn("ReleaseCapture", source)
+        self.assertIn("SendMessageW", source)
+        self.assertIn("ensure_native_bottom_resize_grip", source)
+        self.assertNotIn("WM_NCHITTEST", source)
+        self.assertNotIn("SetWindowLongPtrW", source)
         self.assertNotIn("HTLEFT", source)
         self.assertNotIn("HTRIGHT", source)
 
