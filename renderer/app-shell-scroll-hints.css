@@ -1,0 +1,36 @@
+/* Subtle horizontal-overflow cues for long calculator expressions. */
+
+body[data-app-mode="calculator"] .expression-field-shell::before,
+body[data-app-mode="calculator"] .expression-field-shell::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  top: 1px;
+  bottom: 1px;
+  width: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 90ms ease;
+}
+
+body[data-app-mode="calculator"] .expression-field-shell::before {
+  left: 1px;
+  background: linear-gradient(to right, var(--panel-raised), transparent);
+}
+
+body[data-app-mode="calculator"] .expression-field-shell::after {
+  right: 1px;
+  background: linear-gradient(to left, var(--panel-raised), transparent);
+}
+
+body[data-app-mode="calculator"] .expression-field-shell.has-scroll-left::before,
+body[data-app-mode="calculator"] .expression-field-shell.has-scroll-right::after {
+  opacity: .92;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-app-mode="calculator"] .expression-field-shell::before,
+  body[data-app-mode="calculator"] .expression-field-shell::after {
+    transition: none;
+  }
+}

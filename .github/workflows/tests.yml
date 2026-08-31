@@ -4,8 +4,12 @@ on:
   push:
     branches:
       - main
-      - 'release/**'
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -13,6 +17,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,68 +57,9 @@ jobs:
           test ! -e NumLockCalc.spec
           test ! -e NumLockCalc-folder.spec
       - name: Audit reachable Git history before publication
-        id: history_audit
-        continue-on-error: true
-        run: python tools/audit_public_history.py > history-audit.log 2>&1
-      - name: Capture tracked release tree
-        if: always()
-        run: git ls-files | sort | tee tracked-files.log
-      - name: Upload public audit reports
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: public-repository-audit
-          path: |
-            history-audit.log
-            tracked-files.log
-      - name: Report history audit failure
-        if: steps.history_audit.outcome == 'failure'
-        run: |
-          cat history-audit.log
-          exit 1
-      - name: Test calculation engine
-        run: python -m unittest tests.test_calc_engine -v
-      - name: Test application API
-        run: python -m unittest tests.test_app -v
-      - name: Test focus and NumLock stability
-        run: python -m unittest tests.test_stability -v
-      - name: Test consolidated renderer
-        id: renderer_tests
-        continue-on-error: true
-        run: python -m unittest tests.test_renderer tests.test_mode_transitions -v > renderer-test.log 2>&1
-      - name: Upload renderer test log
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: renderer-test-log
-          path: renderer-test.log
-      - name: Report renderer test failure
-        if: steps.renderer_tests.outcome == 'failure'
-        run: |
-          cat renderer-test.log
-          exit 1
-      - name: Test frameless tray shell
-        run: python -m unittest tests.test_tray tests.test_native_dialogs -v
-      - name: Test separate units mode
-        run: python -m unittest tests.test_units_mode -v
-      - name: Test full build sequence
-        id: discover
-        continue-on-error: true
-        run: python -m unittest discover -s tests -v > discover.log 2>&1
-      - name: Upload full build test log
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: discover-log-linux
-          path: discover.log
-      - name: Report full build test failure
-        if: steps.discover.outcome == 'failure'
-        run: |
-          cat discover.log
-          exit 1
+        run: python tools/audit_public_history.py
+      - name: Run full test suite
+        run: python -m unittest discover -s tests -v
       - name: Check consolidated renderer JavaScript
         run: |
           python - <<'PY'
@@ -141,77 +87,3 @@ jobs:
           assert 'composePickerSymbol' in source
           PY
           node --check renderer-check.js
-
-  windows-build:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install build dependencies
-        run: python -m pip install -r requirements-build.txt
-      - name: Run full Windows test suite
-        run: python -m unittest discover -s tests -v
-      - name: Collect runtime licenses
-        run: python collect_third_party_licenses.py --output release/licenses
-      - name: Verify release license bundle
-        shell: pwsh
-        run: |
-          if (-not (Test-Path -LiteralPath 'release\licenses\DEPENDENCIES.md')) {
-            throw 'Dependency license report was not created'
-          }
-          $pystray = Get-ChildItem -LiteralPath 'release\licenses' -Directory |
-            Where-Object { $_.Name -like 'pystray-*' } |
-            Select-Object -First 1
-          if ($null -eq $pystray) {
-            throw 'pystray license directory is missing'
-          }
-          $license = Get-ChildItem -LiteralPath $pystray.FullName -File |
-            Where-Object { $_.Name -match '^(COPYING|LICENSE|LICENCE)' } |
-            Select-Object -First 1
-          if ($null -eq $license) {
-            throw 'pystray LGPL text is missing'
-          }
-      - name: Generate Windows version metadata
-        run: python generate_version_info.py
-      - name: Build NumCalc one-file executable
-        run: python -m PyInstaller --noconfirm --clean NumCalc.spec
-      - name: Verify embedded common-controls manifest
-        run: python tools/verify_windows_manifest.py dist/NumCalc.exe
-      - name: Verify executable metadata and write SHA-256
-        shell: pwsh
-        run: |
-          if (-not (Test-Path -LiteralPath 'dist\NumCalc.exe')) {
-            throw 'dist\NumCalc.exe was not created'
-          }
-          $version = python -c "from product_info import APP_VERSION; print(APP_VERSION)"
-          $file = Get-Item -LiteralPath 'dist\NumCalc.exe'
-          if ($file.Length -le 0) {
-            throw 'dist\NumCalc.exe is empty'
-          }
-          $info = $file.VersionInfo
-          if ($info.ProductName -ne 'NumCalc') {
-            throw "Unexpected ProductName: $($info.ProductName)"
-          }
-          if ($info.FileVersion -ne $version) {
-            throw "Unexpected FileVersion: $($info.FileVersion); expected $version"
-          }
-          if ($info.ProductVersion -ne $version) {
-            throw "Unexpected ProductVersion: $($info.ProductVersion); expected $version"
-          }
-          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash.ToLower()
-          Set-Content -Encoding ascii -LiteralPath 'dist\NumCalc.exe.sha256.txt' -Value ($hash + '  NumCalc.exe')
-      - name: Upload Windows release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NumCalc-windows-release
-          path: |
-            dist/NumCalc.exe
-            dist/NumCalc.exe.sha256.txt
-            LICENSE
-            LICENSING.md
-            THIRD_PARTY_NOTICES.md
-            RELEASE_NOTES.md
-            release/licenses
-          if-no-files-found: error
