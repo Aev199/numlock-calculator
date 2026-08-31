@@ -5,11 +5,11 @@ remaining fixed horizontally. Compact mode stays locked to the renderer-owned
 size so its fitted layout remains deterministic.
 
 pywebview 6.2.1 uses a borderless WinForms Form for ``frameless=True`` and the
-WebView2 control fills its client area. Instead of replacing the managed
-WndProc, NumCalc places a tiny WinForms panel at the bottom of the form. The
-panel owns the SizeNS cursor and starts the standard Windows HTBOTTOM resize
-loop on left mouse-down. This gives the user a real bottom resize target while
-left/right resize never exists.
+WebView2 control fills its client area. NumCalc places a tiny WinForms panel at
+the bottom of the form. The panel owns the SizeNS cursor and starts the standard
+Windows HTBOTTOM resize loop on left mouse-down. Its idle/hover colours mirror
+the renderer theme so the hit target remains convenient without looking like a
+separate strip.
 """
 
 from __future__ import annotations
@@ -27,6 +27,12 @@ FULL_WINDOW_MIN_HEIGHT = 432
 # a deliberately large practical ceiling instead of ``(width, 0)``.
 FULL_WINDOW_MAX_HEIGHT = 100_000
 BOTTOM_RESIZE_GRIP_LOGICAL_PX = 7
+
+# Keep these in sync with renderer/app-shell.css: --panel and --soft.
+LIGHT_GRIP_IDLE = "#fafafa"
+LIGHT_GRIP_HOVER = "#f0f0f0"
+DARK_GRIP_IDLE = "#202020"
+DARK_GRIP_HOVER = "#2b2b2b"
 
 WM_NCLBUTTONDOWN = 0x00A1
 HTBOTTOM = 15
@@ -64,6 +70,14 @@ def grip_height_for_scale(scale: Any) -> int:
     return max(4, int(round(BOTTOM_RESIZE_GRIP_LOGICAL_PX * value)))
 
 
+def grip_palette(theme: Any) -> tuple[str, str]:
+    """Return renderer-matched idle/hover colours for a UI theme."""
+
+    if str(theme or "").strip().lower() == "light":
+        return LIGHT_GRIP_IDLE, LIGHT_GRIP_HOVER
+    return DARK_GRIP_IDLE, DARK_GRIP_HOVER
+
+
 def install(app: Any) -> None:
     """Install bottom-only native resizing without changing renderer geometry."""
 
@@ -74,12 +88,20 @@ def install(app: Any) -> None:
 
     original_create_window = app.webview.create_window
     original_set_compact_window = app.AppApi.set_compact_window
+    original_set_ui_settings = app.AppApi.set_ui_settings
     original_on_loaded = getattr(app, "on_loaded", lambda: None)
     original_on_shown = getattr(app, "on_shown", lambda: None)
 
     def compact_mode_enabled() -> bool:
         callback = getattr(app, "compact_mode_enabled", None)
         return bool(callback()) if callable(callback) else False
+
+    def current_theme(api: Any = None) -> str:
+        owner = api if api is not None else getattr(app, "_api", None)
+        settings = getattr(owner, "_ui_settings", {})
+        if isinstance(settings, dict):
+            return "light" if str(settings.get("theme", "dark")).lower() == "light" else "dark"
+        return "dark"
 
     def native_window_handle(native: Any) -> int | None:
         try:
@@ -91,6 +113,37 @@ def install(app: Any) -> None:
             return int(handle)
         except Exception:
             return None
+
+    def refresh_native_grip_theme(theme: Any = None) -> bool:
+        """Repaint the native grip to match the live renderer theme."""
+
+        state = getattr(app, "_vertical_resize_grip", None)
+        if not isinstance(state, dict):
+            return False
+        native = state.get("native")
+        control = state.get("control")
+        if native is None or control is None or bool(getattr(control, "IsDisposed", False)):
+            return False
+
+        selected_theme = current_theme() if theme is None else theme
+        idle, hover = grip_palette(selected_theme)
+        colour = hover if bool(state.get("hovered", False)) else idle
+
+        try:
+            from System import Action
+            from System.Drawing import ColorTranslator
+
+            def apply() -> None:
+                control.BackColor = ColorTranslator.FromHtml(colour)
+
+            if bool(getattr(native, "InvokeRequired", False)):
+                native.Invoke(Action(apply))
+            else:
+                apply()
+            return True
+        except Exception:
+            logger.exception("Could not refresh the NumCalc bottom resize grip theme")
+            return False
 
     def begin_bottom_resize(native: Any) -> bool:
         """Enter the standard Windows resize loop for the bottom edge."""
@@ -134,6 +187,7 @@ def install(app: Any) -> None:
 
         try:
             import System.Windows.Forms as WinForms
+            from System.Drawing import ColorTranslator
 
             scale = float(getattr(native, "_scale", 1.0) or 1.0)
             grip_height = grip_height_for_scale(scale)
@@ -143,32 +197,51 @@ def install(app: Any) -> None:
                 if control is not None and not bool(getattr(control, "IsDisposed", False)):
                     control.Height = grip_height
                     control.Visible = not compact
+                    refresh_native_grip_theme()
                     if control.Visible:
                         control.BringToFront()
                     return True
 
+            idle, _hover = grip_palette(current_theme())
             grip = WinForms.Panel()
             grip.Name = "numcalcBottomResizeGrip"
             grip.TabStop = False
             grip.Cursor = WinForms.Cursors.SizeNS
             grip.Dock = WinForms.DockStyle.Bottom
             grip.Height = grip_height
-            grip.BackColor = native.BackColor
+            grip.BackColor = ColorTranslator.FromHtml(idle)
             grip.Visible = not compact
+
+            def on_mouse_enter(_sender: Any, _event: Any) -> None:
+                state = getattr(app, "_vertical_resize_grip", None)
+                if isinstance(state, dict):
+                    state["hovered"] = True
+                refresh_native_grip_theme()
+
+            def on_mouse_leave(_sender: Any, _event: Any) -> None:
+                state = getattr(app, "_vertical_resize_grip", None)
+                if isinstance(state, dict):
+                    state["hovered"] = False
+                refresh_native_grip_theme()
 
             def on_mouse_down(_sender: Any, event: Any) -> None:
                 if event.Button == WinForms.MouseButtons.Left:
                     begin_bottom_resize(native)
 
+            grip.MouseEnter += on_mouse_enter
+            grip.MouseLeave += on_mouse_leave
             grip.MouseDown += on_mouse_down
             native.Controls.Add(grip)
             if grip.Visible:
                 grip.BringToFront()
 
-            # Keep both the control and Python event delegate alive for the form lifetime.
+            # Keep the control and Python event delegates alive for the form lifetime.
             app._vertical_resize_grip = {
                 "native": native,
                 "control": grip,
+                "hovered": False,
+                "mouse_enter": on_mouse_enter,
+                "mouse_leave": on_mouse_leave,
                 "mouse_down": on_mouse_down,
             }
             return True
@@ -235,6 +308,12 @@ def install(app: Any) -> None:
 
         return original_create_window(*args, **kwargs)
 
+    def set_ui_settings(self: Any, settings: dict[str, Any]) -> dict[str, Any]:
+        response = original_set_ui_settings(self, settings)
+        if isinstance(settings, dict) and "theme" in settings:
+            refresh_native_grip_theme(response.get("theme", settings.get("theme")))
+        return response
+
     def set_compact_window(
         self: Any,
         compact: bool,
@@ -263,9 +342,11 @@ def install(app: Any) -> None:
         original_on_shown()
 
     app.webview.create_window = create_window
+    app.AppApi.set_ui_settings = set_ui_settings
     app.AppApi.set_compact_window = set_compact_window
     app.on_loaded = on_loaded
     app.on_shown = on_shown
     app.apply_vertical_resize_policy = apply_native_resize_policy
     app.ensure_native_bottom_resize_grip = ensure_native_bottom_resize_grip
+    app.refresh_native_grip_theme = refresh_native_grip_theme
     app.begin_bottom_resize = begin_bottom_resize
