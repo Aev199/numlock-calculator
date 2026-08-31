@@ -131,6 +131,15 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertNotIn("HTLEFT", source)
         self.assertNotIn("HTRIGHT", source)
 
+    def test_windows_11_dwm_border_is_suppressed_without_disabling_shadow(self):
+        source = (ROOT / "app_vertical_resize.py").read_text(encoding="utf-8")
+        self.assertEqual(app_vertical_resize.DWMWA_BORDER_COLOR, 34)
+        self.assertEqual(app_vertical_resize.DWMWA_COLOR_NONE, 0xFFFFFFFE)
+        self.assertIn("DwmSetWindowAttribute", source)
+        self.assertIn("suppress_native_window_border", source)
+        self.assertIn("DWMWA_COLOR_NONE", source)
+        self.assertNotIn('kwargs["shadow"] = False', source)
+
     def test_keyboard_entry_point_installs_resize_layer_after_window_controller(self):
         source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")
         self.assertIn("import app_vertical_resize", source)
