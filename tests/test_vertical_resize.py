@@ -50,6 +50,52 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertEqual(minimum, (384, 188))
         self.assertEqual(maximum, (384, 188))
 
+    def test_bottom_hit_zone_is_vertical_only_and_full_mode_only(self):
+        rect = (100, 200, 484, 632)
+        border = 7
+
+        self.assertTrue(
+            app_vertical_resize.bottom_resize_hit_test(
+                300,
+                631,
+                rect,
+                border,
+            )
+        )
+        self.assertTrue(
+            app_vertical_resize.bottom_resize_hit_test(
+                100,
+                626,
+                rect,
+                border,
+            )
+        )
+        self.assertFalse(
+            app_vertical_resize.bottom_resize_hit_test(
+                300,
+                624,
+                rect,
+                border,
+            )
+        )
+        self.assertFalse(
+            app_vertical_resize.bottom_resize_hit_test(
+                99,
+                631,
+                rect,
+                border,
+            )
+        )
+        self.assertFalse(
+            app_vertical_resize.bottom_resize_hit_test(
+                300,
+                631,
+                rect,
+                border,
+                compact=True,
+            )
+        )
+
     def test_full_window_creation_enables_only_useful_resize_axis(self):
         app, calls = self.make_app(compact=False)
         app_vertical_resize.install(app)
@@ -79,6 +125,17 @@ class VerticalResizeTests(unittest.TestCase):
         kwargs = calls[0][1]
         self.assertEqual(kwargs["width"], 384)
         self.assertEqual(kwargs["min_size"], (384, 160))
+
+    def test_frameless_resize_uses_native_bottom_hit_test_hook(self):
+        source = (ROOT / "app_vertical_resize.py").read_text(encoding="utf-8")
+        self.assertIn("WM_NCHITTEST = 0x0084", source)
+        self.assertIn("HTBOTTOM = 15", source)
+        self.assertIn("SetWindowLongPtrW", source)
+        self.assertIn("CallWindowProcW", source)
+        self.assertIn("ensure_native_bottom_resize_hook", source)
+        self.assertIn("return HTBOTTOM", source)
+        self.assertNotIn("HTLEFT", source)
+        self.assertNotIn("HTRIGHT", source)
 
     def test_keyboard_entry_point_installs_resize_layer_after_window_controller(self):
         source = (ROOT / "app_keyboard.py").read_text(encoding="utf-8")
