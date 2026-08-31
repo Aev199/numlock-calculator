@@ -197,6 +197,8 @@ def install(app: Any) -> None:
                 if control is not None and not bool(getattr(control, "IsDisposed", False)):
                     control.Height = grip_height
                     control.Visible = not compact
+                    if compact:
+                        existing["hovered"] = False
                     refresh_native_grip_theme()
                     if control.Visible:
                         control.BringToFront()
