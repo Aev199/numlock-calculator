@@ -2,12 +2,14 @@
 
 The standard 384px-wide layout may grow downward to expose more history while
 remaining fixed horizontally. Compact mode stays locked to the renderer-owned
-size so its fitted layout and overlay sizing remain deterministic.
+size so its fitted layout remains deterministic.
 
-pywebview deliberately makes ``frameless=True`` windows non-resizable on
-Windows. NumCalc therefore adds one native hit-test zone at the bottom edge of
-the backing WinForms form. Returning ``HTBOTTOM`` lets Windows perform the
-actual resize loop while the existing min/max bounds keep width fixed.
+pywebview 6.2.1 uses a borderless WinForms Form for ``frameless=True`` and the
+WebView2 control fills its client area. Instead of replacing the managed
+WndProc, NumCalc places a tiny WinForms panel at the bottom of the form. The
+panel owns the SizeNS cursor and starts the standard Windows HTBOTTOM resize
+loop on left mouse-down. This gives the user a real bottom resize target while
+left/right resize never exists.
 """
 
 from __future__ import annotations
@@ -24,11 +26,10 @@ FULL_WINDOW_MIN_HEIGHT = 432
 # WinForms treats a zero component of a non-zero MaximumSize literally, so use
 # a deliberately large practical ceiling instead of ``(width, 0)``.
 FULL_WINDOW_MAX_HEIGHT = 100_000
-BOTTOM_RESIZE_GRAB_LOGICAL_PX = 7
+BOTTOM_RESIZE_GRIP_LOGICAL_PX = 7
 
-WM_NCHITTEST = 0x0084
+WM_NCLBUTTONDOWN = 0x00A1
 HTBOTTOM = 15
-GWL_WNDPROC = -4
 
 
 def resize_bounds(compact: bool, height: Any = None) -> tuple[tuple[int, int], tuple[int, int]]:
@@ -51,34 +52,25 @@ def resize_bounds(compact: bool, height: Any = None) -> tuple[tuple[int, int], t
     )
 
 
-def bottom_resize_hit_test(
-    cursor_x: int,
-    cursor_y: int,
-    rect: tuple[int, int, int, int],
-    border_px: int,
-    *,
-    compact: bool = False,
-) -> bool:
-    """Return whether a screen point belongs to NumCalc's bottom resize zone."""
+def grip_height_for_scale(scale: Any) -> int:
+    """Return a DPI-aware physical height for the native bottom grip."""
 
-    if compact:
-        return False
-    left, top, right, bottom = rect
-    border = max(1, int(border_px))
-    return (
-        left <= int(cursor_x) < right
-        and top <= int(cursor_y) < bottom
-        and int(cursor_y) >= bottom - border
-    )
+    try:
+        value = float(scale)
+    except (TypeError, ValueError, OverflowError):
+        value = 1.0
+    if value <= 0:
+        value = 1.0
+    return max(4, int(round(BOTTOM_RESIZE_GRIP_LOGICAL_PX * value)))
 
 
 def install(app: Any) -> None:
-    """Install vertical-only resizing without changing renderer geometry."""
+    """Install bottom-only native resizing without changing renderer geometry."""
 
     if getattr(app, "_vertical_resize_installed", False):
         return
     app._vertical_resize_installed = True
-    app._vertical_resize_wndproc_hook = None
+    app._vertical_resize_grip = None
 
     original_create_window = app.webview.create_window
     original_set_compact_window = app.AppApi.set_compact_window
@@ -100,158 +92,92 @@ def install(app: Any) -> None:
         except Exception:
             return None
 
-    def ensure_native_bottom_resize_hook() -> bool:
-        """Subclass the WinForms WndProc and expose only the bottom resize edge."""
+    def begin_bottom_resize(native: Any) -> bool:
+        """Enter the standard Windows resize loop for the bottom edge."""
 
-        if os.name != "nt":
+        if os.name != "nt" or compact_mode_enabled():
             return False
-        window = getattr(app, "_window", None)
-        native = getattr(window, "native", None) if window is not None else None
-        if native is None:
-            return False
-
         hwnd = native_window_handle(native)
         if not hwnd:
             return False
-
-        existing = getattr(app, "_vertical_resize_wndproc_hook", None)
-        if isinstance(existing, dict) and existing.get("hwnd") == hwnd:
-            return True
 
         try:
             import ctypes
             from ctypes import wintypes
 
             user32 = ctypes.WinDLL("user32", use_last_error=True)
-            long_ptr = ctypes.c_ssize_t
-
-            if ctypes.sizeof(ctypes.c_void_p) == 8:
-                get_window_long_ptr = user32.GetWindowLongPtrW
-                set_window_long_ptr = user32.SetWindowLongPtrW
-            else:
-                get_window_long_ptr = user32.GetWindowLongW
-                set_window_long_ptr = user32.SetWindowLongW
-
-            get_window_long_ptr.argtypes = [wintypes.HWND, ctypes.c_int]
-            get_window_long_ptr.restype = long_ptr
-            set_window_long_ptr.argtypes = [
-                wintypes.HWND,
-                ctypes.c_int,
-                ctypes.c_void_p,
-            ]
-            set_window_long_ptr.restype = long_ptr
-
-            call_window_proc = user32.CallWindowProcW
-            call_window_proc.argtypes = [
-                ctypes.c_void_p,
+            user32.ReleaseCapture.argtypes = []
+            user32.ReleaseCapture.restype = wintypes.BOOL
+            user32.SendMessageW.argtypes = [
                 wintypes.HWND,
                 wintypes.UINT,
                 wintypes.WPARAM,
                 wintypes.LPARAM,
             ]
-            call_window_proc.restype = long_ptr
+            user32.SendMessageW.restype = ctypes.c_ssize_t
+            user32.ReleaseCapture()
+            user32.SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTBOTTOM, 0)
+            return True
+        except Exception:
+            logger.exception("Could not start the NumCalc bottom resize loop")
+            return False
 
-            user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
-            user32.GetCursorPos.restype = wintypes.BOOL
-            user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
-            user32.GetWindowRect.restype = wintypes.BOOL
+    def ensure_native_bottom_resize_grip(compact: bool) -> bool:
+        """Create or update the WinForms panel that receives bottom-edge mouse input."""
 
-            get_dpi_for_window = getattr(user32, "GetDpiForWindow", None)
-            if get_dpi_for_window is not None:
-                get_dpi_for_window.argtypes = [wintypes.HWND]
-                get_dpi_for_window.restype = wintypes.UINT
+        if os.name != "nt":
+            return False
+        window = getattr(app, "_window", None)
+        native = getattr(window, "native", None) if window is not None else None
+        if native is None or not hasattr(native, "Controls"):
+            return False
 
-            original_proc = int(get_window_long_ptr(hwnd, GWL_WNDPROC) or 0)
-            if not original_proc:
-                raise OSError("WinForms WndProc is unavailable")
+        try:
+            import System.Windows.Forms as WinForms
 
-            wndproc_type = ctypes.WINFUNCTYPE(
-                long_ptr,
-                wintypes.HWND,
-                wintypes.UINT,
-                wintypes.WPARAM,
-                wintypes.LPARAM,
-            )
+            scale = float(getattr(native, "_scale", 1.0) or 1.0)
+            grip_height = grip_height_for_scale(scale)
+            existing = getattr(app, "_vertical_resize_grip", None)
+            if isinstance(existing, dict) and existing.get("native") is native:
+                control = existing.get("control")
+                if control is not None and not bool(getattr(control, "IsDisposed", False)):
+                    control.Height = grip_height
+                    control.Visible = not compact
+                    if control.Visible:
+                        control.BringToFront()
+                    return True
 
-            def call_original(
-                callback_hwnd: int,
-                message: int,
-                wparam: int,
-                lparam: int,
-            ) -> int:
-                return int(
-                    call_window_proc(
-                        ctypes.c_void_p(original_proc),
-                        callback_hwnd,
-                        message,
-                        wparam,
-                        lparam,
-                    )
-                )
+            grip = WinForms.Panel()
+            grip.Name = "numcalcBottomResizeGrip"
+            grip.TabStop = False
+            grip.Cursor = WinForms.Cursors.SizeNS
+            grip.Dock = WinForms.DockStyle.Bottom
+            grip.Height = grip_height
+            grip.BackColor = native.BackColor
+            grip.Visible = not compact
 
-            def wndproc(
-                callback_hwnd: int,
-                message: int,
-                wparam: int,
-                lparam: int,
-            ) -> int:
-                if message == WM_NCHITTEST:
-                    try:
-                        point = wintypes.POINT()
-                        rect = wintypes.RECT()
-                        if user32.GetCursorPos(ctypes.byref(point)) and user32.GetWindowRect(
-                            callback_hwnd,
-                            ctypes.byref(rect),
-                        ):
-                            dpi = 96
-                            if get_dpi_for_window is not None:
-                                dpi = max(96, int(get_dpi_for_window(callback_hwnd) or 96))
-                            border_px = max(
-                                4,
-                                int(round(BOTTOM_RESIZE_GRAB_LOGICAL_PX * dpi / 96.0)),
-                            )
-                            if bottom_resize_hit_test(
-                                point.x,
-                                point.y,
-                                (rect.left, rect.top, rect.right, rect.bottom),
-                                border_px,
-                                compact=compact_mode_enabled(),
-                            ):
-                                return HTBOTTOM
-                    except Exception:
-                        # A hit-test failure must never break normal WinForms dispatch.
-                        pass
+            def on_mouse_down(_sender: Any, event: Any) -> None:
+                if event.Button == WinForms.MouseButtons.Left:
+                    begin_bottom_resize(native)
 
-                return call_original(callback_hwnd, message, wparam, lparam)
+            grip.MouseDown += on_mouse_down
+            native.Controls.Add(grip)
+            if grip.Visible:
+                grip.BringToFront()
 
-            callback = wndproc_type(wndproc)
-            ctypes.set_last_error(0)
-            previous = int(
-                set_window_long_ptr(
-                    hwnd,
-                    GWL_WNDPROC,
-                    ctypes.cast(callback, ctypes.c_void_p),
-                )
-                or 0
-            )
-            error = ctypes.get_last_error()
-            if previous == 0 and error:
-                raise ctypes.WinError(error)
-
-            # Keep the callback alive for the entire native window lifetime.
-            app._vertical_resize_wndproc_hook = {
-                "hwnd": hwnd,
-                "callback": callback,
-                "original_proc": original_proc,
-                "user32": user32,
+            # Keep both the control and Python event delegate alive for the form lifetime.
+            app._vertical_resize_grip = {
+                "native": native,
+                "control": grip,
+                "mouse_down": on_mouse_down,
             }
             return True
         except Exception:
-            logger.exception("Could not install the NumCalc bottom resize hit-test")
+            logger.exception("Could not install the NumCalc bottom resize grip")
             return False
 
     def apply_native_resize_policy(compact: bool, height: Any = None) -> bool:
-        """Apply fixed-width WinForms bounds and the bottom-edge native hit-test."""
+        """Apply fixed-width bounds and keep the bottom resize grip in sync."""
 
         window = getattr(app, "_window", None)
         if os.name != "nt" or window is None:
@@ -269,7 +195,7 @@ def install(app: Any) -> None:
             from System import Action
             from System.Drawing import Size
 
-            result = {"hook": False}
+            result = {"grip": False}
 
             def apply() -> None:
                 scale = float(getattr(native, "_scale", 1.0) or 1.0)
@@ -281,13 +207,13 @@ def install(app: Any) -> None:
                     max(1, int(round(maximum[0] * scale))),
                     max(1, int(round(maximum[1] * scale))),
                 )
-                result["hook"] = ensure_native_bottom_resize_hook()
+                result["grip"] = ensure_native_bottom_resize_grip(compact)
 
             if bool(getattr(native, "InvokeRequired", False)):
                 native.Invoke(Action(apply))
             else:
                 apply()
-            return bool(result["hook"])
+            return bool(result["grip"])
         except Exception:
             logger.exception("Could not apply the NumCalc native resize policy")
             return False
@@ -341,4 +267,5 @@ def install(app: Any) -> None:
     app.on_loaded = on_loaded
     app.on_shown = on_shown
     app.apply_vertical_resize_policy = apply_native_resize_policy
-    app.ensure_native_bottom_resize_hook = ensure_native_bottom_resize_hook
+    app.ensure_native_bottom_resize_grip = ensure_native_bottom_resize_grip
+    app.begin_bottom_resize = begin_bottom_resize
