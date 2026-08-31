@@ -9,6 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DummyApi:
+    def set_ui_settings(self, settings):
+        return dict(settings or {})
+
     def set_compact_window(self, compact, content_height=None):
         return {
             "ok": True,
@@ -33,6 +36,7 @@ class VerticalResizeTests(unittest.TestCase):
             on_loaded=lambda: None,
             on_shown=lambda: None,
             _window=None,
+            _api=types.SimpleNamespace(_ui_settings={"theme": "dark"}),
         )
         return app, calls
 
@@ -55,6 +59,20 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertEqual(app_vertical_resize.grip_height_for_scale(1.5), 10)
         self.assertEqual(app_vertical_resize.grip_height_for_scale(2.0), 14)
         self.assertEqual(app_vertical_resize.grip_height_for_scale(0), 7)
+
+    def test_resize_grip_palette_matches_renderer_themes(self):
+        self.assertEqual(
+            app_vertical_resize.grip_palette("dark"),
+            ("#202020", "#2b2b2b"),
+        )
+        self.assertEqual(
+            app_vertical_resize.grip_palette("light"),
+            ("#fafafa", "#f0f0f0"),
+        )
+        self.assertEqual(
+            app_vertical_resize.grip_palette("unexpected"),
+            ("#202020", "#2b2b2b"),
+        )
 
     def test_full_window_creation_enables_only_useful_resize_axis(self):
         app, calls = self.make_app(compact=False)
@@ -86,7 +104,7 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertEqual(kwargs["width"], 384)
         self.assertEqual(kwargs["min_size"], (384, 160))
 
-    def test_frameless_resize_uses_real_winforms_bottom_grip(self):
+    def test_frameless_resize_uses_subtle_theme_aware_winforms_bottom_grip(self):
         source = (ROOT / "app_vertical_resize.py").read_text(encoding="utf-8")
         self.assertIn("WM_NCLBUTTONDOWN = 0x00A1", source)
         self.assertIn("HTBOTTOM = 15", source)
@@ -97,6 +115,12 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertIn("ReleaseCapture", source)
         self.assertIn("SendMessageW", source)
         self.assertIn("ensure_native_bottom_resize_grip", source)
+        self.assertIn("ColorTranslator.FromHtml", source)
+        self.assertIn("grip.MouseEnter += on_mouse_enter", source)
+        self.assertIn("grip.MouseLeave += on_mouse_leave", source)
+        self.assertIn("refresh_native_grip_theme", source)
+        self.assertIn('"theme" in settings', source)
+        self.assertNotIn("grip.BackColor = native.BackColor", source)
         self.assertNotIn("WM_NCHITTEST", source)
         self.assertNotIn("SetWindowLongPtrW", source)
         self.assertNotIn("HTLEFT", source)
