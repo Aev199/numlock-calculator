@@ -24,6 +24,7 @@ import app
 import app_clipboard_settings
 import app_diagnostics
 import app_formulas
+import app_frameless_chrome
 import app_native_titlebar
 import app_numlock_compat
 import app_product
@@ -42,9 +43,11 @@ import app_window
 # the session/API before that production instance is built so they persist in
 # the same engine_state object as variables and memories. Native behavior
 # (including compact sizing, vertical-only full-window resizing and DPI-safe
-# titlebar dragging) is installed next; the renderer remains the sole owner of
-# HTML/CSS/JavaScript. Diagnostics wrap the final runtime, while the outer
-# process guard prevents duplicate hooks, trays and writes.
+# titlebar dragging) is installed next; the final frameless-chrome layer runs
+# after the tray defaults so pywebview's 1 px DWM shadow frame is disabled
+# without affecting the custom bottom resize grip. The renderer remains the
+# sole owner of HTML/CSS/JavaScript. Diagnostics wrap the final runtime, while
+# the outer process guard prevents duplicate hooks, trays and writes.
 app_product.install(app, app_tray)
 app_clipboard_settings.install(app)
 app_user_functions.install(app)
@@ -54,6 +57,7 @@ app_vertical_resize.install(app)
 app_native_titlebar.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)
+app_frameless_chrome.install(app)
 app_units_backend.install(app)
 app_variables.install(app)
 app_formulas.install(app)
