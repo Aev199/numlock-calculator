@@ -104,7 +104,7 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertEqual(kwargs["width"], 384)
         self.assertEqual(kwargs["min_size"], (384, 160))
 
-    def test_frameless_resize_uses_subtle_theme_aware_winforms_bottom_grip(self):
+    def test_frameless_resize_uses_borderless_theme_aware_winforms_bottom_grip(self):
         source = (ROOT / "app_vertical_resize.py").read_text(encoding="utf-8")
         self.assertIn("WM_NCLBUTTONDOWN = 0x00A1", source)
         self.assertIn("HTBOTTOM = 15", source)
@@ -120,6 +120,9 @@ class VerticalResizeTests(unittest.TestCase):
         self.assertIn("grip.MouseLeave += on_mouse_leave", source)
         self.assertIn("refresh_native_grip_theme", source)
         self.assertIn('"theme" in settings', source)
+        self.assertIn("grip.BorderStyle = WinForms.BorderStyle.None", source)
+        self.assertIn("grip.Margin = WinForms.Padding(0)", source)
+        self.assertIn("grip.Padding = WinForms.Padding(0)", source)
         self.assertNotIn("grip.BackColor = native.BackColor", source)
         self.assertNotIn("WM_NCHITTEST", source)
         self.assertNotIn("SetWindowLongPtrW", source)
