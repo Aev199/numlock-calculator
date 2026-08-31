@@ -8,8 +8,8 @@ pywebview 6.2.1 uses a borderless WinForms Form for ``frameless=True`` and the
 WebView2 control fills its client area. NumCalc places a tiny WinForms panel at
 the bottom of the form. The panel owns the SizeNS cursor and starts the standard
 Windows HTBOTTOM resize loop on left mouse-down. Its idle/hover colours mirror
-the renderer theme so the hit target remains convenient without looking like a
-separate strip.
+the renderer theme and its native border is explicitly disabled, so the hit
+target remains convenient without looking like a separate strip.
 """
 
 from __future__ import annotations
@@ -132,8 +132,12 @@ def install(app: Any) -> None:
         try:
             from System import Action
             from System.Drawing import ColorTranslator
+            import System.Windows.Forms as WinForms
 
             def apply() -> None:
+                control.BorderStyle = WinForms.BorderStyle.None
+                control.Margin = WinForms.Padding(0)
+                control.Padding = WinForms.Padding(0)
                 control.BackColor = ColorTranslator.FromHtml(colour)
 
             if bool(getattr(native, "InvokeRequired", False)):
@@ -196,6 +200,9 @@ def install(app: Any) -> None:
                 control = existing.get("control")
                 if control is not None and not bool(getattr(control, "IsDisposed", False)):
                     control.Height = grip_height
+                    control.BorderStyle = WinForms.BorderStyle.None
+                    control.Margin = WinForms.Padding(0)
+                    control.Padding = WinForms.Padding(0)
                     control.Visible = not compact
                     if compact:
                         existing["hovered"] = False
@@ -211,6 +218,9 @@ def install(app: Any) -> None:
             grip.Cursor = WinForms.Cursors.SizeNS
             grip.Dock = WinForms.DockStyle.Bottom
             grip.Height = grip_height
+            grip.BorderStyle = WinForms.BorderStyle.None
+            grip.Margin = WinForms.Padding(0)
+            grip.Padding = WinForms.Padding(0)
             grip.BackColor = ColorTranslator.FromHtml(idle)
             grip.Visible = not compact
 
