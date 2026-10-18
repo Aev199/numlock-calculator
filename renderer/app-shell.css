@@ -404,7 +404,8 @@ body[data-app-mode="interpolation"] .mode-indicator {
   background: var(--soft);
   color: var(--accent);
   box-shadow: none;
-  font: 600 11px "Cascadia Mono", "Consolas", monospace;
+  font-size: 11px;
+  font-weight: 600;
   transition: opacity var(--local) ease, visibility 0s linear var(--local);
 }
 
@@ -673,7 +674,8 @@ body[data-app-mode="units"] .result-unit-badge {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
-  font: 12px "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .history-meta {
@@ -690,6 +692,12 @@ body[data-app-mode="units"] .result-unit-badge {
   white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
+}
+
+.history-result.is-status,
+.compact-history-result.is-status {
+  color: var(--subtle);
+  font-weight: 500;
 }
 
 .history-entry-actions {
@@ -834,18 +842,37 @@ body[data-app-mode="units"] .result-unit-badge {
 }
 
 .item-kind {
-  min-width: 29px;
+  min-width: 16px;
   color: var(--accent);
-  font-size: 9px;
-  font-weight: 600;
-  text-transform: uppercase;
+  font: italic 600 12px "Segoe UI", sans-serif;
+  text-align: center;
+}
+
+/* Palette groups already separate kinds; the description says more. */
+.palette-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.palette-item .item-kind {
+  display: none;
+}
+
+.palette-item .item-description {
+  display: block;
+  overflow: hidden;
+  max-width: 190px;
+  color: var(--subtle);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .item-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 600 11px "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .item-description {
@@ -1010,7 +1037,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .row-button {
@@ -1020,6 +1047,34 @@ kbd {
   color: var(--muted);
   font-size: 10px;
   font-weight: 600;
+}
+
+.memory-free {
+  display: grid;
+  gap: 6px;
+  padding: 8px 3px 2px;
+}
+
+.memory-row + .memory-free {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.memory-free-caption {
+  color: var(--subtle);
+  font-size: 11px;
+}
+
+.memory-free-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.memory-free-slot {
+  min-width: 0;
+  padding: 0 6px;
+  color: var(--accent);
 }
 
 .row-button.primary {

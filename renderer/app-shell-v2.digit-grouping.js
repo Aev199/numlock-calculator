@@ -239,7 +239,7 @@
     `;
     const help = document.createElement('p');
     help.className = 'settings-help';
-    help.textContent = 'Включено: 150 000 000. Выключено: 150000000.';
+    help.textContent = '150 000 000 вместо 150000000.';
     formatSection.insertBefore(row, formatStatus);
     formatSection.insertBefore(help, formatStatus);
 

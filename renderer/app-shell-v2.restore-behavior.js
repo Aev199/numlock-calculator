@@ -44,7 +44,7 @@
     if (section && !section.querySelector('.restore-mode-help')) {
       const help = document.createElement('p');
       help.className = 'settings-help restore-mode-help';
-      help.textContent = 'Выключено: после показа сохраняется предыдущая вкладка. Если окно уже открыто и только неактивно, текущая вкладка сохраняется всегда.';
+      help.textContent = 'Иначе остаётся последняя вкладка.';
       section.appendChild(help);
     }
   };

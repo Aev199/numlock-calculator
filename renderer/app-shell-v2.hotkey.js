@@ -130,7 +130,7 @@
           <input id="selectResultOnEnter" type="checkbox">
           <span>Выделять результат в строке ввода</span>
         </label>
-        <p class="settings-help">Включено по умолчанию. Выделение удобно для немедленной замены результата новым выражением.</p>
+        <p class="settings-help">Новое выражение сразу заменит результат.</p>
         <div class="hotkey-status" id="behaviorStatus" role="status"></div>
         <label class="settings-checkbox">
           <input id="focusCalculatorOnRestore" type="checkbox">
@@ -146,7 +146,7 @@
           <button class="hotkey-save" id="globalHotkeySave" type="button">Сохранить</button>
         </div>
         <p class="settings-help" id="globalHotkeyHelp">
-          Нажмите поле и затем нужную комбинацию. Клавиша показывает, возвращает фокус или скрывает NumCalc.
+          Нажмите поле, затем нужную комбинацию.
         </p>
         <div class="hotkey-status" id="globalHotkeyStatus" role="status"></div>
       </section>

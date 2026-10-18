@@ -146,8 +146,8 @@ body[data-compact-mode="true"] .onboarding-card {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .compact-history-result {

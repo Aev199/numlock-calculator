@@ -291,11 +291,6 @@
     border-radius: 2px;
   }
 
-  .palette-item .item-kind {
-    min-width: 29px;
-    font-size: 9px;
-  }
-
   .palette-item .item-label {
     font-size: 11px;
   }

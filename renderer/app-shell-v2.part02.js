@@ -35,6 +35,16 @@
     return slot;
   }
 
+  // A function definition echoes itself as the result; a short status reads
+  // better than repeating the expression in both columns.
+  function isDefinitionEntry(entry) {
+    return /:=/.test(String(entry?.result || ''));
+  }
+
+  function historyResultText(entry) {
+    return isDefinitionEntry(entry) ? 'функция сохранена' : entry.result;
+  }
+
   function updateHistoryNode(slot, entry) {
     slot.dataset.historyId = entry.id;
     const row = slot.querySelector('.history-entry');
@@ -45,7 +55,9 @@
       : 'Загрузить выражение для редактирования';
     slot.querySelector('.history-expression').textContent = entry.expression;
     slot.querySelector('.history-meta').textContent = historyMeta(entry);
-    slot.querySelector('.history-result').textContent = entry.result;
+    const result = slot.querySelector('.history-result');
+    result.textContent = historyResultText(entry);
+    result.classList.toggle('is-status', isDefinitionEntry(entry));
     const remove = slot.querySelector('[data-history-action="delete"]');
     remove.disabled = Boolean(entry.pending);
     remove.title = entry.pending ? 'Сохранение записи…' : 'Удалить запись';

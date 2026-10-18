@@ -26,7 +26,7 @@
     const ok = Boolean(response?.ok);
     dom.interpolationResultValue.textContent = ok
       ? String(response.result || '—')
-      : (response?.error ? 'Ошибка ввода' : 'Введите исходные данные');
+      : (response?.error ? 'Ошибка ввода' : 'Заполните две точки и x');
     dom.interpolationResultValue.classList.toggle('muted', !ok);
     dom.interpolationResultFormula.textContent = ok ? String(response.formula || '') : '';
     dom.interpolationResultError.textContent = response?.error || '';

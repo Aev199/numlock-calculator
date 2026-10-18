@@ -183,7 +183,8 @@
         expression.textContent = displayExpression(entry.expression);
         const result = document.createElement('strong');
         result.className = 'compact-history-result';
-        result.textContent = entry.result;
+        result.textContent = historyResultText(entry);
+        result.classList.toggle('is-status', isDefinitionEntry(entry));
         load.append(expression, result);
         load.addEventListener('click', () => {
           closeDrawer(false);

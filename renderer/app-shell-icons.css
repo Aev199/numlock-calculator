@@ -16,7 +16,8 @@
 }
 
 .icon-button .ui-glyph,
-.swap-units-button .ui-glyph {
+.swap-units-button .ui-glyph,
+.tool-button .ui-glyph {
   margin: auto;
 }
 

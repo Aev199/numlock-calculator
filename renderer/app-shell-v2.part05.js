@@ -168,11 +168,40 @@
     if (focus) restoreEditorFocus();
   }
 
+  function memoryIsEmpty(value) {
+    return !normalize(String(value ?? '')) || /^[+-]?0(?:[.,]0*)?$/.test(String(value).trim());
+  }
+
+  async function saveMemory(index) {
+    const response = await state.api.set_memory(
+      index,
+      state.calculator.expression,
+    );
+    if (!response?.ok) {
+      showToast(response?.error || 'Не удалось записать память');
+      return;
+    }
+    state.memories[index] = response.memory;
+    renderMemoryDrawer();
+    showToast(`M${index} обновлена`);
+  }
+
+  // Filled cells get full rows; free cells collapse into one row of chips, so
+  // an unused memory does not render as ten identical zeros.
   function renderMemoryDrawer() {
-    dom.drawerTitle.textContent = 'Память';
-    dom.drawerSubtitle.textContent = '10 ячеек памяти';
-    dom.drawerContent.replaceChildren();
+    const filled = [];
+    const free = [];
     state.memories.forEach((value, index) => {
+      (memoryIsEmpty(value) ? free : filled).push(index);
+    });
+    dom.drawerTitle.textContent = 'Память';
+    dom.drawerSubtitle.textContent = filled.length
+      ? `Занято ${filled.length} из ${state.memories.length}`
+      : 'Ячейки свободны';
+    dom.drawerContent.replaceChildren();
+
+    filled.forEach(index => {
+      const value = state.memories[index];
       const row = document.createElement('div');
       row.className = 'memory-row';
       const slot = document.createElement('span');
@@ -190,25 +219,36 @@
       save.type = 'button';
       save.className = 'row-button';
       save.textContent = 'Записать';
+      save.title = 'Заменить текущим значением';
       insert.addEventListener('click', () => {
         insertAtSelection(value);
         closeDrawer();
       });
-      save.addEventListener('click', async () => {
-        const response = await state.api.set_memory(
-          index,
-          state.calculator.expression,
-        );
-        if (!response?.ok) {
-          showToast(response?.error || 'Не удалось записать память');
-          return;
-        }
-        state.memories[index] = response.memory;
-        renderMemoryDrawer();
-        showToast(`M${index} обновлена`);
-      });
+      save.addEventListener('click', () => void saveMemory(index));
       actions.append(insert, save);
       row.append(slot, display, actions);
       dom.drawerContent.appendChild(row);
     });
+
+    if (!free.length) return;
+    const freeRow = document.createElement('div');
+    freeRow.className = 'memory-free';
+    const caption = document.createElement('span');
+    caption.className = 'memory-free-caption';
+    caption.textContent = filled.length
+      ? 'Записать текущее значение в свободную ячейку'
+      : 'Записать текущее значение в ячейку';
+    const chips = document.createElement('div');
+    chips.className = 'memory-free-slots';
+    free.forEach(index => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'row-button memory-free-slot';
+      chip.textContent = `M${index}`;
+      chip.title = `Записать текущее значение в M${index}`;
+      chip.addEventListener('click', () => void saveMemory(index));
+      chips.appendChild(chip);
+    });
+    freeRow.append(caption, chips);
+    dom.drawerContent.appendChild(freeRow);
   }

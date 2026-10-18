@@ -14,6 +14,10 @@
     clear: utilityIcon('<path d="M4.25 5.25h7.5M6 5.25V3.5h4v1.75M5 5.25l.5 7.25h5l.5-7.25M7 7.25v3.5M9 7.25v3.5"></path>'),
     swap: utilityIcon('<path d="M3 5h8.5M9.5 3l2 2-2 2M13 11H4.5M6.5 9l-2 2 2 2"></path>'),
     close: utilityIcon('<path d="m4 4 8 8M12 4l-8 8"></path>'),
+    functions: utilityIcon('<path d="M10.75 2.75c-1.55-.4-2.5.3-2.8 1.85L6.6 11.4c-.3 1.55-1.25 2.25-2.8 1.85M5 6.75h4.75"></path>'),
+    memory: utilityIcon('<ellipse cx="8" cy="4.25" rx="4.5" ry="1.75"></ellipse><path d="M3.5 4.25v7.5c0 .97 2 1.75 4.5 1.75s4.5-.78 4.5-1.75v-7.5M3.5 8c0 .97 2 1.75 4.5 1.75S12.5 8.97 12.5 8"></path>'),
+    variables: utilityIcon('<path d="M5.75 2.75c-1.1 0-1.6.55-1.6 1.5v1.6c0 .85-.45 1.4-1.4 1.4.95 0 1.4.55 1.4 1.4v1.6c0 .95.5 1.5 1.6 1.5M10.25 2.75c1.1 0 1.6.55 1.6 1.5v1.6c0 .85.45 1.4 1.4 1.4-.95 0-1.4.55-1.4 1.4v1.6c0 .95-.5 1.5-1.6 1.5"></path>'),
+    formulas: utilityIcon('<path d="M12 3.25H4.25L8.5 8l-4.25 4.75H12"></path>'),
   };
 
   function setUtilityIcon(element, icon) {
@@ -29,6 +33,10 @@
   setUtilityIcon(document.getElementById('swapUnitsButton'), utilityIcons.swap);
   setUtilityIcon(document.getElementById('drawerClose'), utilityIcons.close);
   setUtilityIcon(document.getElementById('onboardingClose'), utilityIcons.close);
+  setUtilityIcon(document.getElementById('paletteButton'), utilityIcons.functions);
+  setUtilityIcon(document.getElementById('memoryButton'), utilityIcons.memory);
+  setUtilityIcon(document.getElementById('variablesButton'), utilityIcons.variables);
+  setUtilityIcon(document.getElementById('formulasButton'), utilityIcons.formulas);
 
   document.querySelectorAll('.search-field > span, .palette-search-wrap > span').forEach(element => {
     element.innerHTML = utilityIcons.search;

@@ -42,10 +42,10 @@
         <div class="editor-toolbar">
           <span class="editor-label" id="editorLabel">Выражение</span>
           <div class="editor-tools calculator-only" id="editorTools">
-            <button class="tool-button" id="paletteButton" type="button" title="Функции (Tab)">ƒx</button>
-            <button class="tool-button" id="memoryButton" type="button" title="Память">M</button>
-            <button class="tool-button" id="variablesButton" type="button" title="Переменные">x</button>
-            <button class="tool-button" id="formulasButton" type="button" title="Формулы и профили">Σ</button>
+            <button class="tool-button" id="paletteButton" type="button" title="Функции (Tab)" aria-label="Функции">ƒx</button>
+            <button class="tool-button" id="memoryButton" type="button" title="Память" aria-label="Память">M</button>
+            <button class="tool-button" id="variablesButton" type="button" title="Переменные и функции" aria-label="Переменные и функции">x</button>
+            <button class="tool-button" id="formulasButton" type="button" title="Формулы и профили" aria-label="Формулы">Σ</button>
           </div>
         </div>
 
@@ -86,7 +86,7 @@
         <section class="mode-panel unit-converter-card" id="unitsPanel" data-mode-panel="units" aria-label="Преобразование единиц" aria-hidden="true">
           <div class="section-header unit-converter-header">
             <div class="section-heading converter-heading">
-              <h2>Единицы</h2>
+              <h2>Величина</h2>
               <span class="converter-caption">простая арифметика</span>
             </div>
             <label class="compact-select-shell category-select-shell">
@@ -113,18 +113,18 @@
         <section class="mode-panel interpolation-card" id="interpolationPanel" data-mode-panel="interpolation" aria-label="Линейная интерполяция" aria-hidden="true">
           <div class="section-header interpolation-header">
             <div class="section-heading converter-heading">
-              <h2>Интерполяция</h2>
+              <h2>Линейная, по двум точкам</h2>
             </div>
           </div>
           <div class="interpolation-content" id="interpolationContent">
             <div class="interpolation-form" id="interpolation1dForm">
               <div class="interpolation-grid">
-                <label class="interpolation-field"><span>x₀</span><input id="interpolation1dX0" data-interpolation-field="x0" type="text" inputmode="decimal" placeholder="0"></label>
-                <label class="interpolation-field"><span>y₀</span><input id="interpolation1dY0" data-interpolation-field="y0" type="text" inputmode="decimal" placeholder="0"></label>
-                <label class="interpolation-field"><span>x₁</span><input id="interpolation1dX1" data-interpolation-field="x1" type="text" inputmode="decimal" placeholder="10"></label>
-                <label class="interpolation-field"><span>y₁</span><input id="interpolation1dY1" data-interpolation-field="y1" type="text" inputmode="decimal" placeholder="100"></label>
+                <label class="interpolation-field"><span>x₀</span><input id="interpolation1dX0" data-interpolation-field="x0" type="text" inputmode="decimal"></label>
+                <label class="interpolation-field"><span>y₀</span><input id="interpolation1dY0" data-interpolation-field="y0" type="text" inputmode="decimal"></label>
+                <label class="interpolation-field"><span>x₁</span><input id="interpolation1dX1" data-interpolation-field="x1" type="text" inputmode="decimal"></label>
+                <label class="interpolation-field"><span>y₁</span><input id="interpolation1dY1" data-interpolation-field="y1" type="text" inputmode="decimal"></label>
               </div>
-              <label class="interpolation-field interpolation-target-field"><span>Найти y при x</span><input id="interpolation1dX" data-interpolation-field="x" type="text" inputmode="decimal" placeholder="5"></label>
+              <label class="interpolation-field interpolation-target-field"><span>Найти y при x</span><input id="interpolation1dX" data-interpolation-field="x" type="text" inputmode="decimal"></label>
             </div>
 
             <div class="interpolation-actions">
@@ -134,7 +134,7 @@
             </div>
             <div class="interpolation-result" id="interpolationResult" aria-live="polite">
               <span class="interpolation-result-label">Результат</span>
-              <strong id="interpolationResultValue">Введите исходные данные</strong>
+              <strong id="interpolationResultValue" class="muted">Заполните две точки и x</strong>
               <span class="interpolation-result-formula" id="interpolationResultFormula"></span>
               <span class="interpolation-result-error hidden" id="interpolationResultError"></span>
             </div>

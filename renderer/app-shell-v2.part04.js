@@ -155,11 +155,11 @@
     const kind = document.createElement('span');
     kind.className = 'item-kind';
     kind.textContent = ({
-      function: 'ƒx',
-      variable: 'var',
-      constant: 'const',
-      memory: 'mem',
-    })[item.kind] || item.kind || 'cmd';
+      function: 'ƒ',
+      variable: 'x',
+      constant: 'π',
+      memory: 'M',
+    })[item.kind] || '›';
     const label = document.createElement('span');
     label.className = 'item-label';
     label.textContent = item.label;

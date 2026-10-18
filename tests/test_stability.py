@@ -145,7 +145,7 @@ class StabilityTests(unittest.TestCase):
         self.assertIn("__nlcalcRestoreEditorFocus", html)
         self.assertIn("__nlcalcRestoreEditorFocusFromHidden", html)
         self.assertIn("При открытии скрытого окна переходить в калькулятор", html)
-        self.assertIn("Если окно уже открыто и только неактивно", html)
+        self.assertIn("Иначе остаётся последняя вкладка", html)
         self.assertIn("nlcalc-consolidated", html)
 
 

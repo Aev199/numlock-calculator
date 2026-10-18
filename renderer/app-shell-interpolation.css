@@ -55,7 +55,9 @@ body[data-app-mode="interpolation"] .workspace {
   outline: 0;
   background: var(--panel-raised);
   color: var(--text);
-  font: 11px "Cascadia Mono", "Consolas", monospace;
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   transition: border-color 80ms ease;
 }
 
@@ -107,7 +109,9 @@ body[data-app-mode="interpolation"] .workspace {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 600 17px "Cascadia Mono", "Consolas", monospace;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .interpolation-result-formula {
@@ -149,4 +153,10 @@ body[data-app-mode="interpolation"] .workspace {
   .interpolation-result strong {
     font-size: 15px;
   }
+}
+
+.interpolation-result strong.muted {
+  color: var(--subtle);
+  font-size: 13px;
+  font-weight: 500;
 }
