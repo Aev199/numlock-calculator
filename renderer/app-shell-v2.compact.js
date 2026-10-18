@@ -258,7 +258,7 @@
     `;
     const compactHelp = document.createElement('p');
     compactHelp.className = 'settings-compact-help';
-    compactHelp.textContent = 'Alt+↑ — компактный, Alt+↓ — полный, Ctrl+H — история.';
+    compactHelp.textContent = 'Alt+↑ включает, Alt+↓ выключает, Ctrl+H открывает историю.';
     section.append(compactLabel, compactHelp);
     content.prepend(section);
 

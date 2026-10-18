@@ -147,7 +147,7 @@ class CompactModeTests(unittest.TestCase):
     def test_renderer_contains_fitted_compact_layout_history_and_shortcuts(self):
         html = app_renderer.render_document(Path(app.RENDERER_DIR))
         self.assertIn('Компактный режим', html)
-        self.assertIn('Alt+↑ — компактный, Alt+↓ — полный, Ctrl+H — история.', html)
+        self.assertIn('Alt+↑ включает, Alt+↓ выключает, Ctrl+H открывает историю.', html)
         self.assertIn('data-compact-mode="true"', html)
         self.assertIn("mode !== 'calculator'", html)
         self.assertIn('compactVisibleContentHeight', html)

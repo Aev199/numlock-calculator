@@ -250,7 +250,7 @@
       }
 
       const copied = await state.api.copy_text(text);
-      showToast(copied ? 'Вычисление скопировано' : 'Не удалось открыть буфер обмена');
+      showToast(copied ? 'Скопировано' : 'Не удалось открыть буфер обмена');
     } catch (_) {
       showToast('Не удалось скопировать вычисление');
     }

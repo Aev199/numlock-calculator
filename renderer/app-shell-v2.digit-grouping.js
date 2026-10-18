@@ -149,7 +149,7 @@
   const copyTextWithoutDigitGrouping = copyText;
   copyText = async function copyTextWithDigitGroupingPreference(
     text,
-    successMessage = 'Результат скопирован',
+    successMessage = 'Скопировано',
   ) {
     return copyTextWithoutDigitGrouping(
       clipboardDigitText(text),
@@ -179,7 +179,7 @@
       ) {
         await copyText(
           displayExpression(expression),
-          'Значение скопировано',
+          'Скопировано',
         );
         return;
       }
@@ -216,7 +216,7 @@
         text = `${copyExpression(expression)} ${state.units.from_unit} = ${response.result} ${state.units.to_unit}`;
       }
 
-      await copyText(text, 'Вычисление скопировано');
+      await copyText(text, 'Скопировано');
     } catch (_) {
       showToast('Не удалось скопировать вычисление');
     }
@@ -248,7 +248,7 @@
     input.addEventListener('change', async () => {
       const enabled = input.checked;
       input.disabled = true;
-      formatStatus.textContent = 'Сохранение…';
+      formatStatus.textContent = '';
       formatStatus.className = 'hotkey-status';
       try {
         const response = await state.api.set_ui_settings({
@@ -256,7 +256,7 @@
         });
         state.ui = { ...state.ui, ...(response || {}) };
         input.checked = state.ui.group_copied_digits !== false;
-        formatStatus.textContent = 'Настройка сохранена';
+        formatStatus.textContent = '';
         formatStatus.className = 'hotkey-status success';
       } catch (_) {
         input.checked = state.ui.group_copied_digits !== false;

@@ -117,8 +117,8 @@
           <label class="format-setting">
             <span>Разделитель</span>
             <select id="decimalSeparatorSelect" class="settings-select">
-              <option value=".">Точка — 1.23</option>
-              <option value=",">Запятая — 1,23</option>
+              <option value=".">Точка (1.23)</option>
+              <option value=",">Запятая (1,23)</option>
             </select>
           </label>
         </div>
@@ -197,7 +197,7 @@
         state.settings.precision ?? 6,
       );
       precisionInput.value = String(precision);
-      setFormatStatus('Сохранение…');
+      setFormatStatus('');
       try {
         const response = await state.api.set_settings({
           number_format: formatSelect.value,
@@ -216,7 +216,7 @@
           setInputValue(state.units.expression);
           scheduleUnitsPreview(0);
         }
-        setFormatStatus('Формат сохранён', 'success');
+        setFormatStatus('');
       } catch (_) {
         setFormatStatus('Не удалось сохранить формат', 'error');
       }
@@ -229,14 +229,14 @@
     selectResultOnEnter.addEventListener('change', async () => {
       const enabled = selectResultOnEnter.checked;
       selectResultOnEnter.disabled = true;
-      setBehaviorStatus('Сохранение…');
+      setBehaviorStatus('');
       try {
         const response = await state.api.set_ui_settings({
           select_result_on_enter: enabled,
         });
         state.ui = { ...state.ui, ...(response || {}) };
         selectResultOnEnter.checked = state.ui.select_result_on_enter !== false;
-        setBehaviorStatus('Настройка сохранена', 'success');
+        setBehaviorStatus('');
       } catch (_) {
         selectResultOnEnter.checked = state.ui.select_result_on_enter !== false;
         setBehaviorStatus('Не удалось сохранить настройку', 'error');
@@ -248,14 +248,14 @@
     focusCalculatorOnRestore.addEventListener('change', async () => {
       const enabled = focusCalculatorOnRestore.checked;
       focusCalculatorOnRestore.disabled = true;
-      setBehaviorStatus('Сохранение…');
+      setBehaviorStatus('');
       try {
         const response = await state.api.set_ui_settings({
           focus_calculator_on_restore: enabled,
         });
         state.ui = { ...state.ui, ...(response || {}) };
         focusCalculatorOnRestore.checked = state.ui.focus_calculator_on_restore !== false;
-        setBehaviorStatus('Настройка сохранена', 'success');
+        setBehaviorStatus('');
       } catch (_) {
         focusCalculatorOnRestore.checked = state.ui.focus_calculator_on_restore !== false;
         setBehaviorStatus('Не удалось сохранить настройку', 'error');
@@ -267,7 +267,7 @@
     capture.addEventListener('focus', () => {
       capture.classList.add('is-listening');
       capture.value = 'Нажмите комбинацию…';
-      setStatus('Ожидание клавиш');
+      setStatus('');
     });
     capture.addEventListener('blur', () => {
       capture.classList.remove('is-listening');
@@ -297,7 +297,7 @@
     });
     save.addEventListener('click', async () => {
       save.disabled = true;
-      setStatus('Проверка и регистрация…');
+      setStatus('Проверка…');
       try {
         const response = await state.api.set_global_hotkey(pending);
         if (!response?.ok) {
@@ -308,7 +308,6 @@
         state.ui.global_hotkey = response.hotkey;
         capture.value = response.display || hotkeyDisplay(response.hotkey);
         setStatus(`Сохранено: ${response.display || hotkeyDisplay(response.hotkey)}`, 'success');
-        showToast('Глобальная клавиша изменена');
       } catch (_) {
         setStatus('Не удалось зарегистрировать комбинацию', 'error');
         save.disabled = false;

@@ -67,3 +67,22 @@
 .about-close .ui-glyph {
   margin: auto;
 }
+
+/* Toolbar controls are quiet until hovered: a row of identical framed boxes
+   competes with the expression field for attention. */
+.topbar .icon-button,
+.topbar .mode-pill,
+.editor-tools .tool-button,
+#clearHistoryButton {
+  border-color: transparent;
+  background: transparent;
+}
+
+.topbar .icon-button:hover,
+.topbar .mode-pill:hover,
+.editor-tools .tool-button:hover,
+#clearHistoryButton:hover {
+  border-color: transparent;
+  background: var(--soft-strong);
+  color: var(--text);
+}

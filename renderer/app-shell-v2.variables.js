@@ -4,7 +4,7 @@
   // the keyboard-first workflow instead of the heavier formula/profile UI.
   renderVariablesDrawer = async function () {
     dom.drawerTitle.textContent = 'Переменные и функции';
-    dom.drawerSubtitle.textContent = 'x := выражение · c(d) := pi*d^2/4';
+    dom.drawerSubtitle.textContent = 'имя := выражение';
     dom.drawerContent.replaceChildren();
 
     let userFunctions = {};
@@ -22,7 +22,7 @@
     if (!variableEntries.length && !functionEntries.length) {
       const empty = document.createElement('div');
       empty.className = 'history-empty';
-      empty.innerHTML = '<div><strong>Переменных и функций пока нет</strong>Примеры: span := 6 · c(d) := pi*d^2/4</div>';
+      empty.innerHTML = '<div><strong>Переменных и функций пока нет</strong>span := 6 или c(d) := pi*d^2/4</div>';
       dom.drawerContent.appendChild(empty);
       return;
     }

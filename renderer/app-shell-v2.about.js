@@ -12,8 +12,8 @@
       <p class="about-purpose">Калькулятор для Windows</p>
       <p class="about-license">MIT</p>
       <p class="about-origin">
-        <a class="about-link" href="https://nlcalc.narod.ru/" data-product-link>NumLock Calculator</a>
-        — Владимир Потапов
+        По мотивам <a class="about-link" href="https://nlcalc.narod.ru/" data-product-link>NumLock Calculator</a>
+        Владимира Потапова
       </p>
       <div class="about-actions">
         <a class="about-link" href="https://github.com/Aev199/numlock-calculator" data-product-link>GitHub</a>

@@ -112,7 +112,7 @@
     const values = interpolationValues();
     const text = `y(${values.x}) = ${response.result}`;
     try {
-      await copyText(text, 'Результат скопирован');
+      await copyText(text, 'Скопировано');
     } catch (_) {
       showToast('Не удалось скопировать результат');
     }

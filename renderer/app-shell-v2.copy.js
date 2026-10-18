@@ -22,7 +22,7 @@
 
     try {
       const copied = await state.api.copy_text(displayExpression(expression));
-      showToast(copied ? 'Значение скопировано' : 'Не удалось открыть буфер обмена');
+      showToast(copied ? 'Скопировано' : 'Не удалось открыть буфер обмена');
     } catch (_) {
       showToast('Не удалось скопировать значение');
     }

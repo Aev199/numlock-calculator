@@ -86,8 +86,8 @@
       const empty = document.createElement('div');
       empty.className = 'history-empty';
       empty.innerHTML = query
-        ? '<div><strong>Ничего не найдено</strong>Измените запрос</div>'
-        : '<div><strong>История пуста</strong>Введите выражение и нажмите Enter</div>';
+        ? '<div><strong>Ничего не найдено</strong></div>'
+        : '<div><strong>История пуста</strong></div>';
       dom.historyList.appendChild(empty);
       return;
     }

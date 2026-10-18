@@ -73,9 +73,7 @@
     dom.editorLabel.textContent = calculator
       ? 'Выражение'
       : units ? 'Исходное значение' : 'Интерполяция';
-    dom.input.placeholder = calculator
-      ? 'Например: (120 + 30) / 5'
-      : units ? 'Например: (100 + 25) / 2' : '';
+    dom.input.placeholder = '';
     dom.input.setAttribute(
       'aria-label',
       calculator

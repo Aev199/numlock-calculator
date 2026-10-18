@@ -12,8 +12,8 @@
 
   function renderOnboardingSlide() {
     dom.onboardingKicker.textContent = '';
-    dom.onboardingTitle.textContent = 'Клавиши NumCalc';
-    dom.onboardingDescription.textContent = 'Основные команды.';
+    dom.onboardingTitle.textContent = 'Горячие клавиши';
+    dom.onboardingDescription.textContent = '';
     dom.onboardingItems.replaceChildren();
     for (const [key, description] of ONBOARDING_SHORTCUTS) {
       const row = document.createElement('div');

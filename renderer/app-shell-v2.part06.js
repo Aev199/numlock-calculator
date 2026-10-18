@@ -62,7 +62,7 @@
     restoreEditorFocus();
   }
 
-  async function copyText(text, successMessage = 'Результат скопирован') {
+  async function copyText(text, successMessage = 'Скопировано') {
     const copied = await state.api.copy_text(text);
     showToast(
       copied ? successMessage : 'Не удалось открыть буфер обмена',
@@ -206,7 +206,7 @@
         event.stopPropagation();
         await copyText(
           `${copyExpression(entry.expression)} = ${entry.result}`,
-          'Вычисление скопировано',
+          'Скопировано',
         );
         return;
       }

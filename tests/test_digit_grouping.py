@@ -51,8 +51,8 @@ class DigitGroupingTests(unittest.TestCase):
         self.assertIn("state.ui.group_copied_digits === false", html)
         self.assertIn("Группировать разряды при копировании", html)
         self.assertIn("group_copied_digits: enabled", html)
-        self.assertIn("await copyText(text, 'Вычисление скопировано')", html)
-        self.assertIn("await copyText(text, 'Результат скопирован')", html)
+        self.assertIn("await copyText(text, 'Скопировано')", html)
+        self.assertIn("await copyText(text, 'Скопировано')", html)
 
     def test_editor_and_result_share_windows_ui_typeface(self):
         utility = (RENDERER / "app-shell-utility.css").read_text(encoding="utf-8")

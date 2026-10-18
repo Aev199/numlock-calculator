@@ -142,7 +142,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("state.mode !== 'calculator'", html)
         self.assertIn("return copyCalculationWithResult();", html)
         self.assertIn("state.api.copy_text(displayExpression(expression))", html)
-        self.assertIn("Значение скопировано", html)
+        self.assertIn("Скопировано", html)
 
     def test_formatting_settings_and_history_copy_are_exposed(self):
         app, _calls = self.make_app()
@@ -155,7 +155,7 @@ class ConsolidatedRendererTests(unittest.TestCase):
         self.assertIn("number_format: 'auto'", html)
         self.assertIn("normalized_expression", html)
         self.assertIn("copy-calculation", html)
-        self.assertIn("Вычисление скопировано", html)
+        self.assertIn("Скопировано", html)
         self.assertIn("copyExpression(entry.expression)", html)
 
     def test_enter_selection_setting_and_no_duplicate_input_repaint_are_exposed(self):

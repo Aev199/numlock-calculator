@@ -286,5 +286,5 @@
       ? state.calculator.expression
       : state.units.expression;
     const empty = state.mode === 'calculator'
-      ? 'Введите выражение'
-      : 'Введите значение';
+      ? '0'
+      : '0';
