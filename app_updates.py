@@ -296,7 +296,10 @@ class Updater:
             self.offered = found
             if not self._installable:
                 self.phase = "failed"
-                self.message = "Обновление устанавливается только в собранной Windows-версии NumCalc.exe"
+                self.message = (
+                    "Эта копия NumCalc обновляется вручную: скачайте архив со страницы выпуска. "
+                    "Сама обновляется только однофайловая NumCalc.exe."
+                )
                 return self._publish()
             self.phase = "downloading"
             self.update = found
