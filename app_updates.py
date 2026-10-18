@@ -30,9 +30,25 @@ RESTART_ARGUMENT = "--after-update="
 
 
 def can_self_update() -> bool:
-    """Only a built Windows EXE replaces itself; a source run is never "outdated"."""
+    """Only the one-file Windows EXE replaces itself.
 
-    return os.name == "nt" and bool(getattr(sys, "frozen", False))
+    A source run is never "outdated", and a one-folder build keeps its
+    libraries in ``_internal`` beside the EXE, which a new EXE would not match.
+    """
+
+    if os.name != "nt" or not getattr(sys, "frozen", False):
+        return False
+    return is_one_file_bundle(current_exe(), getattr(sys, "_MEIPASS", ""))
+
+
+def is_one_file_bundle(exe: Path, bundle: str) -> bool:
+    """A one-file EXE unpacks to a temporary folder outside its own folder."""
+
+    if not bundle:
+        return False
+    folder = os.path.normcase(os.path.abspath(exe.parent))
+    unpacked = os.path.normcase(os.path.abspath(bundle))
+    return os.path.commonpath([folder, unpacked]) != folder
 
 
 def current_exe() -> Path:

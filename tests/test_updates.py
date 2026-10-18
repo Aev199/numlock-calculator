@@ -125,6 +125,15 @@ class UpdaterTests(unittest.TestCase):
 
 
 
+class InstallabilityTests(unittest.TestCase):
+    def test_only_the_one_file_windows_build_updates_itself(self):
+        exe = Path("/apps/NumCalc/NumCalc.exe")
+        self.assertTrue(app_updates.is_one_file_bundle(exe, "/tmp/_MEI1234"))
+        self.assertFalse(app_updates.is_one_file_bundle(exe, "/apps/NumCalc/_internal"))
+        self.assertFalse(app_updates.is_one_file_bundle(exe, ""))
+        self.assertFalse(app_updates.can_self_update())
+
+
 class RendererWiringTests(unittest.TestCase):
     def test_renderer_receives_update_state_and_settings(self):
         import app_renderer
