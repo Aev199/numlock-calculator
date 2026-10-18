@@ -156,7 +156,7 @@ class UnitsModeTests(unittest.TestCase):
         payload = api.units_bootstrap()["categories"]
         force = next(item for item in payload if item["id"] == "force")
         self.assertIn(
-            {"symbol": "tf", "label": "Тонна-сила — тс"},
+            {"symbol": "tf", "label": "Тонна-сила — тс", "short": "тс"},
             force["units"],
         )
 

@@ -25,32 +25,32 @@ class ReinforcementShorthandTests(unittest.TestCase):
         result = self.engine.evaluate("d16")
         self.assertTrue(result.ok, result.error)
         self.assertEqual(result.unit, "cm2")
-        self.assertEqual(result.result, "2.010619 cm2")
+        self.assertEqual(result.result, "2.010619 см²")
         self.assertAlmostEqual(result.raw_value, 2.0106192982974678)
 
     def test_multiple_bars_return_total_square_centimetres(self):
         result = self.engine.evaluate("2d20")
         self.assertTrue(result.ok, result.error)
         self.assertEqual(result.unit, "cm2")
-        self.assertEqual(result.result, "6.283185 cm2")
+        self.assertEqual(result.result, "6.283185 см²")
 
     def test_bar_terms_without_spacing_can_be_summed(self):
         result = self.engine.evaluate("2d20+d16")
         self.assertTrue(result.ok, result.error)
         self.assertEqual(result.unit, "cm2")
-        self.assertEqual(result.result, "8.293805 cm2")
+        self.assertEqual(result.result, "8.293805 см²")
 
     def test_single_spacing_term_returns_square_centimetres_per_metre(self):
         result = self.engine.evaluate("d16s150")
         self.assertTrue(result.ok, result.error)
         self.assertEqual(result.unit, "cm2/m")
-        self.assertEqual(result.result, "13.404129 cm2/m")
+        self.assertEqual(result.result, "13.404129 см²/м")
 
     def test_multiple_spacing_terms_are_summed_per_metre(self):
         result = self.engine.evaluate("4d20s200+d16s150")
         self.assertTrue(result.ok, result.error)
         self.assertEqual(result.unit, "cm2/m")
-        self.assertEqual(result.result, "76.235982 cm2/m")
+        self.assertEqual(result.result, "76.235982 см²/м")
         self.assertAlmostEqual(result.raw_value, 76.23598172711232)
 
     def test_spaces_and_decimal_values_are_supported(self):

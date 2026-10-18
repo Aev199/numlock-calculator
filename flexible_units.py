@@ -400,7 +400,11 @@ def unit_payload() -> list[dict[str, Any]]:
             "label": category["label"],
             # Preserve the established public shape for all unit entries.
             "units": [
-                {"symbol": symbol, "label": label}
+                {
+                    "symbol": symbol,
+                    "label": label,
+                    "short": quantity_engine.unit_display_text(symbol),
+                }
                 for symbol, label in category["units"]
             ],
         }

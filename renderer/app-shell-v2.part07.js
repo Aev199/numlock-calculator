@@ -187,6 +187,16 @@
       else openPalette();
     });
 
+    // Drawers opened by mouse keep focus on their toolbar button, so Escape is
+    // handled at document level. Capture runs before the editor clears itself.
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || dom.drawerOverlay.classList.contains('hidden')) return;
+      if (event.target?.classList?.contains('is-listening')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeDrawer();
+    }, { capture: true });
+
     window.addEventListener('focus', () => {
       state.api?.window_focus_changed(true).catch(() => {});
     });

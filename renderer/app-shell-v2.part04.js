@@ -110,7 +110,9 @@
 
     window.requestAnimationFrame(() => {
       if (mode === 'interpolation') interpolationField(INTERPOLATION_FIELDS[0])?.focus();
-      else restoreEditorFocus();
+      // The units field usually holds a value carried over from the calculator;
+      // selecting it lets new input replace the value instead of appending.
+      else restoreEditorFocus(units);
     });
   }
 

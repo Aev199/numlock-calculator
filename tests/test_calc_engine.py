@@ -41,17 +41,43 @@ class CalculatorEngineTests(unittest.TestCase):
         self.assertResult('2^3%', '0.08')
 
     def test_units_and_conversion(self):
-        self.assertResult('250 kPa to MPa', '0.25 MPa')
-        self.assertResult('2 m + 30 cm to m', '2.3 m')
-        self.assertResult('10 kN / 2 m2 to kPa', '5 kPa')
-        self.assertResult('2 m / 2 s', '1 m/s')
-        self.assertResult('20 degC to K', '293.15 K')
+        self.assertResult('250 kPa to MPa', '0.25 МПа')
+        self.assertResult('2 m + 30 cm to m', '2.3 м')
+        self.assertResult('10 kN / 2 m2 to kPa', '5 кПа')
+        self.assertResult('2 m / 2 s', '1 м/с')
+        self.assertResult('20 degC to K', '293.15 К')
 
     def test_derived_units_share_the_dimensional_engine(self):
-        self.assertResult('2 m * 3 m', '6 m2')
-        self.assertResult('2 kPa + 300 Pa', '2.3 kPa')
-        self.assertResult('1 tf/m2 to kPa', '9.80665 kPa')
-        self.assertResult('4 tf/m to kgf/m', '4000 kgf/m')
+        self.assertResult('2 m * 3 m', '6 м²')
+        self.assertResult('2 kPa + 300 Pa', '2.3 кПа')
+        self.assertResult('1 tf/m2 to kPa', '9.80665 кПа')
+        self.assertResult('4 tf/m to kgf/m', '4000 кгс/м')
+
+    def test_results_use_russian_unit_notation(self):
+        self.assertResult('10 m * 3 kN', '30 кН·м')
+        self.assertResult('5 kN / 1 m2 to kN/m2', '5 кН/м²')
+        self.assertResult('3 kgf/m3', '3 кгс/м³')
+        self.assertResult('2 psi', '2 psi')
+        self.assertResult('16 mm * 16 mm', '256 мм²')
+        self.assertResult('(2 m)^3', '8 м³')
+
+    def test_displayed_units_parse_back_to_the_same_quantity(self):
+        # A committed result becomes the next expression, so every displayed
+        # unit must round-trip through the parser.
+        seen = set()
+        for unit in calc_engine.UNIT_DEFS.values():
+            if unit.symbol in seen or unit.offset or not any(unit.dimensions):
+                continue
+            if unit.symbol == 'in':  # a Python keyword, not parsable as a unit
+                continue
+            seen.add(unit.symbol)
+            with self.subTest(unit=unit.symbol):
+                first = self.engine.evaluate(f'2.5 ({unit.symbol})')
+                self.assertTrue(first.ok, first.error)
+                again = self.engine.evaluate(first.result)
+                self.assertTrue(again.ok, f'{first.result}: {again.error}')
+                self.assertEqual(again.unit, first.unit)
+                self.assertAlmostEqual(again.raw_value, first.raw_value)
 
     def test_result_exposes_common_quantity_shape(self):
         result = self.engine.evaluate('2 m * 3 m')
@@ -69,8 +95,8 @@ class CalculatorEngineTests(unittest.TestCase):
         result = self.engine.evaluate('span := 6 m', commit=True)
         self.assertTrue(result.ok, result.error)
         self.assertEqual(result.assigned_variable, 'span')
-        self.assertResult('span / 2 to m', '3 m')
-        self.assertResult('ans + 1 m to m', '4 m')
+        self.assertResult('span / 2 to m', '3 м')
+        self.assertResult('ans + 1 m to m', '4 м')
 
     def test_number_bases(self):
         self.engine.set_settings({'number_base': 'HEX'})

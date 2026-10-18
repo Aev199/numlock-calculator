@@ -46,5 +46,6 @@
     dom.resultValue.classList.add('muted');
     dom.resultError.textContent = 'Python API недоступен';
     dom.resultError.classList.remove('hidden');
+    dom.resultValue.classList.add('hidden');
   });
 })();

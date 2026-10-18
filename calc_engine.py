@@ -168,8 +168,12 @@ class Quantity:
         result = self.value**value
         if isinstance(result, complex) or not math.isfinite(float(result)):
             raise CalculationError("Результат степени не является действительным числом")
-        display_unit = self.display_unit if fraction == 1 else None
-        return Quantity(float(result), _dim_mul(self.dimensions, fraction), display_unit)
+        dimensions = _dim_mul(self.dimensions, fraction)
+        if fraction == 1:
+            display_unit = self.display_unit
+        else:
+            display_unit = _power_display_unit(self.display_unit, fraction, dimensions)
+        return Quantity(float(result), dimensions, display_unit)
 
     def __neg__(self) -> "Quantity":
         return Quantity(-self.value, self.dimensions, self.display_unit)
@@ -491,7 +495,30 @@ def _compound_display_unit(
 
     if not left or not right:
         return None
-    candidate = get_unit(f"{left}{operator_symbol}{right}")
+    candidates = [f"{left}{operator_symbol}{right}"]
+    if operator_symbol == "*":
+        if left == right:
+            # 16 mm * 16 mm stays in mm2 instead of falling back to m2.
+            return _power_display_unit(left, Fraction(2), dimensions)
+        # Engineering units are registered force-first: 10 m * 3 kN is kN*m.
+        candidates.append(f"{right}{operator_symbol}{left}")
+    for name in candidates:
+        candidate = get_unit(name)
+        if candidate and candidate.dimensions == dimensions and not candidate.offset:
+            return candidate.symbol
+    return None
+
+
+def _power_display_unit(
+    symbol: str | None,
+    exponent: Fraction,
+    dimensions: Dim,
+) -> str | None:
+    """Keep the user's length unit when squaring or cubing it: mm^2 → mm2."""
+
+    if not symbol or exponent not in (2, 3):
+        return None
+    candidate = get_unit(f"{symbol}{exponent.numerator}")
     if candidate and candidate.dimensions == dimensions and not candidate.offset:
         return candidate.symbol
     return None
@@ -517,6 +544,64 @@ def display_unit_for(quantity: Quantity) -> str | None:
     if preferred and preferred.dimensions == quantity.dimensions and not preferred.offset:
         return preferred.symbol
     return CANONICAL_UNITS.get(quantity.dimensions)
+
+
+# Russian engineering notation for result text. Symbols missing here (imperial
+# units, angles) are shown as registered. Every displayed form must parse back
+# to the same unit, because a committed result becomes the next expression.
+_UNIT_DISPLAY_COMPONENTS: dict[str, str] = {
+    "m": "м",
+    "km": "км",
+    "cm": "см",
+    "mm": "мм",
+    "kg": "кг",
+    "g": "г",
+    "t": "т",
+    "s": "с",
+    "min": "мин",
+    "h": "ч",
+    "N": "Н",
+    "kN": "кН",
+    "MN": "МН",
+    "kgf": "кгс",
+    "tf": "тс",
+    "Pa": "Па",
+    "kPa": "кПа",
+    "MPa": "МПа",
+    "GPa": "ГПа",
+    "bar": "бар",
+    "atm": "атм",
+    "L": "л",
+    "mL": "мл",
+    "ha": "га",
+    "K": "К",
+    "degC": "°C",
+    "degF": "°F",
+}
+_UNIT_EXPONENTS = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def unit_display_text(symbol: str | None) -> str | None:
+    """Return the user-facing form of a registered unit symbol: ``kN*m`` → ``кН·м``."""
+
+    if not symbol:
+        return symbol
+    parts = re.split(r"([*/])", symbol)
+    rendered: list[str] = []
+    for part in parts:
+        if part == "*":
+            rendered.append("·")
+            continue
+        if part == "/":
+            rendered.append("/")
+            continue
+        match = re.fullmatch(r"([A-Za-z]+)([2-9]?)", part)
+        if not match or match.group(1) not in _UNIT_DISPLAY_COMPONENTS:
+            rendered.append(part)
+            continue
+        base, exponent = match.groups()
+        rendered.append(_UNIT_DISPLAY_COMPONENTS[base] + exponent.translate(_UNIT_EXPONENTS))
+    return "".join(rendered)
 
 
 def _split_conversion(expression: str) -> tuple[str, str | None]:
@@ -987,7 +1072,7 @@ class CalculatorSession:
             self.settings.number_format,
             self.settings.decimal_separator,
         )
-        return f"{text} {explicit_unit}" if explicit_unit else text
+        return f"{text} {unit_display_text(explicit_unit)}" if explicit_unit else text
 
     def serialize_quantity(self, value: Quantity) -> dict[str, Any]:
         return {

@@ -71,4 +71,25 @@
         closeOnboarding();
       }
     });
+    // While the card is open, keys must not reach the editor or open the palette.
+    document.addEventListener('keydown', event => {
+      if (dom.onboardingOverlay.classList.contains('hidden')) return;
+      if (dom.onboardingOverlay.contains(event.target)) {
+        if (event.key !== 'Tab') return;
+        const focusable = [...dom.onboardingOverlay.querySelectorAll('button:not([disabled]):not(.hidden)')]
+          .filter(element => element.offsetParent !== null);
+        if (!focusable.length) return;
+        const index = focusable.indexOf(document.activeElement);
+        const next = event.shiftKey
+          ? (index <= 0 ? focusable.length - 1 : index - 1)
+          : (index + 1) % focusable.length;
+        event.preventDefault();
+        focusable[next].focus();
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.key === 'Escape') closeOnboarding();
+      else dom.onboardingNext.focus();
+    }, { capture: true });
   }

@@ -4,6 +4,7 @@
       dom.resultValue.classList.add('muted');
       dom.resultError.textContent = '';
       dom.resultError.classList.add('hidden');
+      dom.resultValue.classList.remove('hidden');
       return;
     }
 
@@ -13,15 +14,18 @@
       if (evaluation?.incomplete) {
         dom.resultError.textContent = '';
         dom.resultError.classList.add('hidden');
+        dom.resultValue.classList.remove('hidden');
       } else {
+        // The message replaces the placeholder dash so the block keeps one line.
         dom.resultError.textContent = evaluation?.error || 'Ошибка вычисления';
         dom.resultError.classList.remove('hidden');
+        dom.resultValue.classList.add('hidden');
       }
       return;
     }
 
     dom.resultValue.textContent = String(evaluation.result);
-    dom.resultValue.classList.remove('muted');
+    dom.resultValue.classList.remove('muted', 'hidden');
     dom.resultError.textContent = '';
     dom.resultError.classList.add('hidden');
   }
@@ -147,8 +151,13 @@
     const units = currentUnitCategory()?.units || [];
     fillSelect(dom.sourceUnit, units, state.units.from_unit);
     fillSelect(dom.targetUnit, units, state.units.to_unit);
-    dom.sourceBadge.textContent = state.units.from_unit;
-    dom.targetBadge.textContent = state.units.to_unit;
+    dom.sourceBadge.textContent = unitBadgeText(state.units.from_unit);
+    dom.targetBadge.textContent = unitBadgeText(state.units.to_unit);
+  }
+
+  function unitBadgeText(symbol) {
+    const unit = (currentUnitCategory()?.units || []).find(item => item.symbol === symbol);
+    return unit?.short || symbol;
   }
 
   function persistUnitsSoon() {

@@ -165,7 +165,7 @@
       card?.querySelector('.compound-unit-picker')?.remove();
       select.classList.toggle('compound-unit-hidden', Boolean(category));
       if (!category || !card) {
-        badge.textContent = selected;
+        badge.textContent = unitBadgeText(selected);
         continue;
       }
       const builder = buildCompoundPicker(category, select, selected);

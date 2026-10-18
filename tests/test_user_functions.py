@@ -96,7 +96,7 @@ class UserFunctionTests(unittest.TestCase):
     def test_parameters_can_have_units_and_result_can_be_converted(self):
         self.define("c(d)=pi*d^2/4")
         result = self.evaluate("c(20 mm) to mm2")
-        self.assertEqual(result.result, "314.159265 mm2")
+        self.assertEqual(result.result, "314.159265 мм²")
         self.assertEqual(result.unit, "mm2")
 
     def test_function_uses_current_variables_and_restores_parameter_shadowing(self):

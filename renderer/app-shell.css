@@ -493,7 +493,7 @@ body[data-app-mode="units"] .result-unit-badge {
 
 .result-error {
   color: var(--danger);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.35;
 }
 

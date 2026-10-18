@@ -79,14 +79,14 @@ class StorageAndApiTests(unittest.TestCase):
             api = app.AppApi(storage)
             preview = api.preview('250 kPa to MPa')
             self.assertTrue(preview['ok'], preview['error'])
-            self.assertEqual(preview['result'], '0.25 MPa')
+            self.assertEqual(preview['result'], '0.25 МПа')
             self.assertTrue(api.preview('span := 6 m')['ok'])
             self.assertNotIn('span', api.bootstrap()['variables'])
             committed = api.commit('span := 6 m')
             self.assertTrue(committed['ok'], committed['error'])
             self.assertIn('history_entry', committed)
             restored = app.AppApi(storage).bootstrap()
-            self.assertEqual(restored['variables']['span'], '6 m')
+            self.assertEqual(restored['variables']['span'], '6 м')
             self.assertEqual(len(restored['history']), 1)
 
     def test_delete_variable_persists_and_refreshes_suggestions(self):

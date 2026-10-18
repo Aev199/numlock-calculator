@@ -232,7 +232,11 @@ def unit_payload() -> list[dict[str, Any]]:
             "id": category["id"],
             "label": category["label"],
             "units": [
-                {"symbol": symbol, "label": label}
+                {
+                    "symbol": symbol,
+                    "label": label,
+                    "short": quantity_engine.unit_display_text(symbol),
+                }
                 for symbol, label in category["units"]
             ],
         }
