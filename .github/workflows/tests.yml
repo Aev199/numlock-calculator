@@ -35,7 +35,7 @@ jobs:
           collect_third_party_licenses.py generate_version_info.py
           hotkey_config.py input_normalization.py interpolation.py
           number_formatting.py product_info.py unit_conversion.py flexible_units.py
-          calc_engine.py calc_engine_runtime.py
+          calc_engine.py calc_engine_runtime.py update_core.py app_updates.py
           tools/audit_public_history.py tools/verify_windows_manifest.py
       - name: Verify generated product metadata
         run: |

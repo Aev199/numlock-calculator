@@ -33,6 +33,7 @@ import app_single_instance
 import app_storage
 import app_tray
 import app_units_backend
+import app_updates
 import app_user_functions
 import app_variables
 import app_vertical_resize
@@ -47,7 +48,9 @@ import app_window
 # after the tray defaults so pywebview's 1 px DWM shadow frame is disabled
 # without affecting the custom bottom resize grip. The renderer remains the
 # sole owner of HTML/CSS/JavaScript. Diagnostics wrap the final runtime, while
-# the outer process guard prevents duplicate hooks, trays and writes.
+# the outer process guard prevents duplicate hooks, trays and writes. Update
+# checks start inside the guard; a restarted EXE first waits, outside the
+# guard, for the process it replaced to exit.
 app_product.install(app, app_tray)
 app_clipboard_settings.install(app)
 app_user_functions.install(app)
@@ -62,8 +65,10 @@ app_units_backend.install(app)
 app_variables.install(app)
 app_formulas.install(app)
 app_renderer.install(app)
+app_updates.install(app)
 app_diagnostics.install(app)
 app_single_instance.install(app)
+app_updates.install_restart_wait(app)
 
 
 if __name__ == "__main__":

@@ -28,6 +28,7 @@ STYLE_PARTS = (
     "app-shell-icons.css",
     "app-shell-compact.css",
     "app-shell-flexible-units.css",
+    "app-shell-updates.css",
     "app-shell-utility.css",
 )
 SCRIPT_PARTS = (
@@ -53,6 +54,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.icons.js",
     "app-shell-v2.compact.js",
     "app-shell-v2.compact-palette-fit.js",
+    "app-shell-v2.updates.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",

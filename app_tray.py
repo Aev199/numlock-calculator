@@ -198,6 +198,11 @@ def install(app: Any) -> None:
 
         run_async(copy)
 
+    def check_updates_from_tray(_icon: Any = None, _item: Any = None) -> None:
+        check = getattr(app, "check_updates_from_tray", None)
+        if check is not None:
+            run_async(check)
+
     def quit_from_tray(icon: Any = None, _item: Any = None) -> None:
         if icon is not None:
             try:
@@ -225,6 +230,7 @@ def install(app: Any) -> None:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Справка", show_help),
                 pystray.MenuItem("О программе", show_about),
+                pystray.MenuItem("Проверить обновления", check_updates_from_tray),
                 pystray.MenuItem("Копировать диагностику", copy_diagnostics_from_tray),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Выйти", quit_from_tray),

@@ -17,6 +17,7 @@
       </p>
       <div class="about-actions">
         <a class="about-link" href="https://github.com/Aev199/numlock-calculator" data-product-link>GitHub</a>
+        <button class="about-link about-check" type="button">Проверить обновления</button>
       </div>
     </section>
   `;
