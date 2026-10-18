@@ -122,6 +122,19 @@ jobs:
           }
 
           "PACKAGE_NAME=$packageName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      # In-app updates read NumCalc.exe and latest.json (version, commit,
+      # channel, SHA-256, CHANGELOG notes) straight from the release assets.
+      - name: Write update manifest
+        shell: pwsh
+        run: |
+          Copy-Item -LiteralPath 'dist\NumCalc.exe' -Destination 'release\NumCalc.exe'
+          python tools/release_manifest.py release/NumCalc.exe --output release/latest.json --commit $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $manifest = Get-Content -Raw -Encoding utf8 'release\latest.json' | ConvertFrom-Json
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath 'release\NumCalc.exe').Hash.ToLower()
+          if ($manifest.sha256 -ne $hash) {
+            throw 'latest.json does not match NumCalc.exe'
+          }
       - name: Upload release candidate artifact
         if: github.event_name == 'workflow_dispatch' && inputs.upload_artifact
         uses: actions/upload-artifact@v4
@@ -130,6 +143,8 @@ jobs:
           path: |
             release/${{ env.PACKAGE_NAME }}.zip
             release/${{ env.PACKAGE_NAME }}.zip.sha256.txt
+            release/NumCalc.exe
+            release/latest.json
           if-no-files-found: error
           retention-days: 1
       - name: Publish GitHub Release
@@ -138,9 +153,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A tag with a suffix (v1.5.0-beta.1) reaches only the beta channel.
+          $flags = @()
+          if ($env:GITHUB_REF_NAME.Contains('-')) { $flags += '--prerelease' }
           gh release create $env:GITHUB_REF_NAME `
             "release/$env:PACKAGE_NAME.zip" `
             "release/$env:PACKAGE_NAME.zip.sha256.txt" `
+            "release/NumCalc.exe" `
+            "release/latest.json" `
             --verify-tag `
             --title "NumCalc $env:GITHUB_REF_NAME" `
-            --notes-file RELEASE_NOTES.md
+            --notes-file RELEASE_NOTES.md @flags
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

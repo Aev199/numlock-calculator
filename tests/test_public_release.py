@@ -132,6 +132,15 @@ class PublicReleaseTests(unittest.TestCase):
         self.assertNotIn("--no-binary=:all:", workflow)
         self.assertIn("THIRD_PARTY_NOTICES.md", workflow)
 
+    def test_release_workflow_publishes_update_assets(self):
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("tools/release_manifest.py", workflow)
+        self.assertIn('"release/NumCalc.exe"', workflow)
+        self.assertIn('"release/latest.json"', workflow)
+        self.assertIn("--prerelease", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
