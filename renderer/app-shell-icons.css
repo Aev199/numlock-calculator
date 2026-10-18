@@ -33,3 +33,37 @@
   width: 13px;
   height: 13px;
 }
+
+.brand-logo {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.brand-logo rect {
+  fill: #526dff;
+}
+
+.brand-logo path {
+  fill: #f8faff;
+}
+
+.brand-mark:has(.brand-logo) {
+  background: transparent;
+}
+
+#aboutTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#aboutTitle .brand-logo {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.about-close .ui-glyph {
+  margin: auto;
+}

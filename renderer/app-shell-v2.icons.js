@@ -20,6 +20,14 @@
     formulas: utilityIcon('<path d="M12 3.25H4.25L8.5 8l-4.25 4.75H12"></path>'),
   };
 
+  // Same outline as app_icon.py, so the window, tray and EXE share one logo.
+  const brandLogo = `
+    <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <rect x="3" y="3" width="58" height="58" rx="14"></rect>
+      <path d="M17 47V17h8l14 18.5V17h8v30h-8L25 28.5V47Z"></path>
+    </svg>
+  `;
+
   function setUtilityIcon(element, icon) {
     if (!element || !icon) return;
     element.innerHTML = icon;
@@ -33,6 +41,14 @@
   setUtilityIcon(document.getElementById('swapUnitsButton'), utilityIcons.swap);
   setUtilityIcon(document.getElementById('drawerClose'), utilityIcons.close);
   setUtilityIcon(document.getElementById('onboardingClose'), utilityIcons.close);
+  document.querySelectorAll('.brand-mark').forEach(element => {
+    element.innerHTML = brandLogo;
+  });
+  const aboutTitle = document.getElementById('aboutTitle');
+  if (aboutTitle && !aboutTitle.querySelector('.brand-logo')) {
+    aboutTitle.insertAdjacentHTML('afterbegin', brandLogo);
+  }
+  setUtilityIcon(document.querySelector('.about-close'), utilityIcons.close);
   setUtilityIcon(document.getElementById('paletteButton'), utilityIcons.functions);
   setUtilityIcon(document.getElementById('memoryButton'), utilityIcons.memory);
   setUtilityIcon(document.getElementById('variablesButton'), utilityIcons.variables);

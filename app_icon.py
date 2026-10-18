@@ -11,29 +11,32 @@ ICON_FOREGROUND = (248, 250, 255, 255)
 WINDOWS_ICON_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
 
+# The N is one closed outline on a 64-unit grid. Drawing it as a single polygon
+# avoids the notches that appear where separate thick lines meet.
+_GLYPH = (
+    (17, 47), (17, 17), (25, 17), (39, 35.5), (39, 17),
+    (47, 17), (47, 47), (39, 47), (25, 28.5), (25, 47),
+)
+_SUPERSAMPLE = 4
+
+
 def create_icon_image(size: int = 64) -> Any:
     """Draw the rounded blue NumCalc tile with the white N glyph."""
 
     from PIL import Image, ImageDraw
 
     size = max(16, int(size))
-    scale = size / 64.0
-    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    canvas = size * _SUPERSAMPLE
+    scale = canvas / 64.0
+    image = Image.new("RGBA", (canvas, canvas), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-
-    def point(value: float) -> int:
-        return round(value * scale)
-
     draw.rounded_rectangle(
-        (point(3), point(3), point(61), point(61)),
-        radius=point(15),
+        (3 * scale, 3 * scale, 61 * scale - 1, 61 * scale - 1),
+        radius=14 * scale,
         fill=ICON_BACKGROUND,
     )
-    width = max(2, point(7))
-    draw.line((point(18), point(46), point(18), point(18)), fill=ICON_FOREGROUND, width=width)
-    draw.line((point(18), point(18), point(46), point(46)), fill=ICON_FOREGROUND, width=width)
-    draw.line((point(46), point(46), point(46), point(18)), fill=ICON_FOREGROUND, width=width)
-    return image
+    draw.polygon([(x * scale, y * scale) for x, y in _GLYPH], fill=ICON_FOREGROUND)
+    return image.resize((size, size), Image.Resampling.LANCZOS)
 
 
 def write_windows_icon(path: str | Path) -> Path:
