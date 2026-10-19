@@ -64,6 +64,8 @@ def main() -> int:
     parser.add_argument("--version", default=APP_VERSION)
     parser.add_argument("--commit", default="")
     arguments = parser.parse_args()
+    # Windows runners print through cp1252; the notes are Cyrillic.
+    sys.stdout.reconfigure(encoding="utf-8")
     commit = arguments.commit or subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT,
     ).stdout.strip()
