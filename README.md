@@ -104,6 +104,6 @@ py -3 -m venv .venv
 .venv\Scripts\python app_keyboard.py
 ```
 
-Тесты — `python -m unittest discover -s tests`, сборка EXE — `build.bat`. Выпуск собирается сам при публикации тега `vX.Y.Z`, перед ним проходится [ручная проверка в Windows](docs/WINDOWS_ACCEPTANCE.md).
+Тесты — `python -m unittest discover -s tests`, сборка EXE — `build.bat`. Выпуск собирает workflow `release`: по тегу `vX.Y.Z` или ручным запуском с флажком «publish», который сам ставит тег по версии из `product_info.py`. Перед выпуском проходится [ручная проверка в Windows](docs/WINDOWS_ACCEPTANCE.md).
 
 Код распространяется по лицензии [MIT](LICENSE), лицензии сторонних компонентов — в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Репозиторий: https://github.com/Aev199/numlock-calculator

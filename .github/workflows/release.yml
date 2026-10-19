@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      publish:
+        description: Publish v<APP_VERSION> from this commit (creates the tag)
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -148,20 +153,30 @@ jobs:
           if-no-files-found: error
           retention-days: 1
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.publish
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A pushed tag is published as is; a manual run creates v<APP_VERSION>
+          # on the built commit and refuses to overwrite an existing release.
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $tag = $env:GITHUB_REF_NAME
+            $target = @('--verify-tag')
+          } else {
+            $tag = 'v' + (python -c "from product_info import APP_VERSION; print(APP_VERSION)")
+            gh release view $tag *> $null
+            if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists" }
+            $target = @('--target', $env:GITHUB_SHA)
+          }
           # A tag with a suffix (v1.5.0-beta.1) reaches only the beta channel.
           $flags = @()
-          if ($env:GITHUB_REF_NAME.Contains('-')) { $flags += '--prerelease' }
-          gh release create $env:GITHUB_REF_NAME `
+          if ($tag.Contains('-')) { $flags += '--prerelease' }
+          gh release create $tag `
             "release/$env:PACKAGE_NAME.zip" `
             "release/$env:PACKAGE_NAME.zip.sha256.txt" `
             "release/NumCalc.exe" `
             "release/latest.json" `
-            --verify-tag `
-            --title "NumCalc $env:GITHUB_REF_NAME" `
-            --notes-file RELEASE_NOTES.md @flags
+            --title "NumCalc $tag" `
+            --notes-file RELEASE_NOTES.md @target @flags
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
