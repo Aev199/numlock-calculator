@@ -136,6 +136,42 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(core.downloaded_update(path, version).sha256, core.sha256_hex(b"MZ"))
 
 
+def version_resource(product_version, fixed=(1, 4, 2)):
+    """A minimal VS_VERSION_INFO laid out like the one PyInstaller embeds."""
+
+    data = bytearray(b"MZ" + b"\x00" * 62)
+    data += "VS_VERSION_INFO".encode("utf-16-le") + b"\x00\x00"
+    while len(data) % 4:
+        data += b"\x00"
+    data += b"\xbd\x04\xef\xfe" + (0x10000).to_bytes(4, "little")
+    data += ((fixed[0] << 16) | fixed[1]).to_bytes(4, "little")
+    data += (fixed[2] << 16).to_bytes(4, "little")
+    data += b"\x00" * 64
+    if product_version is not None:
+        data += "ProductVersion".encode("utf-16-le") + b"\x00\x00"
+        while len(data) % 4:
+            data += b"\x00"
+        data += product_version.encode("utf-16-le") + b"\x00\x00"
+    return bytes(data + b"\x00" * 32)
+
+
+class ExeVersionTests(unittest.TestCase):
+    def test_prerelease_suffix_is_read_from_the_version_string(self):
+        self.assertEqual(core.version_from_resource(version_resource("1.4.2-beta.2")), "1.4.2-beta.2")
+        self.assertEqual(core.version_from_resource(version_resource("1.4.2")), "1.4.2")
+
+    def test_numbers_are_the_fallback(self):
+        self.assertEqual(core.version_from_resource(version_resource(None, (1, 3, 0))), "1.3.0")
+        self.assertIsNone(core.version_from_resource(b"MZ not a versioned exe"))
+
+    def test_exe_file_is_read_from_disk(self):
+        with tempfile.TemporaryDirectory() as directory:
+            exe = Path(directory) / "NumCalc (2).exe"
+            exe.write_bytes(version_resource("1.4.2-beta.2"))
+            self.assertEqual(core.exe_version(exe), "1.4.2-beta.2")
+            self.assertIsNone(core.exe_version(Path(directory) / "missing.exe"))
+
+
 class TransportTests(unittest.TestCase):
     def test_powershell_route_is_encoded_safely(self):
         self.assertEqual(core.encode_command("abc"), "YQBiAGMA")

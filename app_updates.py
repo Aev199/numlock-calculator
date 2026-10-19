@@ -219,12 +219,19 @@ class Updater:
         return self.snapshot()
 
     def _find(self, online: bool) -> tuple[str, Any]:
+        """Ask every source and offer the newest version among them.
+
+        A file in Downloads must not hide a newer release, and with equal
+        versions a release (with notes and a published hash) wins over it.
+        """
+
+        candidates: list[core.Update] = []
         downloads = self._downloads()
         if downloads is not None:
             found = core.find_downloaded(downloads, APP_VERSION, self._version_of)
             if found:
                 try:
-                    return "found", core.downloaded_update(*found)
+                    candidates.append(core.downloaded_update(*found))
                 except OSError:
                     pass
         folder = self.folder()
@@ -233,24 +240,28 @@ class Updater:
             try:
                 found = core.check_folder(folder, APP_VERSION)
                 if found:
-                    return "found", found
-                if not online:
-                    return "latest", None
+                    candidates.append(found)
             except core.UpdateError as error:
                 folder_error = str(error)
-        if not online:
-            return ("failed", folder_error) if folder_error else ("latest", None)
-        try:
-            found = core.check(APP_VERSION, self.channel, self._fetch)
-        except core.UpdateError as error:
-            if folder is not None and not folder_error:
-                # A shared folder that is up to date answers for the network.
-                return "latest", None
-            if error.answered:
-                return "failed", str(error)
-            reason = f"{error}. Папка обновлений: {folder_error}" if folder_error else str(error)
-            return "blocked", reason
-        return ("found", found) if found else ("latest", None)
+        network_error: core.UpdateError | None = None
+        if online:
+            try:
+                found = core.check(APP_VERSION, self.channel, self._fetch)
+                if found:
+                    candidates.append(found)
+            except core.UpdateError as error:
+                network_error = error
+        if candidates:
+            return "found", newest(candidates)
+        if not online or network_error is None:
+            return ("failed", folder_error) if folder_error and not online else ("latest", None)
+        if folder is not None and not folder_error:
+            # A shared folder that is up to date answers for the network.
+            return "latest", None
+        if network_error.answered:
+            return "failed", str(network_error)
+        reason = f"{network_error}. Папка обновлений: {folder_error}" if folder_error else str(network_error)
+        return "blocked", reason
 
     def _run_check(self, manual: bool, online: bool) -> None:
         try:
@@ -390,6 +401,18 @@ class Updater:
 
     def restart_command(self) -> list[str]:
         return [str(self._exe), f"{RESTART_ARGUMENT}{os.getpid()}"]
+
+
+def newest(candidates: list[core.Update]) -> core.Update:
+    """The newest update; with equal versions a release beats a local file."""
+
+    best = candidates[0]
+    for candidate in candidates[1:]:
+        order = core.compare_versions(candidate.version, best.version)
+        released = candidate.exe_url.startswith("https://")
+        if order > 0 or (order == 0 and released and not best.exe_url.startswith("https://")):
+            best = candidate
+    return best
 
 
 def wait_for_previous_process(argv: list[str], timeout: float = 15.0) -> None:

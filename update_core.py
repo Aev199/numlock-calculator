@@ -14,7 +14,6 @@ Nothing here touches the UI; the network call is injected so tests stay local.
 from __future__ import annotations
 
 import base64
-import ctypes
 import hashlib
 import html
 import json
@@ -383,27 +382,50 @@ def downloads_dir() -> Path | None:
     return home / "Downloads" if home else None
 
 
-def exe_version(path: Path) -> str | None:
-    """The version in an EXE's file properties ("1.4.0")."""
+_VERSION_KEY = "ProductVersion".encode("utf-16-le") + b"\x00\x00"
+_VERSION_INFO = "VS_VERSION_INFO".encode("utf-16-le")
+_FIXED_INFO_SIGNATURE = b"\xbd\x04\xef\xfe"
+# The version resource sits in the bootloader part of the EXE, well inside this.
+_VERSION_SCAN_BYTES = 4 * 1024 * 1024
 
-    if os.name != "nt":
+
+def version_from_resource(data: bytes) -> str | None:
+    """The ProductVersion string of a version resource, suffix included.
+
+    The numeric file version drops prerelease suffixes, so 1.4.2-beta.1 and
+    1.4.2 would look the same; the string keeps them apart. The numbers are
+    the fallback for an EXE without the string.
+    """
+
+    start = data.find(_VERSION_INFO)
+    if start < 0:
         return None
-    version = ctypes.windll.version  # type: ignore[attr-defined]
-    name = str(path)
-    size = version.GetFileVersionInfoSizeW(name, None)
-    if not size:
+    key = data.find(_VERSION_KEY, start, start + 16384)
+    if key >= 0:
+        position = key + len(_VERSION_KEY)
+        position += (-position) % 4
+        end = position
+        while end + 1 < len(data) and data[end:end + 2] != b"\x00\x00":
+            end += 2
+        value = data[position:end].decode("utf-16-le", "replace").strip()
+        if parse_version(value):
+            return value
+    fixed = data.find(_FIXED_INFO_SIGNATURE, start, start + 16384)
+    if fixed < 0 or fixed + 16 > len(data):
         return None
-    data = ctypes.create_string_buffer(size)
-    if not version.GetFileVersionInfoW(name, 0, size, data):
-        return None
-    pointer = ctypes.c_void_p()
-    length = ctypes.c_uint()
-    if not version.VerQueryValueW(data, "\\", ctypes.byref(pointer), ctypes.byref(length)) or not pointer:
-        return None
-    # VS_FIXEDFILEINFO: signature, struct version, then FileVersionMS / LS.
-    fields = ctypes.cast(pointer, ctypes.POINTER(ctypes.c_uint32 * 4)).contents
-    ms, ls = fields[2], fields[3]
+    ms = int.from_bytes(data[fixed + 8:fixed + 12], "little")
+    ls = int.from_bytes(data[fixed + 12:fixed + 16], "little")
     return f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}"
+
+
+def exe_version(path: Path) -> str | None:
+    """The version in an EXE's file properties ("1.4.2-beta.1")."""
+
+    try:
+        with open(path, "rb") as handle:
+            return version_from_resource(handle.read(_VERSION_SCAN_BYTES))
+    except OSError:
+        return None
 
 
 def find_downloaded(

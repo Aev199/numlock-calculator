@@ -119,6 +119,38 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual(self.exe.read_bytes(), b"MZ current")
         self.assertIsNone(updater.start_background_checks(lambda: True))
 
+    def updater_with_download(self, version):
+        downloads = self.root / "Downloads"
+        downloads.mkdir()
+        (downloads / "NumCalc (2).exe").write_bytes(b"MZ beta")
+        return app_updates.Updater(
+            self.storage, self.states.append, fetch=self.fetch, exe=self.exe,
+            downloads=lambda: downloads, version_of=lambda _path: version, installable=True,
+        )
+
+    def test_a_beta_in_downloads_does_not_hide_the_release(self):
+        updater = self.updater_with_download(f"{NEXT}-beta.2")
+        updater.check(manual=True, wait=True)
+        self.assertEqual(updater.update.version, NEXT)
+        self.assertTrue(updater.update.exe_url.startswith("https://"))
+
+    def test_the_release_wins_over_the_same_version_in_downloads(self):
+        updater = self.updater_with_download(NEXT)
+        updater.check(manual=True, wait=True)
+        self.assertTrue(updater.update.exe_url.startswith("https://"))
+
+    def test_a_newer_file_in_downloads_is_still_offered(self):
+        updater = self.updater_with_download("100.0.0")
+        updater.check(manual=True, wait=True)
+        self.assertEqual(updater.update.version, "100.0.0")
+
+    def test_the_installed_build_in_downloads_is_not_offered_again(self):
+        self.online = False
+        updater = self.updater_with_download(APP_VERSION)
+        updater.check(manual=True, wait=True)
+        self.assertEqual(updater.phase, "blocked")
+        self.assertIsNone(updater.update)
+
     def test_restart_command_names_the_old_process(self):
         command = self.updater().restart_command()
         self.assertEqual(command[0], str(self.exe))
