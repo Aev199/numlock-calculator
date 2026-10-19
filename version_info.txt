@@ -18,12 +18,12 @@ VSVersionInfo(
         [
           StringStruct('CompanyName', 'Aev199'),
           StringStruct('FileDescription', 'Компактный keyboard-first инженерный калькулятор для Windows'),
-          StringStruct('FileVersion', '1.4.2-beta.2'),
+          StringStruct('FileVersion', '1.4.2'),
           StringStruct('InternalName', 'NumCalc'),
           StringStruct('LegalCopyright', 'Copyright © 2026 Aev199'),
           StringStruct('OriginalFilename', 'NumCalc.exe'),
           StringStruct('ProductName', 'NumCalc'),
-          StringStruct('ProductVersion', '1.4.2-beta.2')
+          StringStruct('ProductVersion', '1.4.2')
         ]
       )
     ]),
