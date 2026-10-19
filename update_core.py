@@ -109,7 +109,27 @@ def compare_versions(left: str, right: str) -> int:
     pre_a, pre_b = is_prerelease(left), is_prerelease(right)
     if pre_a != pre_b:
         return -1 if pre_a else 1
+    if pre_a:
+        return _compare_suffixes(_suffix(left), _suffix(right))
     return 0
+
+
+def _suffix(text: str) -> list[str]:
+    return str(text).strip().split("-", 1)[1].split(".")
+
+
+def _compare_suffixes(a: list[str], b: list[str]) -> int:
+    """``beta.2`` > ``beta.1``, ``rc.1`` > ``beta.9``: numbers numerically, words by name."""
+
+    for x, y in zip(a, b):
+        if x == y:
+            continue
+        if x.isdigit() and y.isdigit():
+            return 1 if int(x) > int(y) else -1
+        if x.isdigit() != y.isdigit():
+            return -1 if x.isdigit() else 1
+        return 1 if x > y else -1
+    return (len(a) > len(b)) - (len(a) < len(b))
 
 
 def releases_url() -> str:

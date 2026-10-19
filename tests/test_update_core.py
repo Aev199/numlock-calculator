@@ -36,6 +36,10 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(core.compare_versions("1.4.2-beta.1", "1.4.2"), -1)
         self.assertEqual(core.compare_versions("1.4.2", "1.4.2-beta.1"), 1)
         self.assertEqual(core.compare_versions("1.4.2-beta.1", "1.4.1"), 1)
+        self.assertEqual(core.compare_versions("1.4.2-beta.2", "1.4.2-beta.1"), 1)
+        self.assertEqual(core.compare_versions("1.4.2-beta.10", "1.4.2-beta.9"), 1)
+        self.assertEqual(core.compare_versions("1.4.2-rc.1", "1.4.2-beta.9"), 1)
+        self.assertEqual(core.compare_versions("1.4.2-beta.2", "1.4.2-beta.2"), 0)
 
     def test_channel_picks_newest_complete_release(self):
         beta = core.pick_release(LISTING, core.BETA)
