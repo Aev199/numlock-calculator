@@ -93,13 +93,22 @@ def parse_version(text: str) -> list[int]:
     return numbers
 
 
+def is_prerelease(text: str) -> bool:
+    return "-" in str(text).strip()
+
+
 def compare_versions(left: str, right: str) -> int:
+    """Numeric comparison; with equal numbers ``1.4.2-beta.1`` precedes ``1.4.2``."""
+
     a, b = parse_version(left), parse_version(right)
     for index in range(max(len(a), len(b))):
         x = a[index] if index < len(a) else 0
         y = b[index] if index < len(b) else 0
         if x != y:
             return 1 if x > y else -1
+    pre_a, pre_b = is_prerelease(left), is_prerelease(right)
+    if pre_a != pre_b:
+        return -1 if pre_a else 1
     return 0
 
 
