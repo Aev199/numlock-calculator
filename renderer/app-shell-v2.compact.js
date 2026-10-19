@@ -2,11 +2,7 @@
   state.ui.compact_mode = state.ui.compact_mode === true;
 
   const COMPACT_OVERLAY_HEIGHT = 340;
-  // Matches the fade in app-shell-compact.css; the native window animates its
-  // height afterwards, so content and window never change size at once.
-  const COMPACT_FADE_MS = 160;
   let compactResizeFrame = null;
-  let compactTransitionEpoch = 0;
 
   function compactModeEnabled() {
     return state.ui.compact_mode === true;
@@ -32,13 +28,8 @@
     return Math.max(160, height);
   }
 
-  function compactTransitionActive() {
-    return document.body.classList.contains('compact-collapsing')
-      || document.body.classList.contains('compact-expanding');
-  }
-
   function scheduleCompactWindowFit() {
-    if (!compactModeEnabled() || compactOverlayOpen() || compactTransitionActive()) return;
+    if (!compactModeEnabled() || compactOverlayOpen()) return;
     window.cancelAnimationFrame(compactResizeFrame);
     compactResizeFrame = window.requestAnimationFrame(() => {
       compactResizeFrame = null;
@@ -50,53 +41,11 @@
     });
   }
 
-  // Overlays stay invisible until the window has grown for them, then fade in.
   function expandCompactForOverlay() {
     if (!compactModeEnabled()) return;
     window.cancelAnimationFrame(compactResizeFrame);
     compactResizeFrame = null;
-    document.body.classList.add('compact-overlay-pending');
-    const reveal = () => document.body.classList.remove('compact-overlay-pending');
-    const growing = state.api?.set_compact_window?.(true, COMPACT_OVERLAY_HEIGHT);
-    if (growing?.then) growing.then(reveal, reveal);
-    else reveal();
-    window.setTimeout(reveal, 600);
-  }
-
-  function waitMs(ms) {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
-  }
-
-  function nextFrame() {
-    return new Promise(resolve => window.requestAnimationFrame(() => resolve()));
-  }
-
-  // Full -> compact: tabs and history fade out, then the window shrinks.
-  async function collapseToCompact() {
-    const epoch = ++compactTransitionEpoch;
-    document.body.classList.remove('compact-expanding');
-    document.body.classList.add('compact-collapsing');
-    await waitMs(COMPACT_FADE_MS);
-    if (epoch !== compactTransitionEpoch) return;
-    document.body.dataset.compactMode = 'true';
-    await nextFrame();
-    try {
-      await state.api.set_compact_window(true, compactVisibleContentHeight());
-    } catch (_) {}
-    if (epoch === compactTransitionEpoch) document.body.classList.remove('compact-collapsing');
-  }
-
-  // Compact -> full: the window grows first, then tabs and history fade in.
-  async function expandFromCompact() {
-    const epoch = ++compactTransitionEpoch;
-    document.body.classList.remove('compact-collapsing');
-    document.body.classList.add('compact-expanding');
-    document.body.dataset.compactMode = 'false';
-    try {
-      await state.api.set_compact_window(false);
-    } catch (_) {}
-    await nextFrame();
-    if (epoch === compactTransitionEpoch) document.body.classList.remove('compact-expanding');
+    state.api?.set_compact_window?.(true, COMPACT_OVERLAY_HEIGHT).catch?.(() => {});
   }
 
   async function persistCompactMode(enabled) {
@@ -110,23 +59,16 @@
     const compact = Boolean(enabled);
     const resize = options.resize !== false;
     const focus = options.focus !== false;
-    const changed = (document.body.dataset.compactMode === 'true') !== compact;
     state.ui.compact_mode = compact;
+    document.body.dataset.compactMode = compact ? 'true' : 'false';
 
     if (compact && state.mode !== 'calculator') {
       switchMode('calculator');
     }
 
-    if (resize && changed && state.api?.set_compact_window && !reducedMotion()) {
-      void (compact ? collapseToCompact() : expandFromCompact());
-    } else {
-      ++compactTransitionEpoch;
-      document.body.classList.remove('compact-collapsing', 'compact-expanding');
-      document.body.dataset.compactMode = compact ? 'true' : 'false';
-      if (resize && state.api?.set_compact_window) {
-        if (compact) scheduleCompactWindowFit();
-        else state.api.set_compact_window(false).catch(() => {});
-      }
+    if (resize && state.api?.set_compact_window) {
+      if (compact) scheduleCompactWindowFit();
+      else state.api.set_compact_window(false).catch(() => {});
     }
     const drawerOpen = !dom.drawerOverlay.classList.contains('hidden');
     if (focus && !drawerOpen && !paletteIsOpen()) {

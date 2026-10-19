@@ -38,7 +38,7 @@ import app_user_functions
 import app_variables
 import app_vertical_resize
 import app_window
-import app_window_motion
+import app_window_background
 
 # Product identity and API preference extensions are installed before storage
 # creates the production AppApi instance. Lightweight user functions also patch
@@ -58,7 +58,7 @@ app_user_functions.install(app)
 app_storage.install(app)
 app_window.install(app)
 app_vertical_resize.install(app)
-app_window_motion.install(app)
+app_window_background.install(app)
 app_native_titlebar.install(app)
 app_numlock_compat.install(app)
 app_tray.install(app)

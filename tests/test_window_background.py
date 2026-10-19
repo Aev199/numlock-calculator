@@ -2,30 +2,21 @@ import types
 import unittest
 
 import app_window
-import app_window_motion as motion
+import app_window_background as background
 
 
-class WindowMotionTests(unittest.TestCase):
+class WindowBackgroundTests(unittest.TestCase):
     def test_window_background_follows_the_theme(self):
         css = open("renderer/app-shell.css", encoding="utf-8").read()
-        self.assertIn(f"--panel: {motion.background_for('light')};", css)
-        self.assertIn(f"--panel: {motion.background_for('dark')};", css)
-        self.assertEqual(motion.background_for(None), motion.background_for("dark"))
-
-    def test_height_moves_in_one_eased_motion(self):
-        steps = motion.eased_heights(432, 188)
-        self.assertEqual(len(steps), motion.RESIZE_FRAMES)
-        self.assertEqual(steps[-1], 188)
-        self.assertEqual(steps, sorted(steps, reverse=True))
-        # Ease-out: most of the distance is covered in the first half.
-        self.assertLess(steps[len(steps) // 2], 432 - (432 - 188) * 0.75)
-        self.assertEqual(motion.eased_heights(300, 300), [300])
+        self.assertIn(f"--panel: {background.background_for('light')};", css)
+        self.assertIn(f"--panel: {background.background_for('dark')};", css)
+        self.assertEqual(background.background_for(None), background.background_for("dark"))
 
     def test_target_matches_the_compact_window_rules(self):
-        self.assertEqual(motion.target_height(False, 200), app_window.DEFAULT_WINDOW_HEIGHT)
-        self.assertEqual(motion.target_height(True, 10), app_window.COMPACT_MIN_SIZE[1])
-        self.assertEqual(motion.target_height(True, 9999), app_window.COMPACT_MAX_CONTENT_HEIGHT)
-        self.assertEqual(motion.target_height(True, None), app_window.COMPACT_WINDOW_HEIGHT)
+        self.assertEqual(background.target_height(False, 200), app_window.DEFAULT_WINDOW_HEIGHT)
+        self.assertEqual(background.target_height(True, 10), app_window.COMPACT_MIN_SIZE[1])
+        self.assertEqual(background.target_height(True, 9999), app_window.COMPACT_MAX_CONTENT_HEIGHT)
+        self.assertEqual(background.target_height(True, None), app_window.COMPACT_WINDOW_HEIGHT)
 
     def make_app(self, theme="light"):
         calls = []
@@ -54,13 +45,13 @@ class WindowMotionTests(unittest.TestCase):
 
     def test_window_is_created_with_the_theme_background(self):
         app, calls = self.make_app("light")
-        motion.install(app)
+        background.install(app)
         app.webview.create_window("NumCalc", html="")
         self.assertEqual(calls[-1][1]["background_color"], "#fafafa")
 
     def test_resize_and_theme_changes_still_reach_the_original_api(self):
         app, calls = self.make_app()
-        motion.install(app)
+        background.install(app)
         api = app.AppApi()
         self.assertEqual(api.set_compact_window(True, 200), {"ok": True})
         api.set_ui_settings({"theme": "dark"})
