@@ -8,6 +8,7 @@ regular storage under ``updates``.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -21,6 +22,7 @@ import update_core as core
 from product_info import APP_VERSION
 
 STORAGE_KEY = "updates"
+LOGGER_NAME = "numcalc"
 FIRST_CHECK_DELAY = 8.0
 CHECK_INTERVAL = 60 * 60
 DAY = 24 * 60 * 60
@@ -41,14 +43,18 @@ def can_self_update() -> bool:
     return is_one_file_bundle(current_exe(), getattr(sys, "_MEIPASS", ""))
 
 
-def is_one_file_bundle(exe: Path, bundle: str) -> bool:
+def is_one_file_bundle(exe: Path, bundle: str, paths: Any = os.path) -> bool:
     """A one-file EXE unpacks to a temporary folder outside its own folder."""
 
     if not bundle:
         return False
-    folder = os.path.normcase(os.path.abspath(exe.parent))
-    unpacked = os.path.normcase(os.path.abspath(bundle))
-    return os.path.commonpath([folder, unpacked]) != folder
+    folder = paths.normcase(paths.abspath(str(exe.parent)))
+    unpacked = paths.normcase(paths.abspath(bundle))
+    try:
+        return paths.commonpath([folder, unpacked]) != folder
+    except ValueError:
+        # Different drives (EXE on D:, temp on C:): certainly outside.
+        return True
 
 
 def current_exe() -> Path:
@@ -461,7 +467,11 @@ def install(app: Any) -> None:
     original_main = app.main
 
     def main() -> None:
-        updater().start_background_checks(lambda: not getattr(app, "_quitting", False))
+        # Updates are optional: whatever fails here must not stop the calculator.
+        try:
+            updater().start_background_checks(lambda: not getattr(app, "_quitting", False))
+        except Exception:
+            logging.getLogger(LOGGER_NAME).exception("Update checks did not start")
         original_main()
 
     app.main = main
@@ -476,7 +486,10 @@ def install_restart_wait(app: Any) -> None:
     original_main = app.main
 
     def main() -> None:
-        wait_for_previous_process(sys.argv[1:])
+        try:
+            wait_for_previous_process(sys.argv[1:])
+        except Exception:
+            logging.getLogger(LOGGER_NAME).exception("Waiting for the replaced process failed")
         original_main()
 
     app.main = main

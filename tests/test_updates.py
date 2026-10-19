@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import app_updates
@@ -132,6 +133,27 @@ class InstallabilityTests(unittest.TestCase):
         self.assertFalse(app_updates.is_one_file_bundle(exe, "/apps/NumCalc/_internal"))
         self.assertFalse(app_updates.is_one_file_bundle(exe, ""))
         self.assertFalse(app_updates.can_self_update())
+
+    def test_exe_and_temp_on_different_windows_drives(self):
+        import ntpath
+
+        exe = Path("D:/Tools/NumCalc.exe")
+        temp = r"C:\Users\me\AppData\Local\Temp\_MEI1234"
+        self.assertTrue(app_updates.is_one_file_bundle(exe, temp, ntpath))
+        self.assertFalse(app_updates.is_one_file_bundle(exe, r"D:\Tools\_internal", ntpath))
+
+    def test_calculator_starts_when_updates_fail(self):
+        import types
+
+        started = []
+        app = types.SimpleNamespace(main=lambda: started.append(True), AppApi=type("AppApi", (), {}))
+        app_updates.install(app)
+        app_updates.install_restart_wait(app)
+        broken = mock.Mock(side_effect=RuntimeError("broken"))
+        with mock.patch.object(app_updates, "Updater", broken), \
+                mock.patch.object(app_updates, "wait_for_previous_process", broken):
+            app.main()
+        self.assertEqual(started, [True])
 
 
 class RendererWiringTests(unittest.TestCase):
