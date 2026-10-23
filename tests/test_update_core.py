@@ -120,10 +120,20 @@ class InstallTests(unittest.TestCase):
         update = core.Update(version="1.4.0", sha256=core.sha256_hex(data), exe_url="", page="",
                              commit="abc", notes=["Сеть"], prerelease=True)
         self.assertTrue(core.publish_to_folder(self.root, update, data))
-        found = core.check_folder(self.root, "1.3.0")
+        self.assertIsNone(core.check_folder(self.root, "1.3.0"))
+        found = core.check_folder(self.root, "1.3.0", core.BETA)
         self.assertEqual((found.version, found.notes, found.prerelease), ("1.4.0", ["Сеть"], True))
         self.assertFalse(core.publish_to_folder(self.root, update, data))
         self.assertFalse((self.root / "NumCalc.exe.part").exists())
+
+    def test_a_beta_in_the_shared_folder_is_offered_on_the_beta_channel_only(self):
+        data = b"MZ beta"
+        (self.root / core.EXE_ASSET).write_bytes(data)
+        (self.root / core.MANIFEST_ASSET).write_text(json.dumps({
+            "version": "1.5.0-beta.1", "sha256": core.sha256_hex(data),
+        }), encoding="utf-8")
+        self.assertIsNone(core.check_folder(self.root, "1.4.0"))
+        self.assertEqual(core.check_folder(self.root, "1.4.0", core.BETA).version, "1.5.0-beta.1")
 
     def test_newest_downloaded_numcalc_is_found(self):
         for name in ["NumCalc.exe", "NumCalc (1).exe", "numcalc (2).exe", "Other.exe", "NumCalc.zip"]:

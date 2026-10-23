@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import json
 import os
+import shutil
 import sys
 import tempfile
 import threading
@@ -84,6 +85,7 @@ class Storage:
     def __init__(self, filepath: Path | None):
         self._filepath = Path(filepath) if filepath is not None else None
         self._data: dict[str, Any] = {}
+        self.preserved_copy: Path | None = None
         self._lock = threading.RLock()
         self._load()
 
@@ -95,9 +97,25 @@ class Storage:
                 return
             try:
                 raw = json.loads(self._filepath.read_text(encoding="utf-8"))
-                self._data = raw if isinstance(raw, dict) else {}
-            except (OSError, json.JSONDecodeError):
-                self._data = {}
+            except (OSError, ValueError):
+                raw = None
+            if isinstance(raw, dict):
+                self._data = raw
+                return
+            # The next save would overwrite the file, so keep the unreadable
+            # data aside: history and functions can still be recovered by hand.
+            self._data = {}
+            self._preserve_unreadable()
+
+    def _preserve_unreadable(self) -> None:
+        assert self._filepath is not None
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        backup = self._filepath.with_name(f"{self._filepath.stem}.unreadable-{stamp}{self._filepath.suffix}")
+        try:
+            shutil.copy2(self._filepath, backup)
+            self.preserved_copy = backup
+        except OSError:
+            pass
 
     def _save(self) -> None:
         with self._lock:

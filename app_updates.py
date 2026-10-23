@@ -207,6 +207,11 @@ class Updater:
         with self._lock:
             if self.phase in ("checking", "downloading"):
                 return self.snapshot()
+            if self.phase in ("ready", "rolled_back"):
+                # The replaced EXE is the running image now; a second install
+                # before the restart would fail on it.
+                self.note = "Перезапустите NumCalc, чтобы закончить обновление"
+                return self._publish()
             self.phase = "checking"
             self.manual = manual
             self.note = ""
@@ -238,7 +243,7 @@ class Updater:
         folder_error = ""
         if folder is not None:
             try:
-                found = core.check_folder(folder, APP_VERSION)
+                found = core.check_folder(folder, APP_VERSION, self.channel)
                 if found:
                     candidates.append(found)
             except core.UpdateError as error:

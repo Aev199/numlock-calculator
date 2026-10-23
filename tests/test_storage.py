@@ -94,3 +94,29 @@ class StorageLocationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UnreadableDataTests(unittest.TestCase):
+    def test_unreadable_data_is_kept_aside_before_it_is_overwritten(self):
+        import app
+
+        for content in ('{"history": [', '["not", "an", "object"]'):
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as root:
+                target = Path(root) / "data.json"
+                target.write_text(content, encoding="utf-8")
+                storage = app.Storage(target)
+                self.assertIsNone(storage.get("history"))
+                storage.set("history", [])
+                copies = list(Path(root).glob("data.unreadable-*.json"))
+                self.assertEqual(len(copies), 1)
+                self.assertEqual(copies[0].read_text(encoding="utf-8"), content)
+                self.assertEqual(storage.preserved_copy, copies[0])
+
+    def test_readable_data_leaves_no_copies(self):
+        import app
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root) / "data.json"
+            target.write_text('{"history": [1]}', encoding="utf-8")
+            self.assertEqual(app.Storage(target).get("history"), [1])
+            self.assertEqual(list(Path(root).glob("*.unreadable-*")), [])

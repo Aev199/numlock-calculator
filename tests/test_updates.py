@@ -68,6 +68,15 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual((updater.phase, self.exe.read_bytes()), ("rolled_back", b"MZ current"))
         self.assertIn("checking", [state["phase"] for state in self.states])
 
+    def test_no_second_install_before_the_restart(self):
+        updater = self.updater()
+        updater.check(manual=True, wait=True)
+        updater.download(wait=True)
+        self.assertEqual(updater.phase, "ready")
+        updater.check(manual=True, wait=True)
+        self.assertEqual(updater.phase, "ready")
+        self.assertIn("Перезапустите", updater.note)
+
     def test_skipped_version_is_not_offered_quietly(self):
         updater = self.updater()
         updater.check(manual=True, wait=True)

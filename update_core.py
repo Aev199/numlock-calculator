@@ -308,14 +308,20 @@ def folder_from_side_file(exe: Path) -> Path | None:
     return None
 
 
-def check_folder(folder: Path, current: str) -> Update | None:
-    """An update kept in a shared folder: ``latest.json`` and ``NumCalc.exe``."""
+def check_folder(folder: Path, current: str, channel: str = STABLE) -> Update | None:
+    """An update kept in a shared folder: ``latest.json`` and ``NumCalc.exe``.
+
+    As with GitHub releases, a beta in the folder is offered on the beta channel only.
+    """
 
     try:
         data = (folder / MANIFEST_ASSET).read_bytes()
     except OSError as error:
         raise UpdateError(f"Папка обновлений «{folder}» недоступна: {error.strerror or error}") from error
     manifest = _manifest(data, "в папке обновлений")
+    beta = manifest.get("channel") == BETA or is_prerelease(str(manifest["version"]))
+    if beta and channel != BETA:
+        return None
     if compare_versions(str(manifest["version"]), current) <= 0:
         return None
     exe = folder / EXE_ASSET
@@ -328,7 +334,7 @@ def check_folder(folder: Path, current: str) -> Update | None:
         page=str(folder),
         commit=str(manifest.get("commit", "")),
         notes=list(manifest["notes"]),
-        prerelease=manifest.get("channel") == BETA,
+        prerelease=beta,
     )
 
 
