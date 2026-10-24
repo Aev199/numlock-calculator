@@ -138,10 +138,10 @@ class StorageAndApiTests(unittest.TestCase):
             )
             self.assertEqual(settings['number_format'], 'engineering')
             self.assertEqual(settings['decimal_separator'], ',')
-            committed = api.commit('1234')
+            committed = api.commit('1000 + 234')
             self.assertEqual(committed['result'], '1,234e+3')
             entry = committed['history_entry']
-            self.assertEqual(entry['normalized_expression'], '1234')
+            self.assertEqual(entry['normalized_expression'], '1000 + 234')
             self.assertEqual(entry['precision'], 4)
             self.assertEqual(entry['number_format'], 'engineering')
             self.assertEqual(entry['decimal_separator'], ',')
@@ -149,7 +149,7 @@ class StorageAndApiTests(unittest.TestCase):
             restored = app.AppApi(storage).bootstrap()
             self.assertEqual(restored['settings']['number_format'], 'engineering')
             self.assertEqual(restored['settings']['decimal_separator'], ',')
-            self.assertEqual(restored['history'][0]['normalized_expression'], '1234')
+            self.assertEqual(restored['history'][0]['normalized_expression'], '1000 + 234')
 
     def test_enter_selection_ui_setting_defaults_on_and_survives_restart(self):
         with tempfile.TemporaryDirectory() as directory:

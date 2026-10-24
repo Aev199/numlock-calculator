@@ -8,6 +8,9 @@
       .includes(query.toLowerCase());
   }
 
+  const HISTORY_ROW_TITLE = 'Щелчок по числу или Enter — вставить число\n'
+    + 'Щелчок по строке или Shift+Enter — изменить выражение';
+
   function createHistoryNode(entry, animate = false) {
     const slot = document.createElement('div');
     slot.className = `history-slot${animate ? ' entering' : ''}`;
@@ -16,13 +19,13 @@
     const row = document.createElement('article');
     row.className = 'history-entry';
     row.tabIndex = 0;
-    row.title = 'Загрузить выражение для редактирования';
+    row.title = HISTORY_ROW_TITLE;
     row.innerHTML = [
       '<div class="history-left">',
       '  <div class="history-expression"></div>',
       '  <div class="history-meta"></div>',
       '</div>',
-      '<div class="history-result" title="Нажмите, чтобы скопировать результат"></div>',
+      '<div class="history-result" title="Вставить в выражение"></div>',
       '<div class="history-entry-actions">',
       '  <button class="history-action" type="button" data-history-action="copy" title="Копировать результат">⧉</button>',
       '  <button class="history-action" type="button" data-history-action="copy-calculation" title="Копировать выражение и результат">=</button>',
@@ -51,8 +54,8 @@
     row.classList.toggle('pending', Boolean(entry.pending));
     row.dataset.historyId = entry.id;
     row.title = entry.normalized_expression && entry.normalized_expression !== entry.expression
-      ? `Загрузить выражение для редактирования\nНормализовано: ${entry.normalized_expression}`
-      : 'Загрузить выражение для редактирования';
+      ? `${HISTORY_ROW_TITLE}\nНормализовано: ${entry.normalized_expression}`
+      : HISTORY_ROW_TITLE;
     slot.querySelector('.history-expression').textContent = entry.expression;
     slot.querySelector('.history-meta').textContent = historyMeta(entry);
     const result = slot.querySelector('.history-result');
@@ -82,6 +85,7 @@
     }
 
     dom.historyList.querySelector('.history-empty')?.remove();
+    dom.historyList.querySelectorAll('.history-day').forEach(node => node.remove());
     if (!filtered.length) {
       const empty = document.createElement('div');
       empty.className = 'history-empty';
@@ -93,7 +97,16 @@
     }
 
     const fragment = document.createDocumentFragment();
+    let day = null;
     for (const entry of filtered) {
+      const key = historyDayKey(entry.created_at);
+      if (key !== day) {
+        day = key;
+        const heading = document.createElement('div');
+        heading.className = 'history-day';
+        heading.textContent = historyDayLabel(entry.created_at);
+        fragment.appendChild(heading);
+      }
       let node = state.calculator.historyNodes.get(entry.id);
       if (!node) {
         node = createHistoryNode(entry, options.animateId === entry.id);
@@ -109,6 +122,15 @@
       const node = state.calculator.historyNodes.get(options.animateId);
       window.requestAnimationFrame(() => node?.classList.remove('entering'));
     }
+  }
+
+  // Mirrors history_rules.py: a bare number (Enter on a result) and a repeat
+  // of the latest entry add nothing, so they never flash into the list.
+  function historyWorthy(expression) {
+    const canonical = value => String(value || '').replace(/\s+/g, '').replace(/[⋅×]/g, '*');
+    const text = canonical(expression);
+    if (!text || /^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:e[+-]?\d+)?$/i.test(text)) return false;
+    return canonical(state.calculator.history[0]?.expression) !== text;
   }
 
   function optimisticHistoryEntry(expression, result) {

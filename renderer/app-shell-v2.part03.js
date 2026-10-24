@@ -55,7 +55,7 @@
     };
 
     if (optimisticResult) {
-      localId = optimisticHistoryEntry(expression, optimisticResult);
+      if (historyWorthy(expression)) localId = optimisticHistoryEntry(expression, optimisticResult);
       state.calculator.expression = optimisticResult;
       setInputValue(optimisticResult);
       state.calculator.preview = {
@@ -100,6 +100,9 @@
 
       if (localId && response.history_entry) {
         confirmHistoryEntry(localId, response.history_entry, historyEpoch);
+      } else if (localId) {
+        // The backend found nothing new to record.
+        rollbackHistoryEntry(localId, historyEpoch);
       } else if (
         response.history_entry
         && historyEpoch === state.calculator.historyEpoch

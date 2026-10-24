@@ -286,6 +286,8 @@
       && !event.altKey
       && !event.shiftKey
       && event.code === 'KeyC'
+      // A focused history row copies its own calculation.
+      && !event.target.closest?.('.history-entry, .compact-history-load')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();

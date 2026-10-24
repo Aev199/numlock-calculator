@@ -16,6 +16,7 @@ from flexible_units import (
     unit_display,
     unit_payload,
 )
+from history_rules import history_worthy
 from unit_conversion import (
     evaluate_simple,
     filter_suggestions,
@@ -53,7 +54,7 @@ def install(app: Any) -> None:
         with self._lock:
             evaluation = self._session.evaluate(expression, commit=True)
             response = evaluation.as_dict()
-            if evaluation.ok and expression.strip():
+            if evaluation.ok and history_worthy(expression, self._history):
                 self._sequence += 1
                 entry = app.make_history_entry(
                     evaluation,

@@ -141,7 +141,7 @@
 
   function renderCompactHistoryDrawer() {
     dom.drawerTitle.textContent = 'История';
-    dom.drawerSubtitle.textContent = 'Ctrl+H';
+    dom.drawerSubtitle.textContent = 'Enter — вставить число, Shift+Enter — изменить выражение';
     dom.drawerContent.replaceChildren();
 
     const shell = document.createElement('div');
@@ -186,9 +186,11 @@
         result.textContent = historyResultText(entry);
         result.classList.toggle('is-status', isDefinitionEntry(entry));
         load.append(expression, result);
-        load.addEventListener('click', () => {
+        load.title = 'Вставить число в выражение';
+        load.addEventListener('click', event => {
           closeDrawer(false);
-          loadHistoryEntry(entry);
+          if (event.shiftKey) loadHistoryEntry(entry);
+          else insertHistoryResult(entry);
         });
 
         const copy = document.createElement('button');
@@ -212,6 +214,21 @@
       target.focus();
     });
     list.addEventListener('keydown', event => {
+      const target = event.target.closest('.compact-history-load');
+      const entry = state.calculator.history.find(item => item.id === target?.dataset.historyId);
+      if (entry && event.key === 'Enter') {
+        // Handled here so Shift+Enter is told apart from a plain click.
+        event.preventDefault();
+        closeDrawer(false);
+        if (event.shiftKey) loadHistoryEntry(entry);
+        else insertHistoryResult(entry);
+        return;
+      }
+      if (entry && (event.ctrlKey || event.metaKey) && !event.altKey && event.code === 'KeyC') {
+        event.preventDefault();
+        void copyText(`${copyExpression(entry.expression)} = ${entry.result}`);
+        return;
+      }
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
       const rows = [...list.querySelectorAll('.compact-history-load')];
       const current = rows.indexOf(event.target.closest('.compact-history-load'));

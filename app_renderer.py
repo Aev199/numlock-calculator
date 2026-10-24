@@ -57,6 +57,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.compact-palette-fit.js",
     "app-shell-v2.updates.js",
     "app-shell-v2.accent.js",
+    "app-shell-v2.history.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",

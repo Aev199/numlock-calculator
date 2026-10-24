@@ -638,7 +638,8 @@ body[data-app-mode="units"] .result-unit-badge {
 .history-entry {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
   gap: 8px;
   padding: 6px 8px;
   border-radius: 0;
@@ -646,8 +647,14 @@ body[data-app-mode="units"] .result-unit-badge {
   transition: background 80ms ease, opacity 80ms ease;
 }
 
-.history-entry:hover {
+.history-entry:hover,
+.history-entry:focus-visible {
   background: var(--soft);
+}
+
+.history-entry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .history-entry.pending {
@@ -700,24 +707,16 @@ body[data-app-mode="units"] .result-unit-badge {
   font-weight: 500;
 }
 
+/* The actions take their own column when shown, so they push the number
+   left instead of covering it; the expression is what gets shortened. */
 .history-entry-actions {
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  display: flex;
+  display: none;
   gap: 3px;
-  padding-left: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-50%);
-  background: var(--panel);
-  transition: opacity 80ms ease;
 }
 
 .history-entry:hover .history-entry-actions,
 .history-entry:focus-within .history-entry-actions {
-  opacity: 1;
-  pointer-events: auto;
+  display: flex;
 }
 
 .history-action {
@@ -1079,6 +1078,28 @@ kbd {
 
 .row-button.primary {
   border-color: var(--accent);
+}
+
+.history-day {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  padding: 6px 8px 3px;
+  background: var(--panel);
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.toast-action {
+  margin-left: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .toast {

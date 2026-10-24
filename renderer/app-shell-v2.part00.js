@@ -137,7 +137,6 @@
     completion: { items: [], index: 0 },
     palette: { items: [], groups: [], groupIndex: 0, itemIndex: 0 },
     selection: { start: 0, end: 0, restoring: false },
-    clearArmedUntil: 0,
     toastTimer: null,
     typingTimer: null,
     functionWrapTimer: null,
@@ -168,14 +167,32 @@
     });
   }
 
-  function showToast(message) {
-    dom.toast.textContent = message;
+  // An optional action (such as "Вернуть") keeps the toast up longer and is
+  // available until it hides or another toast replaces it.
+  function showToast(message, action = null) {
+    dom.toast.replaceChildren(document.createTextNode(message));
+    state.toastAction = null;
+    if (action) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'toast-action';
+      button.textContent = action.label;
+      const run = () => {
+        if (state.toastAction !== run) return;
+        state.toastAction = null;
+        dom.toast.classList.add('hidden');
+        action.run();
+      };
+      button.addEventListener('click', run);
+      dom.toast.append(button);
+      state.toastAction = run;
+    }
     dom.toast.classList.remove('hidden');
     window.clearTimeout(state.toastTimer);
-    state.toastTimer = window.setTimeout(
-      () => dom.toast.classList.add('hidden'),
-      1750,
-    );
+    state.toastTimer = window.setTimeout(() => {
+      dom.toast.classList.add('hidden');
+      state.toastAction = null;
+    }, action ? 5000 : 1750);
   }
 
   function setTheme(theme, persist = true) {

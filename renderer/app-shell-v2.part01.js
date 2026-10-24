@@ -225,15 +225,37 @@
     }, delay);
   }
 
-  function shortTime(value) {
-    if (!value) return '';
+  function historyDate(value) {
+    if (!value) return null;
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // The day is a heading above its entries, so each row shows only the time.
+  function shortTime(value) {
+    const date = historyDate(value);
+    return date
+      ? date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      : '';
+  }
+
+  function historyDayKey(value) {
+    const date = historyDate(value);
+    return date ? `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` : '';
+  }
+
+  function historyDayLabel(value, now = new Date()) {
+    const date = historyDate(value);
+    if (!date) return 'Ранее';
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const days = Math.round((today - day) / 86400000);
+    if (days === 0) return 'Сегодня';
+    if (days === 1) return 'Вчера';
+    return date.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
     });
   }
 

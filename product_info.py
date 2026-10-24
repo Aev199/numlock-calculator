@@ -1,7 +1,7 @@
 """Single source of NumCalc product identity and release version."""
 
 APP_NAME = "NumCalc"
-APP_VERSION = "1.4.4"
+APP_VERSION = "1.5.0"
 APP_ID = "Aev199.NumCalc"
 COMPANY_NAME = "Aev199"
 EXECUTABLE_NAME = "NumCalc"

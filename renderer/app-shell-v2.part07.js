@@ -1,30 +1,14 @@
       if (action === 'delete') {
         event.stopPropagation();
-        if (entry.pending) return;
-        await state.api.delete_history(entry.id);
-        state.calculator.history = state.calculator.history.filter(
-          item => item.id !== entry.id,
-        );
-        reconcileHistory();
-        showToast('Запись удалена');
+        await deleteHistoryEntry(entry);
         return;
       }
+      // The number goes into the expression; the rest of the row opens it.
       if (event.target.closest('.history-result')) {
         event.stopPropagation();
-        await copyText(entry.result);
+        insertHistoryResult(entry);
         return;
       }
-      loadHistoryEntry(entry);
-    });
-
-    dom.historyList.addEventListener('keydown', event => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      const slot = event.target.closest('.history-slot');
-      const entry = state.calculator.history.find(
-        item => item.id === slot?.dataset.historyId,
-      );
-      if (!entry || entry.pending) return;
-      event.preventDefault();
       loadHistoryEntry(entry);
     });
 
@@ -33,19 +17,17 @@
         showToast('Дождитесь сохранения текущего вычисления');
         return;
       }
-      const now = Date.now();
-      if (now > state.clearArmedUntil) {
-        state.clearArmedUntil = now + 3000;
-        showToast('Нажмите ещё раз, чтобы очистить историю');
-        return;
-      }
-      state.clearArmedUntil = 0;
+      // No confirmation: the toast offers to bring everything back.
+      const cleared = state.calculator.history.filter(entry => !entry.pending);
       ++state.calculator.historyEpoch;
       state.calculator.history = [];
       reconcileHistory();
       try {
         await state.api.clear_history();
-        showToast('История очищена');
+        showToast('История очищена', {
+          label: 'Вернуть',
+          run: () => void restoreHistoryEntries(cleared),
+        });
       } catch (_) {
         showToast('Не удалось очистить историю');
         const data = await state.api.bootstrap().catch(() => null);

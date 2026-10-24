@@ -24,6 +24,7 @@ from calc_engine import (
     normalize_expression,
     serialize_dimensions,
 )
+from history_rules import history_worthy
 from hotkey_config import DEFAULT_HOTKEY, validate_hotkey
 from interpolation import (
     calculate as calculate_interpolation,
@@ -302,7 +303,7 @@ class AppApi:
         with self._lock:
             evaluation = self._session.evaluate(expression, commit=True)
             response = evaluation.as_dict()
-            if evaluation.ok and expression.strip():
+            if evaluation.ok and history_worthy(expression, self._history):
                 self._sequence += 1
                 entry = make_history_entry(evaluation, self._session.settings, self._sequence).as_dict()
                 self._history.insert(0, entry)
@@ -403,6 +404,45 @@ class AppApi:
             self._ui_settings["global_hotkey"] = validation.hotkey
             self._storage.set("ui_settings", self._ui_settings)
         return validation.as_dict() | {"ok": True}
+
+    def remember_calculation(self, expression: str) -> dict[str, Any]:
+        """Record a calculation that was used without Enter (copied, or left on hide).
+
+        Nothing else changes: no ``ans``, no assignment, no new function, so a
+        half-typed definition is never stored by accident.
+        """
+
+        with self._lock:
+            evaluation = self._session.evaluate(expression, commit=False)
+            if (
+                not evaluation.ok
+                or evaluation.assigned_variable
+                or not history_worthy(expression, self._history)
+            ):
+                return {"ok": evaluation.ok}
+            self._sequence += 1
+            entry = make_history_entry(evaluation, self._session.settings, self._sequence).as_dict()
+            self._history.insert(0, entry)
+            self._history = self._history[:MAX_HISTORY]
+            self._persist()
+            return {"ok": True, "history_entry": entry}
+
+    def restore_history(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Put deleted entries back (undo of delete or clear), newest first."""
+
+        with self._lock:
+            known = {item.get("id") for item in self._history}
+            restored = [
+                item for item in entries if isinstance(item, dict) and item.get("id") not in known
+            ] if isinstance(entries, list) else []
+            merged = sorted(
+                self._history + restored,
+                key=lambda item: str(item.get("created_at", "")),
+                reverse=True,
+            )
+            self._history = merged[:MAX_HISTORY]
+            self._persist()
+            return self._history
 
     def delete_history(self, entry_id: str) -> list[dict[str, Any]]:
         with self._lock:
