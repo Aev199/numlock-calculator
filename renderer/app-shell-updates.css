@@ -130,23 +130,11 @@
 .update-button.primary {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast);
 }
 
 .update-button.primary:hover {
   background: var(--accent-hover);
-}
-
-.settings-text {
-  width: 100%;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--panel-raised);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
 }
 
 .update-settings-actions {

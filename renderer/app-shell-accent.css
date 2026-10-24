@@ -1,0 +1,134 @@
+/* Accent colours. Each accent has a light and a dark variant chosen for at
+   least 3:1 against the panel and readable text on accent buttons
+   (white in the light theme, near-black in the dark one). Blue is the
+   original NumCalc accent and the default. */
+:root {
+  --accent-contrast: #fff;
+  --accent-rgb: 82, 109, 255;
+}
+
+[data-theme="dark"] {
+  --accent-contrast: #111;
+  --accent-rgb: 120, 140, 255;
+}
+
+body[data-accent="violet"] {
+  --accent: #7c4dff;
+  --accent-hover: #6a3be6;
+  --accent-rgb: 124, 77, 255;
+  --accent-soft: rgba(124, 77, 255, .10);
+}
+
+body[data-theme="dark"][data-accent="violet"] {
+  --accent: #a48bff;
+  --accent-hover: #b8a3ff;
+  --accent-rgb: 164, 139, 255;
+  --accent-soft: rgba(164, 139, 255, .11);
+}
+
+body[data-accent="green"] {
+  --accent: #1a7f45;
+  --accent-hover: #156b3a;
+  --accent-rgb: 26, 127, 69;
+  --accent-soft: rgba(26, 127, 69, .10);
+}
+
+body[data-theme="dark"][data-accent="green"] {
+  --accent: #4cc38a;
+  --accent-hover: #66d19c;
+  --accent-rgb: 76, 195, 138;
+  --accent-soft: rgba(76, 195, 138, .11);
+}
+
+body[data-accent="teal"] {
+  --accent: #0b7f92;
+  --accent-hover: #096b7b;
+  --accent-rgb: 11, 127, 146;
+  --accent-soft: rgba(11, 127, 146, .10);
+}
+
+body[data-theme="dark"][data-accent="teal"] {
+  --accent: #3bc9db;
+  --accent-hover: #66d9e8;
+  --accent-rgb: 59, 201, 219;
+  --accent-soft: rgba(59, 201, 219, .11);
+}
+
+body[data-accent="orange"] {
+  --accent: #c2410c;
+  --accent-hover: #a8380a;
+  --accent-rgb: 194, 65, 12;
+  --accent-soft: rgba(194, 65, 12, .10);
+}
+
+body[data-theme="dark"][data-accent="orange"] {
+  --accent: #ff8f4d;
+  --accent-hover: #ffa46e;
+  --accent-rgb: 255, 143, 77;
+  --accent-soft: rgba(255, 143, 77, .11);
+}
+
+body[data-accent="pink"] {
+  --accent: #c92a64;
+  --accent-hover: #b02457;
+  --accent-rgb: 201, 42, 100;
+  --accent-soft: rgba(201, 42, 100, .10);
+}
+
+body[data-theme="dark"][data-accent="pink"] {
+  --accent: #f06595;
+  --accent-hover: #f483aa;
+  --accent-rgb: 240, 101, 149;
+  --accent-soft: rgba(240, 101, 149, .11);
+}
+
+body[data-accent="graphite"] {
+  --accent: #495057;
+  --accent-hover: #343a40;
+  --accent-rgb: 73, 80, 87;
+  --accent-soft: rgba(73, 80, 87, .10);
+}
+
+body[data-theme="dark"][data-accent="graphite"] {
+  --accent: #adb5bd;
+  --accent-hover: #ced4da;
+  --accent-rgb: 173, 181, 189;
+  --accent-soft: rgba(173, 181, 189, .11);
+}
+
+/* Form controls and text selection follow the accent too. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+::selection {
+  background: rgba(var(--accent-rgb), .32);
+}
+
+.accent-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accent-option {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12);
+  cursor: pointer;
+}
+
+.accent-option[aria-checked="true"] {
+  border-color: var(--text);
+  box-shadow: inset 0 0 0 2px var(--panel-raised);
+}
+
+.accent-option:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}

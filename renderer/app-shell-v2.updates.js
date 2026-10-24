@@ -191,10 +191,6 @@
       (updateState.channels || []).forEach(item => channel.add(new Option(item.label, item.id)));
     }
     channel.value = settings.channel || 'stable';
-    const folder = section.querySelector('#updateFolder');
-    if (document.activeElement !== folder) folder.value = settings.folder || '';
-    folder.placeholder = settings.side_folder || 'Не задана';
-    section.querySelector('#updateShare').checked = settings.share === true;
     const checkButton = section.querySelector('#updateCheckNow');
     checkButton.disabled = ['checking', 'downloading'].includes(updateState.phase);
     checkButton.textContent = updateState.phase === 'checking' ? 'Проверка…' : 'Проверить сейчас';
@@ -269,14 +265,6 @@
         <span>Канал</span>
         <select id="updateChannel" class="settings-select"></select>
       </label>
-      <label class="format-setting">
-        <span>Папка обновлений в сети</span>
-        <input id="updateFolder" class="settings-text" type="text" spellcheck="false" autocomplete="off">
-      </label>
-      <label class="settings-checkbox">
-        <input id="updateShare" type="checkbox">
-        <span>Выкладывать установленную версию в эту папку</span>
-      </label>
       <div class="update-settings-actions">
         <button class="row-button" id="updateCheckNow" type="button">Проверить сейчас</button>
         <button class="row-button hidden" id="updateRollback" type="button">Вернуть предыдущую версию</button>
@@ -288,13 +276,9 @@
     const save = () => callUpdates('update_set_preferences', {
       auto: section.querySelector('#updateAuto').checked,
       channel: section.querySelector('#updateChannel').value,
-      folder: section.querySelector('#updateFolder').value,
-      share: section.querySelector('#updateShare').checked,
     });
     section.querySelector('#updateAuto').addEventListener('change', save);
     section.querySelector('#updateChannel').addEventListener('change', save);
-    section.querySelector('#updateShare').addEventListener('change', save);
-    section.querySelector('#updateFolder').addEventListener('change', save);
     section.querySelector('#updateCheckNow').addEventListener('click', () => void callUpdates('update_check'));
     section.querySelector('#updateRollback').addEventListener('click', () => void callUpdates('update_rollback'));
     renderUpdateSettings();

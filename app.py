@@ -77,6 +77,7 @@ def application_dir() -> Path:
 BASE_DIR = resource_dir()
 RENDERER_DIR = BASE_DIR / "renderer"
 DATA_FILE: Path | None = None
+ACCENTS = ("blue", "violet", "green", "teal", "orange", "pink", "graphite")
 
 
 class Storage:
@@ -338,9 +339,12 @@ class AppApi:
                 "select_result_on_enter",
                 "focus_calculator_on_restore",
                 "onboarding_seen",
+                "accent",
             }
             for key, value in settings.items():
-                if key in allowed:
+                if key == "accent":
+                    self._ui_settings[key] = value if value in ACCENTS else ACCENTS[0]
+                elif key in allowed:
                     self._ui_settings[key] = (
                         _coerce_bool(value, key != "onboarding_seen")
                         if key in {

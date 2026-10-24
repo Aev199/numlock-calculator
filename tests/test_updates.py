@@ -98,28 +98,6 @@ class UpdaterTests(unittest.TestCase):
         quiet.check(manual=False, wait=True)
         self.assertEqual(quiet.phase, "idle")
 
-    def test_up_to_date_shared_folder_answers_for_the_network(self):
-        self.online = False
-        (self.root / "share").mkdir()
-        (self.root / "share" / core.MANIFEST_ASSET).write_text(
-            json.dumps({"version": APP_VERSION, "sha256": "a" * 64}), encoding="utf-8")
-        updater = self.updater()
-        updater.set_preferences({"folder": str(self.root / "share")})
-        updater.check(manual=True, wait=True)
-        self.assertEqual(updater.phase, "idle")
-        self.assertIn("последняя версия", updater.note)
-
-    def test_installed_version_is_shared_with_colleagues(self):
-        share = self.root / "share"
-        share.mkdir()
-        updater = self.updater()
-        updater.set_preferences({"folder": str(share), "share": True, "channel": "beta", "auto": False})
-        self.assertEqual(self.storage.data["updates"]["channel"], "beta")
-        updater.check(manual=True, wait=True)
-        updater.download(wait=True)
-        self.assertEqual(core.check_folder(share, APP_VERSION).version, NEXT)
-        self.assertIn("выложена", updater.note)
-
     def test_source_runs_check_but_do_not_install(self):
         updater = self.updater(installable=False)
         updater.check(manual=True, wait=True)

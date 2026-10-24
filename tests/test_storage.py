@@ -1,9 +1,16 @@
 import json
+import sys
 import tempfile
 import types
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+sys.modules.setdefault("webview", types.SimpleNamespace(
+    Window=object,
+    create_window=lambda *args, **kwargs: object(),
+    start=lambda *args, **kwargs: None,
+))
 
 import app_storage
 

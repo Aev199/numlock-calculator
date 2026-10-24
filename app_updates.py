@@ -85,8 +85,6 @@ class Updater:
         saved = saved if isinstance(saved, dict) else {}
         self.auto = saved.get("auto", True) is not False
         self.channel = core.channel_key(saved.get("channel"))
-        self.folder_setting = str(saved.get("folder", "") or "")
-        self.share = saved.get("share") is True
         self.skipped = str(saved.get("skipped", "") or "")
         self.checked_at = float(saved.get("checked_at", 0) or 0)
         self.phase = "idle"
@@ -104,21 +102,12 @@ class Updater:
 
     # Preferences -----------------------------------------------------------
 
-    def folder(self) -> Path | None:
-        """The shared folder: the setting, else ``numcalc-update.txt`` beside the EXE."""
-
-        if self.folder_setting.strip():
-            return Path(self.folder_setting.strip().strip('"'))
-        return core.folder_from_side_file(self._exe)
-
     def _save(self) -> None:
         if self._storage is None:
             return
         self._storage.set(STORAGE_KEY, {
             "auto": self.auto,
             "channel": self.channel,
-            "folder": self.folder_setting,
-            "share": self.share,
             "skipped": self.skipped,
             "checked_at": self.checked_at,
         })
@@ -126,15 +115,12 @@ class Updater:
     def set_preferences(self, values: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
             channel = core.channel_key(values.get("channel", self.channel))
-            folder = str(values.get("folder", self.folder_setting) or "").strip()
-            if (channel, folder) != (self.channel, self.folder_setting) and self.phase in ("available", "failed", "blocked"):
-                # Another source may offer a different version.
+            if channel != self.channel and self.phase in ("available", "failed", "blocked"):
+                # Another channel may offer a different version.
                 self.phase = "idle"
                 self.update = None
             self.auto = values.get("auto", self.auto) is not False
             self.channel = channel
-            self.folder_setting = folder
-            self.share = values.get("share", self.share) is True
             self._save()
         return self._publish()
 
@@ -142,7 +128,6 @@ class Updater:
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
-            side = core.folder_from_side_file(self._exe)
             return {
                 "phase": self.phase,
                 "manual": self.manual,
@@ -157,9 +142,6 @@ class Updater:
                 "settings": {
                     "auto": self.auto,
                     "channel": self.channel,
-                    "folder": self.folder_setting,
-                    "side_folder": str(side) if side else "",
-                    "share": self.share,
                 },
                 "channels": [
                     {"id": key, "label": label} for key, label in core.CHANNEL_LABELS.items()
@@ -202,7 +184,7 @@ class Updater:
         return thread
 
     def check(self, manual: bool = True, online: bool = True, wait: bool = False) -> dict[str, Any]:
-        """Look, in order, in Downloads, the shared folder and — when ``online`` — GitHub."""
+        """Look in Downloads and — when ``online`` — on GitHub."""
 
         with self._lock:
             if self.phase in ("checking", "downloading"):
@@ -239,15 +221,6 @@ class Updater:
                     candidates.append(core.downloaded_update(*found))
                 except OSError:
                     pass
-        folder = self.folder()
-        folder_error = ""
-        if folder is not None:
-            try:
-                found = core.check_folder(folder, APP_VERSION, self.channel)
-                if found:
-                    candidates.append(found)
-            except core.UpdateError as error:
-                folder_error = str(error)
         network_error: core.UpdateError | None = None
         if online:
             try:
@@ -258,15 +231,11 @@ class Updater:
                 network_error = error
         if candidates:
             return "found", newest(candidates)
-        if not online or network_error is None:
-            return ("failed", folder_error) if folder_error and not online else ("latest", None)
-        if folder is not None and not folder_error:
-            # A shared folder that is up to date answers for the network.
+        if network_error is None:
             return "latest", None
         if network_error.answered:
             return "failed", str(network_error)
-        reason = f"{network_error}. Папка обновлений: {folder_error}" if folder_error else str(network_error)
-        return "blocked", reason
+        return "blocked", str(network_error)
 
     def _run_check(self, manual: bool, online: bool) -> None:
         try:
@@ -352,16 +321,7 @@ class Updater:
         except (core.UpdateError, OSError) as error:
             self._set("failed", message=f"Обновление не установлено: {error}")
             return
-        note = ""
-        folder = self.folder()
-        if self.share and folder is not None:
-            # Colleagues behind the same firewall take it from the shared folder.
-            try:
-                if core.publish_to_folder(folder, found, data):
-                    note = f"Версия {found.version} выложена в папку обновлений"
-            except OSError as error:
-                note = f"Не удалось выложить версию в папку обновлений: {error}"
-        self._set("ready", note=note)
+        self._set("ready", note="")
 
     def rollback(self) -> dict[str, Any]:
         try:

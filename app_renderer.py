@@ -29,6 +29,7 @@ STYLE_PARTS = (
     "app-shell-compact.css",
     "app-shell-flexible-units.css",
     "app-shell-updates.css",
+    "app-shell-accent.css",
     "app-shell-utility.css",
 )
 SCRIPT_PARTS = (
@@ -55,6 +56,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.compact.js",
     "app-shell-v2.compact-palette-fit.js",
     "app-shell-v2.updates.js",
+    "app-shell-v2.accent.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",
@@ -203,6 +205,16 @@ def install(app: Any) -> None:
 
     def build_html() -> str:
         document = render_document(Path(app.RENDERER_DIR))
+        # The saved theme and accent are in the first paint, so the window does
+        # not start dark and blue and switch once the settings have loaded.
+        settings = getattr(getattr(app, "_api", None), "_ui_settings", None)
+        settings = settings if isinstance(settings, dict) else {}
+        theme = "light" if settings.get("theme") == "light" else "dark"
+        accent = settings.get("accent")
+        attributes = f'data-theme="{theme}"'
+        if accent in getattr(app, "ACCENTS", ()) and accent != "blue":
+            attributes += f' data-accent="{accent}"'
+        document = document.replace('<body data-theme="dark"', f"<body {attributes}", 1)
         if compact_mode_enabled():
             document = document.replace(
                 'data-motion="full"',

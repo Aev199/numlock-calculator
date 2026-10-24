@@ -6,8 +6,8 @@ downloads the EXE, checks its hash and swaps files by renaming: Windows lets a
 running EXE be renamed, not overwritten. The previous EXE stays beside it as
 ``<name>.old.exe`` for one-click rollback.
 
-When the program itself has no way out, two offline sources work as well: a
-shared folder with the same two files, and the browser's Downloads folder.
+When the program itself has no way out, the browser can fetch the EXE: a newer
+NumCalc*.exe in the Downloads folder is offered as well.
 Nothing here touches the UI; the network call is injected so tests stay local.
 """
 
@@ -32,7 +32,6 @@ from product_info import APP_VERSION
 REPOSITORY = "Aev199/numlock-calculator"
 EXE_ASSET = "NumCalc.exe"
 MANIFEST_ASSET = "latest.json"
-SOURCE_FILE = "numcalc-update.txt"
 USER_AGENT = f"NumCalc/{APP_VERSION}"
 
 STABLE = "stable"
@@ -289,84 +288,6 @@ def remove_leftovers(exe: Path) -> None:
         staged_path(exe).unlink(missing_ok=True)
     except OSError:
         pass
-
-
-def folder_from_side_file(exe: Path) -> Path | None:
-    """The folder named in ``numcalc-update.txt`` beside ``exe``.
-
-    An administrator sets it once for everybody who runs NumCalc from there.
-    """
-
-    try:
-        text = (exe.parent / SOURCE_FILE).read_text(encoding="utf-8-sig")
-    except OSError:
-        return None
-    for line in text.splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            return Path(line.strip('"'))
-    return None
-
-
-def check_folder(folder: Path, current: str, channel: str = STABLE) -> Update | None:
-    """An update kept in a shared folder: ``latest.json`` and ``NumCalc.exe``.
-
-    As with GitHub releases, a beta in the folder is offered on the beta channel only.
-    """
-
-    try:
-        data = (folder / MANIFEST_ASSET).read_bytes()
-    except OSError as error:
-        raise UpdateError(f"Папка обновлений «{folder}» недоступна: {error.strerror or error}") from error
-    manifest = _manifest(data, "в папке обновлений")
-    beta = manifest.get("channel") == BETA or is_prerelease(str(manifest["version"]))
-    if beta and channel != BETA:
-        return None
-    if compare_versions(str(manifest["version"]), current) <= 0:
-        return None
-    exe = folder / EXE_ASSET
-    if not exe.is_file():
-        raise UpdateError(f"В папке обновлений нет {EXE_ASSET}")
-    return Update(
-        version=str(manifest["version"]),
-        sha256=str(manifest["sha256"]),
-        exe_url=str(exe),
-        page=str(folder),
-        commit=str(manifest.get("commit", "")),
-        notes=list(manifest["notes"]),
-        prerelease=beta,
-    )
-
-
-def publish_to_folder(folder: Path, update: Update, data: bytes) -> bool:
-    """Put an installed version into the shared folder for colleagues.
-
-    Skipped when the folder already has it or a newer one. The EXE goes first
-    and the manifest last, so the folder never announces a file that is not there.
-    """
-
-    manifest_path = folder / MANIFEST_ASSET
-    try:
-        existing = _manifest(manifest_path.read_bytes(), "")
-        if compare_versions(str(existing["version"]), update.version) >= 0:
-            return False
-    except (OSError, UpdateError):
-        pass
-    staged = folder / f"{EXE_ASSET}.part"
-    staged.write_bytes(data)
-    # A colleague may be copying the old EXE right now; replace, not truncate.
-    os.replace(staged, folder / EXE_ASSET)
-    manifest = {
-        "version": update.version,
-        "commit": update.commit,
-        "channel": BETA if update.prerelease else STABLE,
-        "sha256": sha256_hex(data),
-        "notes": update.notes,
-    }
-    staged = folder / f"{MANIFEST_ASSET}.part"
-    staged.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(staged, manifest_path)
-    return True
 
 
 def downloads_dir() -> Path | None:

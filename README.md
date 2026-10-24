@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Aev199/numlock-calculator/releases/latest"><b>Скачать NumCalc 1.4.3</b></a>
+  <a href="https://github.com/Aev199/numlock-calculator/releases/latest"><b>Скачать NumCalc 1.4.4</b></a>
   ·
   <a href="CHANGELOG.md">Что нового</a>
   ·
@@ -18,7 +18,7 @@
 
 ---
 
-**NumCalc 1.4.3** — идеологическое продолжение [NumLock Calculator](https://nlcalc.narod.ru/) Владимира Потапова. Это самостоятельный проект, а не официальная новая версия оригинала.
+**NumCalc 1.4.4** — идеологическое продолжение [NumLock Calculator](https://nlcalc.narod.ru/) Владимира Потапова. Это самостоятельный проект, а не официальная новая версия оригинала.
 
 ## Как пользоваться
 
@@ -80,14 +80,11 @@ NumCalc сам проверяет, вышла ли новая версия, и �
   <img src="docs/screenshots/update.png" width="320" alt="Окно обновления">
 </p>
 
-Если на работе программам закрыт выход в интернет, есть два обходных пути:
-
-- нажать «Скачать в браузере» — NumCalc сам найдёт скачанный файл в «Загрузках»;
-- положить `NumCalc.exe` и `latest.json` из выпуска в общую сетевую папку и указать её в настройках. Чтобы не настраивать каждый компьютер, рядом с `NumCalc.exe` можно положить файл `numcalc-update.txt` с путём к этой папке.
+Если на работе программам закрыт выход в интернет, нажмите «Скачать в браузере»: NumCalc сам найдёт скачанный файл в «Загрузках» и предложит его установить.
 
 ## Установка
 
-1. Скачайте `NumCalc-1.4.3-windows-x64.zip` со [страницы выпуска](https://github.com/Aev199/numlock-calculator/releases/latest).
+1. Скачайте `NumCalc-1.4.4-windows-x64.zip` со [страницы выпуска](https://github.com/Aev199/numlock-calculator/releases/latest).
 2. Распакуйте в любую папку и запустите `NumCalc.exe`.
 
 Устанавливать ничего не нужно. Работает на Windows 10 и 11 (нужен WebView2, в современных Windows он уже есть). Windows может предупредить о неизвестном издателе — это потому, что программа не подписана.
