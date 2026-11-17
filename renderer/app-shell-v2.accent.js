@@ -64,12 +64,11 @@
     section.className = 'settings-section settings-accent';
     const label = document.createElement('span');
     label.className = 'settings-label';
-    label.id = 'accentLabel';
-    label.textContent = 'Цвет акцента';
+    label.textContent = 'Оформление';
     const group = document.createElement('div');
     group.className = 'accent-options';
     group.setAttribute('role', 'radiogroup');
-    group.setAttribute('aria-labelledby', 'accentLabel');
+    group.setAttribute('aria-label', 'Цвет акцента');
     for (const accent of ACCENTS) {
       const option = document.createElement('button');
       option.type = 'button';

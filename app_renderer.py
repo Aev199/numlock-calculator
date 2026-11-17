@@ -224,6 +224,8 @@ def install(app: Any) -> None:
                 'data-motion="full" data-compact-mode="true"',
                 1,
             )
+        if settings.get("motion") is False:
+            document = document.replace('data-motion="full"', 'data-motion="off"', 1)
         return document
 
     def create_window(*args: Any, **kwargs: Any) -> Any:

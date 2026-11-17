@@ -28,9 +28,7 @@ body[data-app-mode="calculator"] .expression-field-shell.has-scroll-right::after
   opacity: .92;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  body[data-app-mode="calculator"] .expression-field-shell::before,
-  body[data-app-mode="calculator"] .expression-field-shell::after {
-    transition: none;
-  }
+body[data-motion="off"][data-app-mode="calculator"] .expression-field-shell::before,
+body[data-motion="off"][data-app-mode="calculator"] .expression-field-shell::after {
+  transition: none;
 }

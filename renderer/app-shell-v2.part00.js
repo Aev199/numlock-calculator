@@ -149,12 +149,8 @@
     const selected = Number.isFinite(parsed) ? parsed : fallback;
     return Math.max(0, Math.min(15, selected));
   };
-  // Windows "Show animations" off (reduced motion) turns every effect off.
-  const reducedMotion = () => {
-    return Boolean(
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-    );
-  };
+  // Settings → "Анимация"; the Windows animation preference is not followed.
+  const reducedMotion = () => document.body?.dataset.motion === 'off';
 
   function waitForBridge() {
     if (window.pywebview?.api) return Promise.resolve(window.pywebview.api);

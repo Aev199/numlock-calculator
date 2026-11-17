@@ -341,6 +341,7 @@ class AppApi:
                 "focus_calculator_on_restore",
                 "onboarding_seen",
                 "accent",
+                "motion",
             }
             for key, value in settings.items():
                 if key == "accent":
@@ -352,6 +353,7 @@ class AppApi:
                             "select_result_on_enter",
                             "focus_calculator_on_restore",
                             "onboarding_seen",
+                            "motion",
                         }
                         else value
                     )
