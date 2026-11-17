@@ -30,6 +30,7 @@ STYLE_PARTS = (
     "app-shell-flexible-units.css",
     "app-shell-updates.css",
     "app-shell-accent.css",
+    "app-shell-motion-ui.css",
     "app-shell-utility.css",
 )
 SCRIPT_PARTS = (
@@ -58,6 +59,7 @@ SCRIPT_PARTS = (
     "app-shell-v2.updates.js",
     "app-shell-v2.accent.js",
     "app-shell-v2.history.js",
+    "app-shell-v2.motion.js",
     "app-shell-v2.part06.js",
     "app-shell-v2.part07.js",
     "app-shell-v2.part08.js",

@@ -149,8 +149,8 @@
     const selected = Number.isFinite(parsed) ? parsed : fallback;
     return Math.max(0, Math.min(15, selected));
   };
+  // Windows "Show animations" off (reduced motion) turns every effect off.
   const reducedMotion = () => {
-    if (document.body?.dataset.motion === 'full') return false;
     return Boolean(
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
     );

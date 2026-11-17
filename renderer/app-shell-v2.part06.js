@@ -64,6 +64,7 @@
 
   async function copyText(text, successMessage = 'Скопировано') {
     const copied = await state.api.copy_text(text);
+    if (copied) state.lastCopiedAt = performance.now();
     showToast(
       copied ? successMessage : 'Не удалось открыть буфер обмена',
     );

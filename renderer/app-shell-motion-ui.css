@@ -1,0 +1,142 @@
+/* Calm, uniform motion. One easing, 90-160 ms, transform and opacity only.
+   Elements still hide through .hidden; display transitions discretely, so an
+   overlay keeps rendering just long enough to fade out, and @starting-style
+   gives each appearance its first frame. The reduced-motion rule in
+   app-shell.css shortens all of this to nothing. */
+
+:root {
+  --motion-ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* Overlays: fade and rise in, fade out faster. */
+.overlay,
+.onboarding-overlay,
+.about-overlay,
+.update-overlay {
+  opacity: 1;
+  transition:
+    opacity 120ms var(--motion-ease),
+    display 120ms allow-discrete;
+}
+
+.overlay.hidden,
+.onboarding-overlay.hidden,
+.about-overlay.hidden,
+.update-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 90ms ease-in,
+    display 90ms allow-discrete;
+}
+
+.overlay > .drawer,
+.overlay > .palette,
+.onboarding-card,
+.about-card,
+.update-card {
+  translate: 0 0;
+  transition: translate 120ms var(--motion-ease);
+}
+
+@starting-style {
+  .overlay:not(.hidden),
+  .onboarding-overlay:not(.hidden),
+  .about-overlay:not(.hidden),
+  .update-overlay:not(.hidden) {
+    opacity: 0;
+  }
+
+  .overlay:not(.hidden) > .drawer,
+  .overlay:not(.hidden) > .palette,
+  .onboarding-overlay:not(.hidden) .onboarding-card,
+  .about-overlay:not(.hidden) .about-card,
+  .update-overlay:not(.hidden) .update-card {
+    translate: 0 4px;
+  }
+}
+
+/* Toasts float up a little and fade away. */
+.toast {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity 140ms var(--motion-ease),
+    translate 140ms var(--motion-ease),
+    display 140ms allow-discrete;
+}
+
+.toast.hidden {
+  opacity: 0;
+  translate: 0 6px;
+  transition:
+    opacity 120ms ease-in,
+    translate 120ms ease-in,
+    display 120ms allow-discrete;
+}
+
+@starting-style {
+  .toast:not(.hidden) {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+/* A calculation error fades in instead of popping. It leaves at once: a
+   fading error beside the returning number would make the block two lines. */
+.result-error {
+  transition:
+    opacity 100ms var(--motion-ease),
+    display 100ms allow-discrete;
+}
+
+.result-error.hidden {
+  transition: none;
+}
+
+@starting-style {
+  .result-error:not(.hidden) {
+    opacity: 0;
+  }
+}
+
+/* Buttons give a little under the pointer. */
+.icon-button,
+.tool-button,
+.mode-pill,
+.row-button,
+.history-action,
+.swap-units-button,
+.update-button,
+.hotkey-save,
+.accent-option,
+.toast-action {
+  transition-property: background, color, border-color, opacity, scale;
+  transition-duration: 80ms, 80ms, 80ms, 60ms, 60ms;
+}
+
+.icon-button:active,
+.tool-button:active,
+.mode-pill:active,
+.row-button:active,
+.history-action:active,
+.swap-units-button:active,
+.update-button:active,
+.hotkey-save:active,
+.accent-option:active,
+.toast-action:active {
+  scale: .97;
+  opacity: 1;
+}
+
+/* Theme and accent changes: colours flow for a moment instead of flipping. */
+.colour-blend *,
+.colour-blend *::before,
+.colour-blend *::after {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    fill 150ms ease,
+    stroke 150ms ease !important;
+}
